@@ -119,6 +119,10 @@ function sigueSesion() {
     /* Los atajos se registran al entrar, no al abrir el diálogo: si el
        operador nunca lo abre, igual quiere sus teclas. */
     api()?.aplicaAtajos?.(cargaAtajos());
+    /* Y se engancha el juego. Ya no hay botón de «Connect» ni formulario que
+       rellenar: tener permiso de emisión vigente ES la orden de conectar. Todo
+       lo demás lo gobierna el panel en vivo. */
+    api()?.conecta?.(tokenEmision(), codigoGrupo());
     arranca({
       endpoint: ENDPOINT_DATOS,
       grupo: codigoGrupo(),
