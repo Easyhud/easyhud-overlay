@@ -501,6 +501,28 @@
         <section class="vista" id="vista-ajustes" hidden>
           <div class="panel">
             <div class="panel__cabeza">
+              <h2 class="display">Fuente de OBS</h2>
+            </div>
+            <div class="panel__cuerpo">
+              <p class="apunte" style="margin-top: 2px">
+                En OBS, añade una <strong>Fuente de navegador</strong> con esta dirección, a
+                1920×1080. La sirve este programa desde tu propia PC, así que no lleva
+                credenciales dentro y es la misma en todas las máquinas.
+              </p>
+              <label class="campo" style="margin-top: 14px">
+                <span class="etiqueta">Dirección</span>
+                <span style="display: flex; gap: 10px; flex-wrap: wrap">
+                  <input id="a-obs" type="text" readonly value="···" style="flex: 1 1 260px" />
+                  <button class="boton boton--terciario" type="button" id="a-obs-copiar">
+                    Copiar
+                  </button>
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__cabeza">
               <h2 class="display">Tiempos muertos</h2>
             </div>
             <div class="panel__cuerpo">

@@ -74,6 +74,37 @@ function mudaCampos(aDonde) {
 
 /* ══ Modo panel ════════════════════════════════════════════════════════════ */
 
+/**
+ * La dirección que el operador pone en OBS.
+ *
+ * Es la del servidor local del propio programa, no la del sitio web. Dos cosas
+ * importan de eso: NO lleva token ni código de grupo dentro —el token se queda
+ * en la memoria del proceso y nunca llega a una barra de direcciones—, y es la
+ * MISMA en todas las máquinas, así que se puede dictar por teléfono.
+ */
+function pintaObs() {
+  const campo = $('a-obs');
+  if (campo === null) return;
+  campo.value = cuenta.obs;
+
+  const boton = $('a-obs-copiar');
+  if (boton === null || boton.dataset.listo === '1') return;
+  boton.dataset.listo = '1';
+  boton.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(cuenta.obs);
+    } catch {
+      /* Sin permiso de portapapeles: se selecciona y que copie a mano. */
+      campo.select();
+    }
+    const antes = boton.textContent;
+    boton.textContent = 'Copiado';
+    setTimeout(() => {
+      boton.textContent = antes;
+    }, 1200);
+  });
+}
+
 function modoPanel() {
   mudaCampos('panel');
   $('asistente').hidden = true;
@@ -82,6 +113,7 @@ function modoPanel() {
   $('rotulo-asistente').hidden = true;
 
   $('estado-codigo').textContent = cuenta.grupo || '···';
+  pintaObs();
 
   if (enlace !== null) enlace.cierra();
   pintaEstado('Conectando', false);
@@ -603,49 +635,55 @@ function pideLogin(motivo) {
   a.innerHTML =
     '<div style="display:flex;justify-content:center;padding:60px 0">' +
     '<div class="panel" style="width:min(440px,100%)">' +
-    '<div class="panel__cabeza"><h2 class="display">Inicia sesión</h2></div>' +
+    '<div class="panel__cabeza"><h2 class="display">Sin sesión</h2></div>' +
     '<div class="panel__cuerpo">' +
-    `<p class="apunte">${motivo ?? 'Entra con tu cuenta de Easy HUD para abrir la consola de realización.'}</p>` +
-    '<a class="boton" href="/entrar" style="margin-top:16px;text-decoration:none;display:inline-flex">Entrar</a>' +
+    `<p class="apunte">${motivo ?? 'Entra con tu cuenta de Easy HUD en el programa para abrir la consola de realización.'}</p>` +
     '</div></div></div>';
   $('rotulo-asistente').hidden = false;
   pintaEstado('Sin sesión', false);
 }
 
-/** Pregunta a la cuenta por el grupo y el token, y arranca el panel. */
-async function inicia() {
-  /* En el CLIENTE de escritorio el panel vive dentro del exe: la sesión no se
-     pide por cookie, se inyecta por la dirección (endpoint/groupCode/token) que
-     pone el propio exe desde su sesión ya iniciada. Si vienen, se usan y se
-     salta el paso web. En la web (sin estos parámetros) sigue igual que antes. */
+/**
+ * Arranca el panel con la sesión que le pasa el programa.
+ *
+ * El panel vive SOLO dentro del exe. No hay versión web: la sesión no se pide
+ * por cookie ni hay pantalla de login aquí, llega inyectada en la dirección
+ * (`endpoint`/`groupCode`/`token`) que pone el propio programa desde su sesión
+ * ya iniciada.
+ *
+ * Que no haya modo web es a propósito y se decidió así: tenerlo en dos sitios
+ * —servido por el VPS y empaquetado en el exe— era el mismo fichero bajo dos
+ * raíces distintas, y eso ya produjo dos fallos reales (el botón de salir
+ * dejaba el panel en blanco, y la dirección de OBS salía con el token dentro).
+ * Una sola casa, un solo modo.
+ */
+function inicia() {
   const p = new URLSearchParams(location.search);
-  const gIny = p.get('groupCode');
-  const tIny = p.get('token');
-  if (gIny && tIny) {
-    cuenta = { endpoint: p.get('endpoint') || location.origin, grupo: gIny, token: tIny };
-    return modoPanel();
+  const grupo = p.get('groupCode');
+  const token = p.get('token');
+
+  if (!grupo || !token) {
+    return pideLogin('El programa todavía no ha entregado una sesión de emisión.');
   }
 
-  let datos;
-  try {
-    const r = await fetch('/api/mi-overlay', { credentials: 'include' });
-    if (r.status === 401) return pideLogin();
-    if (!r.ok) return pideLogin('No se pudo comprobar la sesión. Inténtalo de nuevo.');
-    datos = await r.json();
-  } catch {
-    return pideLogin('No se llega al servidor. ¿Hay conexión?');
-  }
-  if (!datos.groupCode || !datos.overlayToken) {
-    return pideLogin('Tu cuenta no tiene overlay asignado. Avisa a soporte.');
-  }
-  /* Mismo origen: el panel y el servidor de datos van por easyhud.net (wss). */
-  cuenta = { endpoint: location.origin, grupo: datos.groupCode, token: datos.overlayToken };
+  cuenta = {
+    endpoint: p.get('endpoint') || location.origin,
+    grupo,
+    token,
+    /* Dónde apuntar OBS. Lo manda el programa, que es quien sabe en qué puerto
+       levantó su servidor local; el valor de aquí es solo el reparto por
+       defecto para no quedarnos sin nada que enseñar. */
+    obs: p.get('obs') || 'http://localhost:5310/',
+  };
   modoPanel();
 }
 
 inicia();
 
-$('a-salir').addEventListener('click', () => {
-  /* Cerrar sesión es cosa de la cuenta: se va a la web, que borra la cookie. */
-  location.href = '/salir';
-});
+/* Cerrar sesión es cosa del programa, no del panel: el panel no tiene cookie
+   que borrar ni sitio a donde navegar. Mientras la sesión siga viviendo en el
+   shell, el botón no se pinta — antes navegaba a `/salir`, que dentro del exe
+   resuelve a una ruta inexistente y dejaba el panel en blanco sin vuelta
+   atrás. Vuelve cuando el login se mude aquí. */
+const botonSalir = $('a-salir');
+if (botonSalir !== null) botonSalir.hidden = true;
