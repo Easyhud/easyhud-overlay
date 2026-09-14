@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Easy HUD · Ronda ganada — HUD Easy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/tokens.css">
+<link rel="stylesheet" href="./css/hud.css">
+<link rel="stylesheet" href="./css/cartel.css">
+<link rel="stylesheet" href="./css/ceremonia.css">
+</head>
+<body>
+
+<div class="escenario">
+  <div class="velo"></div>
+
+  <!-- ══ Cartel de ronda ganada ══
+       Gana el defensor, pero el cartel conserva el verde a propósito: su
+       paleta es fija, no sigue al bando. -->
+  <div class="cartel cer" style="--c: var(--atk); --cl: var(--atk-light);">
+
+    <!-- logo extruido flotando en perspectiva -->
+    <div class="cer__fondo">
+      <div>
+        <i style="background-image: url('./assets/inf-logo.webp'); transform: translateZ(-42px); opacity: .04; filter: brightness(0) saturate(0);"></i>
+        <i style="background-image: url('./assets/inf-logo.webp'); transform: translateZ(-32px); opacity: .05; filter: brightness(0) saturate(0);"></i>
+        <i style="background-image: url('./assets/inf-logo.webp'); transform: translateZ(-22px); opacity: .06; filter: brightness(0) saturate(0);"></i>
+        <i style="background-image: url('./assets/inf-logo.webp'); transform: translateZ(-12px); opacity: .07; filter: brightness(0) saturate(0);"></i>
+        <i style="background-image: url('./assets/inf-logo.webp'); transform: translateZ(-2px);  opacity: .08; filter: brightness(0) saturate(0);"></i>
+        <i style="background-image: url('./assets/inf-logo.webp'); transform: translateZ(8px);   opacity: .08; filter: brightness(0) saturate(0);"></i>
+        <i style="background-image: url('./assets/inf-logo.webp'); transform: translateZ(18px);  opacity: .09; filter: brightness(0) saturate(0);"></i>
+        <i style="background-image: url('./assets/inf-logo.webp'); transform: translateZ(28px);  opacity: .09; filter: brightness(0) saturate(0);"></i>
+        <i style="background-image: url('./assets/inf-logo.webp'); transform: translateZ(38px);  opacity: .10;"></i>
+      </div>
+    </div>
+
+    <div class="cer__lavado"></div>
+    <div class="cer__destello"></div>
+    <div class="cartel__filo"></div>
+
+    <div class="cer__fila">
+      <div class="cer__logo">
+        <span>INF</span>
+        <i style="background-image: url('./assets/inf-logo.webp');"></i>
+      </div>
+      <div class="cer__filete"></div>
+      <div class="cartel__cuerpo">
+        <span class="cartel__etq">Gana la ronda</span>
+        <span class="cartel__dato">Infinity</span>
+        <div class="cartel__pie cer__pie">
+          <span>ronda 16</span>
+          <span class="cartel__punto"></span>
+          <span style="color: var(--cl);">defensor</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="./js/escenario.js?v=2"></script>
+<script type="module" src="./js/ceremonia.js"></script>
+</body>
+</html>

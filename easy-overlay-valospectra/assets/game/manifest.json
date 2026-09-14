@@ -1,0 +1,740 @@
+{
+ "agents": {
+  "gekko": {
+   "name": "Gekko",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/gekko-ability1.png",
+     "name": "Wingman"
+    },
+    "Ability2": {
+     "file": "abilities/gekko-ability2.png",
+     "name": "Dizzy"
+    },
+    "Grenade": {
+     "file": "abilities/gekko-grenade.png",
+     "name": "Mosh Pit"
+    },
+    "Ultimate": {
+     "file": "abilities/gekko-ultimate.png",
+     "name": "Thrash"
+    }
+   },
+   "icon": "agents/gekko.png"
+  },
+  "fade": {
+   "name": "Fade",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/fade-ability1.png",
+     "name": "Seize"
+    },
+    "Ability2": {
+     "file": "abilities/fade-ability2.png",
+     "name": "Haunt"
+    },
+    "Grenade": {
+     "file": "abilities/fade-grenade.png",
+     "name": "Prowler"
+    },
+    "Ultimate": {
+     "file": "abilities/fade-ultimate.png",
+     "name": "Nightfall"
+    }
+   },
+   "icon": "agents/fade.png"
+  },
+  "breach": {
+   "name": "Breach",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/breach-ability1.png",
+     "name": "Flashpoint"
+    },
+    "Ability2": {
+     "file": "abilities/breach-ability2.png",
+     "name": "Fault Line"
+    },
+    "Grenade": {
+     "file": "abilities/breach-grenade.png",
+     "name": "Aftershock"
+    },
+    "Ultimate": {
+     "file": "abilities/breach-ultimate.png",
+     "name": "Rolling Thunder"
+    }
+   },
+   "icon": "agents/breach.png"
+  },
+  "deadlock": {
+   "name": "Deadlock",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/deadlock-ability1.png",
+     "name": "Sonic Sensor"
+    },
+    "Grenade": {
+     "file": "abilities/deadlock-grenade.png",
+     "name": "Barrier Mesh"
+    },
+    "Ability2": {
+     "file": "abilities/deadlock-ability2.png",
+     "name": "GravNet"
+    },
+    "Ultimate": {
+     "file": "abilities/deadlock-ultimate.png",
+     "name": "Annihilation"
+    }
+   },
+   "icon": "agents/deadlock.png"
+  },
+  "tejo": {
+   "name": "Tejo",
+   "abilities": {
+    "Ability2": {
+     "file": "abilities/tejo-ability2.png",
+     "name": "Guided Salvo"
+    },
+    "Ability1": {
+     "file": "abilities/tejo-ability1.png",
+     "name": "Special Delivery"
+    },
+    "Ultimate": {
+     "file": "abilities/tejo-ultimate.png",
+     "name": "Armageddon"
+    },
+    "Grenade": {
+     "file": "abilities/tejo-grenade.png",
+     "name": "Stealth Drone"
+    }
+   },
+   "icon": "agents/tejo.png"
+  },
+  "raze": {
+   "name": "Raze",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/raze-ability1.png",
+     "name": "Blast Pack"
+    },
+    "Ability2": {
+     "file": "abilities/raze-ability2.png",
+     "name": "Paint Shells"
+    },
+    "Grenade": {
+     "file": "abilities/raze-grenade.png",
+     "name": "Boom Bot"
+    },
+    "Ultimate": {
+     "file": "abilities/raze-ultimate.png",
+     "name": "Showstopper"
+    }
+   },
+   "icon": "agents/raze.png"
+  },
+  "chamber": {
+   "name": "Chamber",
+   "abilities": {
+    "Ability2": {
+     "file": "abilities/chamber-ability2.png",
+     "name": "Rendezvous"
+    },
+    "Grenade": {
+     "file": "abilities/chamber-grenade.png",
+     "name": "Trademark"
+    },
+    "Ability1": {
+     "file": "abilities/chamber-ability1.png",
+     "name": "Headhunter"
+    },
+    "Ultimate": {
+     "file": "abilities/chamber-ultimate.png",
+     "name": "Tour De Force"
+    }
+   },
+   "icon": "agents/chamber.png"
+  },
+  "kay-o": {
+   "name": "KAY/O",
+   "abilities": {
+    "Grenade": {
+     "file": "abilities/kay-o-grenade.png",
+     "name": "FRAG/ment"
+    },
+    "Ability1": {
+     "file": "abilities/kay-o-ability1.png",
+     "name": "FLASH/drive"
+    },
+    "Ability2": {
+     "file": "abilities/kay-o-ability2.png",
+     "name": "ZERO/point"
+    },
+    "Ultimate": {
+     "file": "abilities/kay-o-ultimate.png",
+     "name": "NULL/cmd"
+    }
+   },
+   "icon": "agents/kay-o.png"
+  },
+  "skye": {
+   "name": "Skye",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/skye-ability1.png",
+     "name": "Trailblazer"
+    },
+    "Ability2": {
+     "file": "abilities/skye-ability2.png",
+     "name": "Guiding Light"
+    },
+    "Grenade": {
+     "file": "abilities/skye-grenade.png",
+     "name": "Regrowth"
+    },
+    "Ultimate": {
+     "file": "abilities/skye-ultimate.png",
+     "name": "Seekers"
+    }
+   },
+   "icon": "agents/skye.png"
+  },
+  "cypher": {
+   "name": "Cypher",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/cypher-ability1.png",
+     "name": "Cyber Cage"
+    },
+    "Ability2": {
+     "file": "abilities/cypher-ability2.png",
+     "name": "Spycam"
+    },
+    "Grenade": {
+     "file": "abilities/cypher-grenade.png",
+     "name": "Trapwire"
+    },
+    "Ultimate": {
+     "file": "abilities/cypher-ultimate.png",
+     "name": "Neural Theft"
+    }
+   },
+   "icon": "agents/cypher.png"
+  },
+  "sova": {
+   "name": "Sova",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/sova-ability1.png",
+     "name": "Shock Bolt"
+    },
+    "Ability2": {
+     "file": "abilities/sova-ability2.png",
+     "name": "Recon Bolt"
+    },
+    "Grenade": {
+     "file": "abilities/sova-grenade.png",
+     "name": "Owl Drone"
+    },
+    "Ultimate": {
+     "file": "abilities/sova-ultimate.png",
+     "name": "Hunter's Fury"
+    }
+   },
+   "icon": "agents/sova.png"
+  },
+  "miks": {
+   "name": "Miks",
+   "abilities": {
+    "Grenade": {
+     "file": "abilities/miks-grenade.png",
+     "name": "M-pulse"
+    },
+    "Ability2": {
+     "file": "abilities/miks-ability2.png",
+     "name": "Waveform"
+    },
+    "Ability1": {
+     "file": "abilities/miks-ability1.png",
+     "name": "Harmonize"
+    },
+    "Ultimate": {
+     "file": "abilities/miks-ultimate.png",
+     "name": "Bassquake"
+    }
+   },
+   "icon": "agents/miks.png"
+  },
+  "killjoy": {
+   "name": "Killjoy",
+   "abilities": {
+    "Grenade": {
+     "file": "abilities/killjoy-grenade.png",
+     "name": "Nanoswarm"
+    },
+    "Ability1": {
+     "file": "abilities/killjoy-ability1.png",
+     "name": "ALARMBOT"
+    },
+    "Ability2": {
+     "file": "abilities/killjoy-ability2.png",
+     "name": "TURRET"
+    },
+    "Ultimate": {
+     "file": "abilities/killjoy-ultimate.png",
+     "name": "Lockdown"
+    }
+   },
+   "icon": "agents/killjoy.png"
+  },
+  "harbor": {
+   "name": "Harbor",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/harbor-ability1.png",
+     "name": "High Tide"
+    },
+    "Grenade": {
+     "file": "abilities/harbor-grenade.png",
+     "name": "Storm Surge"
+    },
+    "Ability2": {
+     "file": "abilities/harbor-ability2.png",
+     "name": "Cove"
+    },
+    "Ultimate": {
+     "file": "abilities/harbor-ultimate.png",
+     "name": "Reckoning"
+    }
+   },
+   "icon": "agents/harbor.png"
+  },
+  "vyse": {
+   "name": "Vyse",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/vyse-ability1.png",
+     "name": "Shear"
+    },
+    "Ability2": {
+     "file": "abilities/vyse-ability2.png",
+     "name": "Arc Rose"
+    },
+    "Grenade": {
+     "file": "abilities/vyse-grenade.png",
+     "name": "Razorvine"
+    },
+    "Ultimate": {
+     "file": "abilities/vyse-ultimate.png",
+     "name": "Steel Garden"
+    }
+   },
+   "icon": "agents/vyse.png"
+  },
+  "viper": {
+   "name": "Viper",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/viper-ability1.png",
+     "name": "Poison Cloud"
+    },
+    "Ability2": {
+     "file": "abilities/viper-ability2.png",
+     "name": "Toxic Screen"
+    },
+    "Grenade": {
+     "file": "abilities/viper-grenade.png",
+     "name": "Snake Bite"
+    },
+    "Ultimate": {
+     "file": "abilities/viper-ultimate.png",
+     "name": "Viper's Pit"
+    }
+   },
+   "icon": "agents/viper.png"
+  },
+  "phoenix": {
+   "name": "Phoenix",
+   "abilities": {
+    "Grenade": {
+     "file": "abilities/phoenix-grenade.png",
+     "name": "Blaze"
+    },
+    "Ability1": {
+     "file": "abilities/phoenix-ability1.png",
+     "name": "Hot Hands"
+    },
+    "Ability2": {
+     "file": "abilities/phoenix-ability2.png",
+     "name": "Curveball"
+    },
+    "Ultimate": {
+     "file": "abilities/phoenix-ultimate.png",
+     "name": "Run it Back"
+    }
+   },
+   "icon": "agents/phoenix.png"
+  },
+  "veto": {
+   "name": "Veto",
+   "abilities": {
+    "Ability2": {
+     "file": "abilities/veto-ability2.png",
+     "name": "Interceptor"
+    },
+    "Grenade": {
+     "file": "abilities/veto-grenade.png",
+     "name": "Crosscut"
+    },
+    "Ultimate": {
+     "file": "abilities/veto-ultimate.png",
+     "name": "Evolution"
+    },
+    "Ability1": {
+     "file": "abilities/veto-ability1.png",
+     "name": "Chokehold"
+    }
+   },
+   "icon": "agents/veto.png"
+  },
+  "astra": {
+   "name": "Astra",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/astra-ability1.png",
+     "name": "Nova Pulse"
+    },
+    "Ability2": {
+     "file": "abilities/astra-ability2.png",
+     "name": "Nebula  / Dissipate"
+    },
+    "Grenade": {
+     "file": "abilities/astra-grenade.png",
+     "name": "Gravity Well"
+    },
+    "Ultimate": {
+     "file": "abilities/astra-ultimate.png",
+     "name": "Astral Form / Cosmic Divide"
+    }
+   },
+   "icon": "agents/astra.png"
+  },
+  "brimstone": {
+   "name": "Brimstone",
+   "abilities": {
+    "Grenade": {
+     "file": "abilities/brimstone-grenade.png",
+     "name": "Stim Beacon"
+    },
+    "Ability1": {
+     "file": "abilities/brimstone-ability1.png",
+     "name": "Incendiary"
+    },
+    "Ability2": {
+     "file": "abilities/brimstone-ability2.png",
+     "name": "Sky Smoke"
+    },
+    "Ultimate": {
+     "file": "abilities/brimstone-ultimate.png",
+     "name": "Orbital Strike"
+    }
+   },
+   "icon": "agents/brimstone.png"
+  },
+  "iso": {
+   "name": "Iso",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/iso-ability1.png",
+     "name": "Undercut"
+    },
+    "Ultimate": {
+     "file": "abilities/iso-ultimate.png",
+     "name": "Kill Contract"
+    },
+    "Ability2": {
+     "file": "abilities/iso-ability2.png",
+     "name": "Double Tap"
+    },
+    "Grenade": {
+     "file": "abilities/iso-grenade.png",
+     "name": "Contingency"
+    }
+   },
+   "icon": "agents/iso.png"
+  },
+  "clove": {
+   "name": "Clove",
+   "abilities": {
+    "Grenade": {
+     "file": "abilities/clove-grenade.png",
+     "name": "Pick-me-up"
+    },
+    "Ability2": {
+     "file": "abilities/clove-ability2.png",
+     "name": "Ruse"
+    },
+    "Ultimate": {
+     "file": "abilities/clove-ultimate.png",
+     "name": "Not Dead Yet"
+    },
+    "Ability1": {
+     "file": "abilities/clove-ability1.png",
+     "name": "Meddle"
+    }
+   },
+   "icon": "agents/clove.png"
+  },
+  "neon": {
+   "name": "Neon",
+   "abilities": {
+    "Ability2": {
+     "file": "abilities/neon-ability2.png",
+     "name": "High Gear"
+    },
+    "Ability1": {
+     "file": "abilities/neon-ability1.png",
+     "name": "Relay Bolt"
+    },
+    "Grenade": {
+     "file": "abilities/neon-grenade.png",
+     "name": "Fast Lane"
+    },
+    "Ultimate": {
+     "file": "abilities/neon-ultimate.png",
+     "name": "Overdrive"
+    }
+   },
+   "icon": "agents/neon.png"
+  },
+  "yoru": {
+   "name": "Yoru",
+   "abilities": {
+    "Grenade": {
+     "file": "abilities/yoru-grenade.png",
+     "name": "FAKEOUT"
+    },
+    "Ability1": {
+     "file": "abilities/yoru-ability1.png",
+     "name": "BLINDSIDE"
+    },
+    "Ability2": {
+     "file": "abilities/yoru-ability2.png",
+     "name": "GATECRASH"
+    },
+    "Ultimate": {
+     "file": "abilities/yoru-ultimate.png",
+     "name": "DIMENSIONAL DRIFT"
+    }
+   },
+   "icon": "agents/yoru.png"
+  },
+  "waylay": {
+   "name": "Waylay",
+   "abilities": {
+    "Ability2": {
+     "file": "abilities/waylay-ability2.png",
+     "name": "Refract"
+    },
+    "Grenade": {
+     "file": "abilities/waylay-grenade.png",
+     "name": "Saturate"
+    },
+    "Ability1": {
+     "file": "abilities/waylay-ability1.png",
+     "name": "Lightspeed"
+    },
+    "Ultimate": {
+     "file": "abilities/waylay-ultimate.png",
+     "name": "Convergent Paths"
+    }
+   },
+   "icon": "agents/waylay.png"
+  },
+  "sage": {
+   "name": "Sage",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/sage-ability1.png",
+     "name": "Slow Orb"
+    },
+    "Ability2": {
+     "file": "abilities/sage-ability2.png",
+     "name": "Healing Orb"
+    },
+    "Grenade": {
+     "file": "abilities/sage-grenade.png",
+     "name": "Barrier Orb"
+    },
+    "Ultimate": {
+     "file": "abilities/sage-ultimate.png",
+     "name": "Resurrection"
+    }
+   },
+   "icon": "agents/sage.png"
+  },
+  "reyna": {
+   "name": "Reyna",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/reyna-ability1.png",
+     "name": "Devour"
+    },
+    "Ability2": {
+     "file": "abilities/reyna-ability2.png",
+     "name": "Dismiss"
+    },
+    "Grenade": {
+     "file": "abilities/reyna-grenade.png",
+     "name": "Leer"
+    },
+    "Ultimate": {
+     "file": "abilities/reyna-ultimate.png",
+     "name": "Empress"
+    }
+   },
+   "icon": "agents/reyna.png"
+  },
+  "omen": {
+   "name": "Omen",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/omen-ability1.png",
+     "name": "Paranoia"
+    },
+    "Ability2": {
+     "file": "abilities/omen-ability2.png",
+     "name": "Dark Cover"
+    },
+    "Grenade": {
+     "file": "abilities/omen-grenade.png",
+     "name": "Shrouded Step"
+    },
+    "Ultimate": {
+     "file": "abilities/omen-ultimate.png",
+     "name": "From the Shadows"
+    }
+   },
+   "icon": "agents/omen.png"
+  },
+  "jett": {
+   "name": "Jett",
+   "abilities": {
+    "Ability1": {
+     "file": "abilities/jett-ability1.png",
+     "name": "Updraft"
+    },
+    "Ability2": {
+     "file": "abilities/jett-ability2.png",
+     "name": "Tailwind"
+    },
+    "Grenade": {
+     "file": "abilities/jett-grenade.png",
+     "name": "Cloudburst"
+    },
+    "Ultimate": {
+     "file": "abilities/jett-ultimate.png",
+     "name": "Blade Storm"
+    }
+   },
+   "icon": "agents/jett.png"
+  }
+ },
+ "weapons": {
+  "odin": {
+   "name": "Odin",
+   "file": "weapons/odin.png"
+  },
+  "ares": {
+   "name": "Ares",
+   "file": "weapons/ares.png"
+  },
+  "vandal": {
+   "name": "Vandal",
+   "file": "weapons/vandal.png"
+  },
+  "bulldog": {
+   "name": "Bulldog",
+   "file": "weapons/bulldog.png"
+  },
+  "phantom": {
+   "name": "Phantom",
+   "file": "weapons/phantom.png"
+  },
+  "judge": {
+   "name": "Judge",
+   "file": "weapons/judge.png"
+  },
+  "bucky": {
+   "name": "Bucky",
+   "file": "weapons/bucky.png"
+  },
+  "frenzy": {
+   "name": "Frenzy",
+   "file": "weapons/frenzy.png"
+  },
+  "classic": {
+   "name": "Classic",
+   "file": "weapons/classic.png"
+  },
+  "bandit": {
+   "name": "Bandit",
+   "file": "weapons/bandit.png"
+  },
+  "ghost": {
+   "name": "Ghost",
+   "file": "weapons/ghost.png"
+  },
+  "sheriff": {
+   "name": "Sheriff",
+   "file": "weapons/sheriff.png"
+  },
+  "shorty": {
+   "name": "Shorty",
+   "file": "weapons/shorty.png"
+  },
+  "operator": {
+   "name": "Operator",
+   "file": "weapons/operator.png"
+  },
+  "guardian": {
+   "name": "Guardian",
+   "file": "weapons/guardian.png"
+  },
+  "outlaw": {
+   "name": "Outlaw",
+   "file": "weapons/outlaw.png"
+  },
+  "marshal": {
+   "name": "Marshal",
+   "file": "weapons/marshal.png"
+  },
+  "spectre": {
+   "name": "Spectre",
+   "file": "weapons/spectre.png"
+  },
+  "stinger": {
+   "name": "Stinger",
+   "file": "weapons/stinger.png"
+  },
+  "melee": {
+   "name": "Melee",
+   "file": "weapons/melee.png"
+  }
+ },
+ "fetchedAt": 1788989242152,
+ "source": "https://valorant-api.com/v1",
+ "armor": {
+  "heavy": {
+   "name": "Heavy Armor",
+   "file": "armor/heavy.png"
+  },
+  "light": {
+   "name": "Light Armor",
+   "file": "armor/light.png"
+  },
+  "regen": {
+   "name": "Regen Shield",
+   "file": "armor/regen.png"
+  }
+ }
+}

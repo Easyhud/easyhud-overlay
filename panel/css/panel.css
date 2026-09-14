@@ -1,0 +1,1167 @@
+/* ══ PANEL DE OPERADOR — sistema de diseño ═════════════════════════════════
+   Traducción directa del manual de marca v1.0 (easyhud-brand.html). Los
+   valores no se eligen aquí: se copian de allí. Si el manual cambia, este
+   fichero es el único sitio que hay que tocar.
+
+   Tres reglas del manual que son RESTRICCIONES, no estilo:
+
+   1. El naranja está prohibido como color de marca, en cualquier tinte o
+      matiz, y prohibido sobre blanco. Es marca registrada de un competidor
+      en el espacio «easy + palabra», y la defiende. No es una preferencia.
+   2. El color del equipo VIENE DEL PARTIDO. Sirve para distinguir un equipo
+      de otro y nada más: nunca es el acento de un botón, de un enlace ni de
+      un dato. En este panel los dos equipos salen en cada pantalla, así que
+      la tentación es constante — por eso vive en `--equipo`, una variable
+      que sólo se lee dentro de las piezas de equipo.
+   3. Ni cursivas, ni una tercera familia, ni texto por debajo de 4,5:1.
+
+   Y una consecuencia que resulta que es justo lo que necesita un realizador:
+   como los controles NO llevan color, el rojo queda libre para significar una
+   sola cosa —esto está en antena—. En una pantalla llena de botones, lo que
+   está encendido se lee desde el otro lado de la sala.                     */
+
+@import url('../../fonts.css');
+
+:root {
+  /* ── Neutros fríos: el 95 % de la superficie ───────────────────────────── */
+  --void: #08080a; /* suelo de la página */
+  --alzado: #0d0e12; /* celda de datos */
+  --marco: #101116; /* marco de captura, panel */
+  --linea: #26272b; /* TODA línea de 1 px */
+  --linea-alta: #3a3b41; /* botón secundario */
+  --mute: #6c6e75; /* etiquetas */
+  --gris: #a0a2a8; /* texto secundario */
+  --blanco: #f2f2f3; /* titulares y acción primaria */
+  --papel: #f5f5f5; /* el único bloque claro */
+
+  /* ── La señal de grabación. Un rojo, cuatro papeles ────────────────────── */
+  --rec: #f5253b; /* punto en antena, filete de estado */
+  --rec-claro: #ff6470; /* texto rojo sobre negro — 6,4:1 */
+  --rec-hondo: #b00d22; /* rojo dentro del bloque claro — 7:1 */
+  --rec-sombra: #2a0e13; /* relleno de fila activa: negro con temperatura */
+
+  /* ── Retícula ──────────────────────────────────────────────────────────── */
+  --ancho: 1560px;
+  --canal: clamp(16px, 3cqw, 40px);
+  --cabecera: 64px;
+
+  /* El alto mínimo de cualquier cosa que se toque. El operador va a usar esto
+     con el pulgar y con prisa, no con un ratón y tiempo. */
+  --tocable: 44px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/*
+ * `hidden` gana a todo.
+ *
+ * Sin esto, cualquier regla que dé `display` a un elemento —`.nav` es
+ * `flex`— deja visible algo que el JS ha ocultado, porque `[hidden]` sólo
+ * vale `display:none` de la hoja del navegador y la nuestra es más fuerte.
+ * Aquí eso se traducía en que la navegación del panel seguía en pantalla
+ * durante la configuración inicial, invitando a saltarse el asistente.
+ */
+[hidden] {
+  display: none !important;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  background: var(--void);
+  color: var(--blanco);
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+
+  /* Las cifras tabulares van en el CUERPO, no en cada pieza suelta: en un
+     panel casi todo es una cifra que cambia —marcador, cuenta atrás, código
+     de grupo— y si el ancho baila al cambiar, la fila entera se mueve. */
+  font-variant-numeric: tabular-nums;
+
+  /* Las unidades fluidas se miden contra el CONTENEDOR, no contra la ventana,
+     para que la vista previa y el dispositivo real coincidan. */
+  container: panel / inline-size;
+}
+
+::selection {
+  background: var(--blanco);
+  color: var(--void);
+}
+
+/* ══ Tipografía ════════════════════════════════════════════════════════════
+   Oswald grita, Poppins explica. Oswald SIEMPRE en mayúsculas y nunca en un
+   párrafo.                                                                 */
+
+.display {
+  margin: 0;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.005em;
+  line-height: 0.98;
+}
+
+h1.display {
+  font-size: clamp(30px, 6cqw, 66px);
+  line-height: 0.92;
+}
+
+h2.display {
+  font-size: clamp(20px, 2.4cqw, 30px);
+}
+
+h3.display {
+  font-weight: 600;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+/* La etiqueta: lo que nombra un dato. Nunca lleva el peso de la frase. */
+.etiqueta {
+  display: block;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--mute);
+  line-height: 1.4;
+}
+
+/* El valor de un dato va en Oswald: es una cifra o un nombre, no una frase. */
+.valor {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--blanco);
+  line-height: 1.3;
+}
+
+.apunte {
+  margin: 0;
+  font-size: 13px;
+  color: var(--gris);
+  max-width: 76ch;
+}
+
+/* ══ Cabecera ══════════════════════════════════════════════════════════════
+   Una fila de celdas divididas por filetes, no enlaces flotando.           */
+
+.cabecera {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: var(--cabecera);
+  background: color-mix(in srgb, var(--void) 95%, transparent);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--linea);
+}
+
+.cabecera__caja {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  height: 100%;
+  padding: 0 var(--canal);
+  display: flex;
+  align-items: stretch;
+}
+
+.marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: clamp(12px, 2cqw, 28px);
+  border-right: 1px solid var(--linea);
+  flex: 0 0 auto;
+  text-decoration: none;
+}
+
+.marca__logo {
+  display: block;
+  height: 22px;
+  width: auto;
+}
+
+.marca__palabra {
+  font-family: 'Oswald', sans-serif;
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #fff;
+}
+
+/* ── Navegación: celdas, no pestañas ───────────────────────────────────── */
+
+.nav {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.nav::-webkit-scrollbar {
+  display: none;
+}
+
+.nav__celda {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 14px;
+  border: 0;
+  border-right: 1px solid var(--linea);
+  background: transparent;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--gris);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.nav__celda:hover {
+  color: #fff;
+  background: var(--marco);
+}
+
+.nav__orden {
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--mute);
+}
+
+.nav__celda[aria-current='page'] {
+  color: #fff;
+  background: var(--marco);
+}
+
+/* La pista de la celda activa: 2 px de rojo DENTRO del borde inferior. */
+.nav__celda[aria-current='page']::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: var(--rec);
+}
+
+/* ── Estado, a la derecha ──────────────────────────────────────────────── */
+
+.estado {
+  margin-left: auto;
+  display: flex;
+  align-items: stretch;
+  flex: 0 0 auto;
+}
+
+.estado__celda {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-left: 1px solid var(--linea);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mute);
+  white-space: nowrap;
+}
+
+.estado__celda--reloj {
+  font-family: 'Oswald', sans-serif;
+  letter-spacing: 0.06em;
+  color: var(--gris);
+}
+
+/* El punto. Late SOLO cuando hay emisión, y es lo único que se mueve en todo
+   el cromo del panel — el manual no permite más. */
+.punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: var(--linea-alta);
+  flex: 0 0 auto;
+}
+
+.estado[data-vivo='si'] .estado__celda {
+  color: var(--rec-claro);
+}
+
+.estado[data-vivo='si'] .punto {
+  background: var(--rec);
+  animation: late 1.6s ease-in-out infinite;
+}
+
+@keyframes late {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.15;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+  }
+}
+
+/* ══ Cuerpo ════════════════════════════════════════════════════════════════ */
+
+.caja {
+  max-width: var(--ancho);
+  margin: 0 auto;
+  padding: 0 var(--canal);
+}
+
+.vista[hidden] {
+  display: none;
+}
+
+/* ── La tira de datos: etiqueta encima, valor debajo, filete entre celdas.
+      Es el patrón de la casa para cualquier conjunto de hechos. ─────────── */
+
+.tira {
+  display: grid;
+  /* 130 px y no 150: las cinco celdas del estado tienen que caber en una sola
+     fila en un portátil de 1280. Con 150 se rompía en 4 + 1 y la fila huérfana
+     parecía un fallo de maquetación, no una decisión. */
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  border: 1px solid var(--linea);
+  border-bottom: 0;
+  background: var(--alzado);
+}
+
+.tira__celda {
+  padding: 12px 16px;
+  border-right: 1px solid var(--linea);
+  border-bottom: 1px solid var(--linea);
+  min-width: 0;
+}
+
+.tira__celda > .valor {
+  display: block;
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ── Panel: un bloque de trabajo con su título ─────────────────────────── */
+
+.panel {
+  border: 1px solid var(--linea);
+  background: var(--marco);
+  margin-top: 22px;
+}
+
+.panel__cabeza {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--linea);
+}
+
+.panel__cuerpo {
+  padding: 16px;
+}
+
+.rejilla {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 14px;
+}
+
+/* ══ Controles ═════════════════════════════════════════════════════════════
+   Sin radio y sin color. El primario es blanco sobre oscuro, siempre. Al
+   pasar por encima sube 2 px sobre una sombra roja dura: es el único sitio
+   donde el rojo toca un control, y no lo rellena nunca.                    */
+
+.boton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: var(--tocable);
+  padding: 11px 18px;
+  border: 1px solid var(--blanco);
+  border-radius: 0;
+  background: var(--blanco);
+  color: var(--void);
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease;
+}
+
+.boton:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 2px 2px 0 0 var(--rec);
+}
+
+.boton:active:not(:disabled) {
+  transform: translate(0, 0);
+  box-shadow: 0 0 0 0 var(--rec);
+}
+
+.boton:focus-visible {
+  outline: 2px solid var(--rec);
+  outline-offset: 2px;
+}
+
+.boton:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.boton--secundario {
+  background: transparent;
+  border-color: var(--linea-alta);
+  color: var(--blanco);
+}
+
+.boton--terciario {
+  background: transparent;
+  border-color: transparent;
+  color: var(--gris);
+  padding-inline: 6px;
+}
+
+.boton--terciario:hover:not(:disabled) {
+  color: #fff;
+  box-shadow: none;
+  transform: none;
+  text-decoration: underline;
+}
+
+/* ── El mando de directo ────────────────────────────────────────────────────
+   Un botón grande que además DICE si lo que manda está puesto. Encendido, se
+   viste con la señal de grabación: borde rojo, relleno `--rec-sombra` (negro
+   con temperatura, no rojo) y el punto latiendo. Sigue sin ser un botón rojo:
+   el rojo informa, no decora.                                              */
+
+.mando {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 78px;
+  padding: 13px 15px;
+  border: 1px solid var(--linea-alta);
+  border-radius: 0;
+  background: var(--alzado);
+  color: var(--blanco);
+  font-family: 'Poppins', system-ui, sans-serif;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.mando:hover:not(:disabled) {
+  transform: translate(-2px, -2px);
+  box-shadow: 2px 2px 0 0 var(--rec);
+  border-color: var(--blanco);
+}
+
+.mando:active:not(:disabled) {
+  transform: none;
+  box-shadow: none;
+}
+
+.mando:focus-visible {
+  outline: 2px solid var(--rec);
+  outline-offset: 2px;
+}
+
+.mando:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.mando__titulo {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+
+.mando__pie {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.mando[aria-pressed='true'] {
+  border-color: var(--rec);
+  background: var(--rec-sombra);
+}
+
+.mando[aria-pressed='true'] .mando__pie {
+  color: var(--rec-claro);
+}
+
+.mando[aria-pressed='true'] .punto {
+  background: var(--rec);
+  animation: late 1.6s ease-in-out infinite;
+}
+
+/* ── Campos ────────────────────────────────────────────────────────────── */
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.campo input,
+.campo select,
+.campo textarea {
+  min-height: var(--tocable);
+  padding: 10px 12px;
+  border: 1px solid var(--linea);
+  border-radius: 0;
+  background: var(--void);
+  color: var(--blanco);
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  width: 100%;
+}
+
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  outline: none;
+  border-color: var(--blanco);
+}
+
+.campo input::placeholder {
+  color: var(--mute);
+}
+
+/* Un campo tocado y sin guardar. El operador tiene que poder mirar la
+   pantalla y saber qué está en antena y qué es sólo un borrador suyo. */
+.campo[data-sucio='si'] input,
+.campo[data-sucio='si'] select {
+  border-color: var(--rec);
+}
+
+/* ── La pieza de equipo: el ÚNICO sitio donde vive el color del partido ──
+      Va como filete lateral, nunca como relleno ni como texto: identifica la
+      fila, no decora el panel.                                             */
+
+.equipo {
+  --equipo: var(--linea-alta);
+  border-left: 3px solid var(--equipo);
+  padding-left: 13px;
+}
+
+/* ══ El asistente ══════════════════════════════════════════════════════════
+   La primera vez no hay nada que gobernar: no hay licencia, ni servidor, ni
+   torneo, ni equipos. Un panel que abriera directamente en los mandos de
+   directo estaría enseñando la mitad de en medio de una historia.
+
+   Así que hay DOS niveles, y el segundo no aparece hasta que el primero está
+   resuelto:
+
+     1. Asistente — pasos numerados, uno cada vez, con vuelta atrás.
+     2. Panel — las pestañas, para el día a día.
+
+   El raíl de pasos es la misma celda con filete de la navegación: no es otro
+   componente, es el mismo con tres estados.                                */
+
+.pasos {
+  display: flex;
+  align-items: stretch;
+  overflow-x: auto;
+  scrollbar-width: none;
+  border: 1px solid var(--linea);
+  border-bottom: 0;
+  background: var(--alzado);
+  margin-top: 22px;
+}
+
+.pasos::-webkit-scrollbar {
+  display: none;
+}
+
+.paso {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 13px 16px;
+  border: 0;
+  border-right: 1px solid var(--linea);
+  background: transparent;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--mute);
+  white-space: nowrap;
+  cursor: default;
+}
+
+/* El número del paso va en una caja cuadrada, como todo aquí. */
+.paso__n {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--linea-alta);
+  font-family: 'Oswald', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--mute);
+  flex: 0 0 auto;
+}
+
+/* Hecho: se puede volver, así que es pulsable. */
+.paso[data-estado='hecho'] {
+  color: var(--gris);
+  cursor: pointer;
+}
+
+.paso[data-estado='hecho']:hover {
+  color: #fff;
+  background: var(--marco);
+}
+
+.paso[data-estado='hecho'] .paso__n {
+  border-color: var(--blanco);
+  color: var(--blanco);
+}
+
+/* Actual: el filete rojo de 2 px por dentro del borde inferior, igual que la
+   celda activa de la navegación. */
+.paso[data-estado='actual'] {
+  color: #fff;
+  background: var(--marco);
+}
+
+.paso[data-estado='actual'] .paso__n {
+  border-color: var(--rec);
+  color: #fff;
+}
+
+.paso[data-estado='actual']::after {
+  content: '';
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 2px;
+  background: var(--rec);
+}
+
+.paso[data-estado='pendiente'] {
+  opacity: 0.55;
+}
+
+/* El pie de un paso: adelante a la derecha, atrás y saltar a la izquierda.
+   El botón primario es el único relleno de la pantalla, para que no haya duda
+   de cuál es el camino. */
+.pie-paso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 14px 16px;
+  border-top: 1px solid var(--linea);
+}
+
+.pie-paso__hueco {
+  margin-left: auto;
+}
+
+/* ── La tarjeta de plantilla ─────────────────────────────────────────────
+   Mismo idioma que el mando de directo: sin color cuando está apagada, y la
+   señal roja cuando está puesta. Así «elegida» y «en antena» se leen igual en
+   todo el panel, que es una cosa menos que aprender.
+
+   La vista previa es un ESQUEMA, no una captura. Una captura envejece con la
+   plantilla y acaba enseñando algo que ya no es; el esquema dice dónde va cada
+   bloque, que es lo que se compara al elegir.                              */
+
+.plantilla {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid var(--linea-alta);
+  border-radius: 0;
+  background: var(--alzado);
+  color: var(--blanco);
+  text-align: left;
+  cursor: pointer;
+  transition:
+    transform 0.12s ease,
+    box-shadow 0.12s ease,
+    border-color 0.12s ease;
+}
+
+.plantilla:hover {
+  transform: translate(-2px, -2px);
+  box-shadow: 2px 2px 0 0 var(--rec);
+  border-color: var(--blanco);
+}
+
+.plantilla:focus-visible {
+  outline: 2px solid var(--rec);
+  outline-offset: 2px;
+}
+
+.plantilla[aria-checked='true'] {
+  border-color: var(--rec);
+  background: var(--rec-sombra);
+}
+
+/* El marco de captura del manual: filete de 1 px sobre `--marco`, 16:9. */
+.plantilla__vista {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--linea);
+  background: var(--marco);
+  overflow: hidden;
+}
+
+.plantilla__vista i {
+  position: absolute;
+  background: var(--linea-alta);
+}
+
+.plantilla[aria-checked='true'] .plantilla__vista i {
+  background: var(--gris);
+}
+
+.plantilla__nombre {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  line-height: 1.15;
+}
+
+.plantilla__estado {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.plantilla[aria-checked='true'] .plantilla__estado {
+  color: var(--rec-claro);
+}
+
+.plantilla[aria-checked='true'] .punto {
+  background: var(--rec);
+}
+
+/* ── La ficha de la licencia leída ─────────────────────────────────────── */
+
+.ficha {
+  border: 1px solid var(--linea);
+  background: var(--void);
+  margin-top: 14px;
+}
+
+.ficha__fila {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--linea);
+}
+
+.ficha__fila:last-child {
+  border-bottom: 0;
+}
+
+.ficha__fila .etiqueta {
+  flex: 0 0 108px;
+}
+
+/* ── El bloque de copiar la URL de OBS ─────────────────────────────────── */
+
+.copia {
+  display: flex;
+  gap: 0;
+  border: 1px solid var(--linea);
+  background: var(--void);
+}
+
+.copia input {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: var(--tocable);
+  padding: 10px 12px;
+  border: 0;
+  background: transparent;
+  color: var(--blanco);
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 13px;
+}
+
+.copia input:focus {
+  outline: none;
+}
+
+.copia .boton {
+  border-left: 1px solid var(--linea);
+  flex: 0 0 auto;
+}
+
+/* ══ Vista god ═════════════════════════════════════════════════════════════
+   La pantalla del realizador: los dos equipos enfrentados —logo y nombre
+   arriba, alineación debajo—, el marcador grande en medio y las herramientas
+   ahí mismo. Todo de un vistazo, como una mesa de realización.            */
+
+.cinta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  align-items: baseline;
+  padding: 12px 16px;
+  border: 1px solid var(--linea);
+  background: var(--alzado);
+  margin-top: 22px;
+}
+
+.cinta b {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--blanco);
+  margin-left: 6px;
+}
+
+.god {
+  display: grid;
+  grid-template-columns: 1fr minmax(260px, 0.9fr) 1fr;
+  gap: 14px;
+  margin-top: 14px;
+  align-items: start;
+}
+
+.god__equipo {
+  --equipo: var(--linea-alta);
+  border: 1px solid var(--linea);
+  border-top: 3px solid var(--equipo);
+  background: var(--marco);
+  padding: 14px;
+}
+
+/* Tinte por bando, como en el juego: ataque en rojo, defensa en turquesa. Un
+   degradado suave desde arriba para reconocer el lado de un vistazo, sin tapar
+   el contenido. Se pone según `data-bando` que fija el panel. */
+.god__equipo[data-bando="atk"] {
+  --equipo: #ff4655;
+  background: linear-gradient(180deg, rgb(255 70 85 / 16%), var(--marco) 62%);
+}
+.god__equipo[data-bando="def"] {
+  --equipo: #2ad4c2;
+  background: linear-gradient(180deg, rgb(42 212 194 / 16%), var(--marco) 62%);
+}
+
+/* La cabecera del equipo: logo grande y nombre. El de la derecha se refleja
+   —logo al otro lado— como en una emisión real, para que izquierda y derecha
+   se lean sin pensar. */
+.god__cab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.god__equipo--der .god__cab {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+.god__logo {
+  width: 52px;
+  height: 52px;
+  flex: 0 0 auto;
+  background: center / contain no-repeat;
+  background-color: var(--void);
+  border: 1px solid var(--linea);
+}
+
+.god__nombre {
+  display: block;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: clamp(18px, 2cqw, 26px);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  line-height: 1;
+  color: var(--blanco);
+}
+
+.god__meta {
+  display: block;
+  margin-top: 5px;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+/* La alineación. Cada jugador: un punto de estado, su nick y su agente. */
+.roster {
+  margin-top: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.jug {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 10px;
+  border: 1px solid var(--linea);
+  background: var(--alzado);
+}
+
+.god__equipo--der .jug {
+  flex-direction: row-reverse;
+  text-align: right;
+}
+
+/* Sin cliente conectado: en gris, para que un roster incompleto salte a la
+   vista antes de salir en directo. */
+.jug[data-online='false'] {
+  opacity: 0.5;
+}
+
+/* Muerto: el nick tachado, como en el propio HUD. */
+.jug[data-vivo='false'] .jug__nick {
+  text-decoration: line-through;
+  color: var(--gris);
+}
+
+.jug .punto {
+  background: var(--linea-alta);
+}
+
+/* Cliente dentro = punto rojo (el mismo idioma que «en marcha» del panel). */
+.jug[data-online='true'] .punto {
+  background: var(--rec);
+}
+
+.jug__nick {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  color: var(--blanco);
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jug__agente {
+  font-size: 11px;
+  color: var(--gris);
+  flex: 0 0 auto;
+}
+
+/* El bloque de edición del equipo: siempre visible bajo la alineación, para
+   que el realizador tenga dónde poner nombre, tricode y logo sin salir de la
+   vista. Se separa con un filete para que se lea como «zona de ajuste». */
+.edita {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--linea);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* ── El centro: marcador y herramientas ─────────────────────────────────── */
+
+.god__centro {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.marcador {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 10px 0;
+  border: 1px solid var(--linea);
+  background: var(--marco);
+}
+
+.marcador__n {
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: clamp(34px, 5cqw, 54px);
+  line-height: 1;
+  color: var(--blanco);
+  min-width: 1.4ch;
+  text-align: center;
+}
+
+.marcador__sep {
+  color: var(--mute);
+  font-size: 24px;
+}
+
+.marcador__meta {
+  text-align: center;
+  font-family: 'Oswald', sans-serif;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gris);
+  font-size: 13px;
+  margin-top: -6px;
+}
+
+/* En la vista god los mandos van apilados en el centro, no en rejilla ancha. */
+.god__centro .rejilla {
+  grid-template-columns: 1fr 1fr;
+}
+
+@container panel (width < 900px) {
+  /* En pantallas estrechas la mesa se apila: equipo izq, centro, equipo der. */
+  .god {
+    grid-template-columns: 1fr;
+  }
+  .god__equipo--der .god__cab,
+  .god__equipo--der .jug {
+    flex-direction: row;
+    text-align: left;
+  }
+}
+
+/* ── Aviso ─────────────────────────────────────────────────────────────── */
+
+.aviso {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--linea);
+  background: var(--alzado);
+  font-size: 13px;
+  color: var(--gris);
+}
+
+.aviso--rojo {
+  border-color: var(--rec);
+  background: var(--rec-sombra);
+  color: var(--rec-claro);
+}
+
+/* ══ Móvil ═════════════════════════════════════════════════════════════════
+   Que el panel se use desde el teléfono no es un extra: es el motivo de que
+   exista. El que pulsa la pausa casi nunca es el que está sentado al lado
+   del PC del observador.                                                   */
+
+@container panel (width < 760px) {
+  /*
+   * En el teléfono la cabecera se parte en dos filas en vez de apretarse.
+   *
+   * Con una sola fila, la marca y el estado se comían el ancho y de las seis
+   * secciones sólo asomaba la primera: había que arrastrar a ciegas para
+   * encontrar «Equipos». Partirla cuesta 44 px de alto y devuelve la
+   * navegación entera. Siguen siendo celdas divididas por filetes, que es lo
+   * que pide el manual; lo único que cambia es dónde se dobla la fila.
+   */
+  .cabecera {
+    height: auto;
+  }
+
+  .cabecera__caja {
+    flex-wrap: wrap;
+    padding: 0;
+  }
+
+  .marca {
+    height: 52px;
+    padding-left: var(--canal);
+    padding-right: 14px;
+  }
+
+  .estado {
+    height: 52px;
+    padding-right: var(--canal);
+  }
+
+  .nav {
+    order: 3;
+    flex: 1 0 100%;
+    height: 46px;
+    border-top: 1px solid var(--linea);
+  }
+
+  .nav__celda:first-child {
+    padding-left: var(--canal);
+  }
+
+  .estado__celda--codigo {
+    display: none;
+  }
+
+  .panel__cuerpo {
+    padding: 13px;
+  }
+
+  /* El titular de un panel y su apunte no caben en la misma línea en 375 px, y
+     partir el apunte en tres renglones dejaba el bloque torcido. */
+  .panel__cabeza {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}

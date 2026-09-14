@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Panel · Easy HUD</title>
+    <link rel="stylesheet" href="css/panel.css" />
+  </head>
+  <body>
+    <!--
+      EL PANEL DE OPERADOR.
+      =====================
+
+      Esto NO es una pantalla de emisión: no sale por antena, sale en el
+      teléfono o en el segundo monitor del que realiza. Por eso rompe dos
+      costumbres del overlay a propósito:
+
+        - No hay lienzo fijo de 1920×1080 ni escalado. Aquí manda el
+          dispositivo, y el dispositivo suele ser un móvil en vertical.
+        - Sí hay interacción, foco visible y objetivos de 44 px.
+
+      ## Dos niveles, y el segundo no existe sin el primero
+
+      La primera vez que alguien abre esto no hay licencia, ni servidor, ni
+      torneo, ni equipos. Abrir directamente en los mandos de directo sería
+      enseñar la mitad de en medio de una historia, así que:
+
+        1. ASISTENTE — pasos numerados, uno cada vez, con vuelta atrás.
+        2. PANEL — las pestañas del día a día.
+
+      Las pestañas no aparecen hasta que hay algo que gobernar.
+    -->
+
+    <header class="cabecera">
+      <div class="cabecera__caja">
+        <a class="marca" href="#" aria-label="Easy HUD">
+          <img class="marca__logo" src="assets/wordmark-easy.svg" alt="Easy" width="76" height="29" />
+          <span class="marca__palabra" translate="no">HUD</span>
+        </a>
+
+        <!-- Navegación del panel. Oculta durante la configuración: durante el
+             asistente el único camino es hacia delante. -->
+        <nav class="nav" id="nav" aria-label="Secciones del panel" hidden>
+          <button class="nav__celda" type="button" data-vista="directo" aria-current="page">
+            <span class="nav__orden">01</span>Directo
+          </button>
+          <button class="nav__celda" type="button" data-vista="torneo">
+            <span class="nav__orden">02</span>Torneo
+          </button>
+          <button class="nav__celda" type="button" data-vista="equipos">
+            <span class="nav__orden">03</span>Equipos
+          </button>
+          <button class="nav__celda" type="button" data-vista="serie">
+            <span class="nav__orden">04</span>Serie
+          </button>
+          <button class="nav__celda" type="button" data-vista="patrocinio">
+            <span class="nav__orden">05</span>Patrocinio
+          </button>
+          <button class="nav__celda" type="button" data-vista="ajustes">
+            <span class="nav__orden">06</span>Ajustes
+          </button>
+        </nav>
+
+        <!-- Durante el asistente la cabecera dice en qué paso vas, no si hay
+             emisión: todavía no puede haberla. -->
+        <span class="nav" id="rotulo-asistente" aria-hidden="true">
+          <span class="nav__celda" style="cursor: default">Consola de realización</span>
+        </span>
+
+        <div class="estado" id="estado" data-vivo="no">
+          <span class="estado__celda">
+            <i class="punto" aria-hidden="true"></i>
+            <span id="estado-texto">Sin configurar</span>
+          </span>
+          <span class="estado__celda estado__celda--reloj" id="estado-reloj">--:--</span>
+          <span class="estado__celda estado__celda--codigo" id="estado-codigo">···</span>
+        </div>
+      </div>
+    </header>
+
+    <main class="caja">
+      <!-- ══════════════════════════════════════════════════════════════════
+           ASISTENTE
+           ══════════════════════════════════════════════════════════════════ -->
+      <section id="asistente" aria-label="Configuración inicial">
+        <div class="pasos" id="raíl"></div>
+
+        <!-- ── 01 · PLANTILLA ─────────────────────────────────────────────
+             Sólo salen las que la licencia incluye. Si sólo hay una, este paso
+             ni se enseña: preguntar con una única respuesta posible es hacer
+             perder el tiempo.                                              -->
+        <section class="panel" data-paso="plantilla" hidden style="margin-top: 0">
+          <div class="panel__cabeza">
+            <h2 class="display">01 · Plantilla</h2>
+            <span class="etiqueta" id="plan-nota">Incluidas en tu plan</span>
+          </div>
+          <div class="panel__cuerpo">
+            <div class="rejilla" id="plantillas" role="radiogroup" aria-label="Plantilla"></div>
+            <p class="apunte" style="margin-top: 14px">
+              Se puede cambiar entre torneos. Cambia las direcciones de OBS, así que si ya las
+              tenías puestas hay que volver a copiarlas del último paso.
+            </p>
+          </div>
+          <div class="pie-paso">
+            <button class="boton boton--terciario" type="button" data-atras hidden>Atrás</button>
+            <span class="pie-paso__hueco"></span>
+            <button class="boton" type="button" data-avanza>Continuar</button>
+          </div>
+        </section>
+
+        <!-- ── 02 · SERVIDOR ────────────────────────────────────────────── -->
+        <section class="panel" data-paso="servidor" hidden style="margin-top: 0">
+          <div class="panel__cabeza">
+            <h2 class="display">02 · Servidor y partido</h2>
+            <span class="etiqueta">Obligatorio</span>
+          </div>
+          <div class="panel__cuerpo">
+            <p class="apunte">
+              El código de grupo es el mismo que pusiste en el observador. Es lo que dice a qué
+              partido pertenece todo lo demás.
+            </p>
+            <div class="rejilla" style="margin-top: 14px">
+              <label class="campo">
+                <span class="etiqueta">Servidor</span>
+                <input id="cfg-endpoint" type="url" spellcheck="false" placeholder="http://…:5200" />
+              </label>
+              <label class="campo">
+                <span class="etiqueta">Código de grupo</span>
+                <input id="cfg-grupo" type="text" spellcheck="false" placeholder="123" />
+              </label>
+            </div>
+            <div id="cfg-prueba" style="margin-top: 14px"></div>
+          </div>
+          <div class="pie-paso">
+            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
+            <span class="pie-paso__hueco"></span>
+            <button class="boton boton--secundario" type="button" id="cfg-probar">Probar</button>
+            <button class="boton" type="button" data-avanza>Continuar</button>
+          </div>
+        </section>
+
+        <!-- ── 03 · TORNEO ──────────────────────────────────────────────── -->
+        <section class="panel" data-paso="torneo" hidden style="margin-top: 0">
+          <div class="panel__cabeza">
+            <h2 class="display">03 · Torneo</h2>
+            <span class="etiqueta">Se puede saltar</span>
+          </div>
+          <div class="panel__cuerpo">
+            <div class="rejilla">
+              <label class="campo">
+                <span class="etiqueta">Nombre</span>
+                <input id="t-nombre" data-clave="tournamentInfo.name" type="text" maxlength="64" />
+              </label>
+              <label class="campo">
+                <span class="etiqueta">Logo (URL)</span>
+                <input id="t-logo" data-clave="tournamentInfo.logoUrl" type="url" placeholder="https://" />
+              </label>
+              <label class="campo">
+                <span class="etiqueta">Fondo (URL)</span>
+                <input id="t-fondo" data-clave="tournamentInfo.backdropUrl" type="url" placeholder="https://" />
+              </label>
+            </div>
+          </div>
+          <div class="pie-paso">
+            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
+            <button class="boton boton--terciario" type="button" data-salta>Saltar</button>
+            <span class="pie-paso__hueco"></span>
+            <button class="boton" type="button" data-avanza>Continuar</button>
+          </div>
+        </section>
+
+        <!-- ── 04 · EQUIPOS ─────────────────────────────────────────────── -->
+        <section class="panel" data-paso="equipos" hidden style="margin-top: 0">
+          <div class="panel__cabeza">
+            <h2 class="display">04 · Equipos</h2>
+            <span class="etiqueta">Se puede saltar</span>
+          </div>
+          <div class="panel__cuerpo">
+            <p class="apunte">
+              Si el observador ya los mandó, aquí solo se corrigen. Lo que escribas manda sobre lo
+              que diga el cliente.
+            </p>
+            <div class="rejilla" style="margin-top: 14px">
+              <div class="equipo">
+                <span class="etiqueta">Izquierda</span>
+                <label class="campo" style="margin-top: 6px">
+                  <span class="etiqueta">Nombre</span>
+                  <input id="e0-nombre" type="text" maxlength="32" />
+                </label>
+                <label class="campo" style="margin-top: 8px">
+                  <span class="etiqueta">Tricódigo</span>
+                  <input id="e0-tri" type="text" maxlength="4" />
+                </label>
+              </div>
+              <div class="equipo">
+                <span class="etiqueta">Derecha</span>
+                <label class="campo" style="margin-top: 6px">
+                  <span class="etiqueta">Nombre</span>
+                  <input id="e1-nombre" type="text" maxlength="32" />
+                </label>
+                <label class="campo" style="margin-top: 8px">
+                  <span class="etiqueta">Tricódigo</span>
+                  <input id="e1-tri" type="text" maxlength="4" />
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="pie-paso">
+            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
+            <button class="boton boton--terciario" type="button" data-salta>Saltar</button>
+            <span class="pie-paso__hueco"></span>
+            <button class="boton" type="button" data-avanza>Continuar</button>
+          </div>
+        </section>
+
+        <!-- ── 05 · SERIE ───────────────────────────────────────────────── -->
+        <section class="panel" data-paso="serie" hidden style="margin-top: 0">
+          <div class="panel__cabeza">
+            <h2 class="display">05 · Serie</h2>
+            <span class="etiqueta">Se puede saltar</span>
+          </div>
+          <div class="panel__cuerpo">
+            <div class="rejilla">
+              <label class="campo">
+                <span class="etiqueta">Formato</span>
+                <select id="s-formato" data-clave="seriesInfo.needed">
+                  <option value="1">BO1 · gana 1</option>
+                  <option value="2">BO3 · gana 2</option>
+                  <option value="3">BO5 · gana 3</option>
+                </select>
+              </label>
+              <label class="campo">
+                <span class="etiqueta">Mapas ganados · izquierda</span>
+                <input id="s-izq" data-clave="seriesInfo.wonLeft" type="number" min="0" max="3" step="1" value="0" />
+              </label>
+              <label class="campo">
+                <span class="etiqueta">Mapas ganados · derecha</span>
+                <input id="s-der" data-clave="seriesInfo.wonRight" type="number" min="0" max="3" step="1" value="0" />
+              </label>
+            </div>
+          </div>
+          <div class="pie-paso">
+            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
+            <button class="boton boton--terciario" type="button" data-salta>Saltar</button>
+            <span class="pie-paso__hueco"></span>
+            <button class="boton" type="button" data-avanza>Continuar</button>
+          </div>
+        </section>
+
+        <!-- ── 06 · PATROCINIO ──────────────────────────────────────────── -->
+        <section class="panel" data-paso="patrocinio" hidden style="margin-top: 0">
+          <div class="panel__cabeza">
+            <h2 class="display">06 · Patrocinadores</h2>
+            <span class="etiqueta">Se puede saltar</span>
+          </div>
+          <div class="panel__cuerpo">
+            <div class="rejilla">
+              <label class="campo">
+                <span class="etiqueta">Mostrar</span>
+                <select id="p-activo" data-clave="sponsorInfo.enabled">
+                  <option value="false">No</option>
+                  <option value="true">Sí</option>
+                </select>
+              </label>
+              <label class="campo">
+                <span class="etiqueta">Segundos por logo</span>
+                <input id="p-duracion" data-clave="sponsorInfo.duration" type="number" min="2" max="60" step="1" value="8" />
+              </label>
+            </div>
+            <label class="campo" style="margin-top: 14px">
+              <span class="etiqueta">Logos · una URL por línea</span>
+              <textarea id="p-lista" rows="5" placeholder="https://…"></textarea>
+            </label>
+          </div>
+          <div class="pie-paso">
+            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
+            <button class="boton boton--terciario" type="button" data-salta>Saltar</button>
+            <span class="pie-paso__hueco"></span>
+            <button class="boton" type="button" data-avanza>Continuar</button>
+          </div>
+        </section>
+
+        <!-- ── 07 · LISTO ───────────────────────────────────────────────── -->
+        <section class="panel" data-paso="listo" hidden style="margin-top: 0">
+          <div class="panel__cabeza">
+            <h2 class="display">07 · Listo</h2>
+            <span class="etiqueta">Copia esto en OBS</span>
+          </div>
+          <div class="panel__cuerpo">
+            <p class="apunte">
+              Una fuente de navegador por pantalla, a 1920×1080. Son las mismas direcciones de
+              siempre; lo único que cambia es que ahora llevan la licencia dentro.
+            </p>
+            <div id="urls" style="margin-top: 14px; display: grid; gap: 10px"></div>
+          </div>
+          <div class="pie-paso">
+            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
+            <span class="pie-paso__hueco"></span>
+            <button class="boton" type="button" id="termina">Abrir el panel</button>
+          </div>
+        </section>
+      </section>
+
+      <!-- ══════════════════════════════════════════════════════════════════
+           PANEL
+           ══════════════════════════════════════════════════════════════════ -->
+      <div id="panel" hidden>
+        <!-- ══ 01 · DIRECTO · vista god ═══════════════════════════════════
+             Los dos equipos enfrentados, con logo y alineación, el marcador en
+             medio y las herramientas ahí mismo. La mesa de realización. -->
+        <section class="vista" id="vista-directo">
+          <!-- Cinta de contexto: ¿estoy mirando el partido que creo? -->
+          <div class="cinta" aria-label="Contexto del partido">
+            <span><span class="etiqueta">Torneo</span><b id="d-torneo">—</b></span>
+            <span><span class="etiqueta">Mapa</span><b id="d-mapa">—</b></span>
+            <span><span class="etiqueta">Fase</span><b id="d-fase">—</b></span>
+            <span
+              class="estado"
+              id="estado-directo"
+              data-vivo="no"
+              style="margin-left: auto; gap: 0"
+            >
+              <span class="estado__celda" style="border: 0; padding-right: 0">
+                <i class="punto" aria-hidden="true"></i><span id="estado-directo-txt">—</span>
+              </span>
+            </span>
+          </div>
+
+          <div class="god">
+            <!-- Equipo izquierda -->
+            <div class="god__equipo" id="lado-0" style="--equipo: var(--rec)">
+              <div class="god__cab">
+                <div class="god__logo" id="logo-0"></div>
+                <div>
+                  <span class="god__nombre" id="nombre-0">—</span>
+                  <span class="god__meta" id="meta-0">—</span>
+                </div>
+              </div>
+              <div class="roster" id="roster-0"></div>
+              <div class="edita">
+                <label class="campo">
+                  <span class="etiqueta">Nombre del equipo</span>
+                  <input id="ed-nombre-0" data-eq="0" data-campo="name" type="text" maxlength="32" />
+                </label>
+                <div class="rejilla" style="grid-template-columns: 1fr 1fr">
+                  <label class="campo">
+                    <span class="etiqueta">Tricode</span>
+                    <input id="ed-tri-0" data-eq="0" data-campo="tricode" type="text" maxlength="4" />
+                  </label>
+                  <label class="campo">
+                    <span class="etiqueta">Logo (URL)</span>
+                    <input id="ed-logo-0" data-eq="0" data-campo="url" type="url" placeholder="https://" />
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Centro: marcador y herramientas -->
+            <div class="god__centro">
+              <div class="marcador">
+                <span class="marcador__n" id="score-0">0</span>
+                <span class="marcador__sep">—</span>
+                <span class="marcador__n" id="score-1">0</span>
+              </div>
+              <div class="marcador__meta">
+                <span id="d-ronda">Ronda —</span> · <span id="reloj-god">--:--</span>
+              </div>
+
+              <div class="rejilla" id="mandos" role="group" aria-label="Mandos en antena"></div>
+
+              <div class="panel" style="margin-top: 2px">
+                <div class="panel__cabeza">
+                  <h2 class="display" style="font-size: 17px">Rótulo</h2>
+                  <span class="etiqueta">Sobre la emisión</span>
+                </div>
+                <div class="panel__cuerpo">
+                  <label class="campo">
+                    <span class="etiqueta">Título</span>
+                    <input id="rot-titulo" type="text" maxlength="48" placeholder="Pausa de la organización" />
+                  </label>
+                  <label class="campo" style="margin-top: 8px">
+                    <span class="etiqueta">Mensaje</span>
+                    <input id="rot-mensaje" type="text" maxlength="120" placeholder="Volvemos en unos minutos" />
+                  </label>
+                  <div class="rejilla" style="margin-top: 8px">
+                    <label class="campo">
+                      <span class="etiqueta">A nombre de</span>
+                      <select id="rot-equipo">
+                        <option value="">Producción</option>
+                        <option value="0">Izquierda</option>
+                        <option value="1">Derecha</option>
+                      </select>
+                    </label>
+                    <label class="campo">
+                      <span class="etiqueta">Segundos (0 = fijo)</span>
+                      <input id="rot-duracion" type="number" min="0" max="600" step="5" value="0" />
+                    </label>
+                  </div>
+                  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px">
+                    <button class="boton" type="button" id="rot-pon">Poner</button>
+                    <button class="boton boton--secundario" type="button" id="rot-quita">Quitar</button>
+                  </div>
+                </div>
+              </div>
+
+              <p class="apunte">
+                Los mandos van también en las teclas del observador; si el panel se queda sin red,
+                las teclas siguen.
+              </p>
+            </div>
+
+            <!-- Equipo derecha -->
+            <div class="god__equipo god__equipo--der" id="lado-1" style="--equipo: var(--linea-alta)">
+              <div class="god__cab">
+                <div class="god__logo" id="logo-1"></div>
+                <div>
+                  <span class="god__nombre" id="nombre-1">—</span>
+                  <span class="god__meta" id="meta-1">—</span>
+                </div>
+              </div>
+              <div class="roster" id="roster-1"></div>
+              <div class="edita">
+                <label class="campo">
+                  <span class="etiqueta">Nombre del equipo</span>
+                  <input id="ed-nombre-1" data-eq="1" data-campo="name" type="text" maxlength="32" />
+                </label>
+                <div class="rejilla" style="grid-template-columns: 1fr 1fr">
+                  <label class="campo">
+                    <span class="etiqueta">Tricode</span>
+                    <input id="ed-tri-1" data-eq="1" data-campo="tricode" type="text" maxlength="4" />
+                  </label>
+                  <label class="campo">
+                    <span class="etiqueta">Logo (URL)</span>
+                    <input id="ed-logo-1" data-eq="1" data-campo="url" type="url" placeholder="https://" />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ 03 · TORNEO ════════════════════════════════════════════════ -->
+        <section class="vista" id="vista-torneo" hidden>
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Torneo</h2>
+              <span class="etiqueta">Se guarda en el servidor</span>
+            </div>
+            <div class="panel__cuerpo" data-espejo="torneo"></div>
+          </div>
+        </section>
+
+        <!-- ══ 04 · EQUIPOS ═══════════════════════════════════════════════ -->
+        <section class="vista" id="vista-equipos" hidden>
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Equipos</h2>
+              <span class="etiqueta">Izquierda y derecha, como salen en antena</span>
+            </div>
+            <div class="panel__cuerpo">
+              <!-- Los campos de corrección son los MISMOS nodos que usa el
+                   asistente: se mudan de sitio, no se duplican. Dos copias del
+                   mismo campo acaban discrepando el día que se toca una. -->
+              <div data-espejo="equipos"></div>
+              <div class="rejilla" id="equipos" style="margin-top: 16px"></div>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px">
+                <button class="boton boton--secundario" type="button" data-orden="intercambiaLados">
+                  Intercambiar izquierda y derecha
+                </button>
+                <button class="boton boton--secundario" type="button" data-orden="intercambiaBandos">
+                  Intercambiar atacante y defensor
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ══ 05 · SERIE ═════════════════════════════════════════════════ -->
+        <section class="vista" id="vista-serie" hidden>
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Serie</h2>
+              <span class="etiqueta">El marcador que sobrevive al mapa</span>
+            </div>
+            <div class="panel__cuerpo" data-espejo="serie"></div>
+          </div>
+        </section>
+
+        <!-- ══ 06 · PATROCINIO ════════════════════════════════════════════ -->
+        <section class="vista" id="vista-patrocinio" hidden>
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Patrocinadores</h2>
+              <span class="etiqueta">Se relevan solos mientras haya más de uno</span>
+            </div>
+            <div class="panel__cuerpo" data-espejo="patrocinio"></div>
+          </div>
+        </section>
+
+        <!-- ══ 06 · AJUSTES ═══════════════════════════════════════════════ -->
+        <section class="vista" id="vista-ajustes" hidden>
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Tiempos muertos</h2>
+            </div>
+            <div class="panel__cuerpo">
+              <div class="rejilla">
+                <label class="campo">
+                  <span class="etiqueta">Duración (s)</span>
+                  <input id="a-duracion" data-clave="timeoutDuration" type="number" min="15" max="300" step="5" />
+                </label>
+                <label class="campo">
+                  <span class="etiqueta">Cupo por equipo</span>
+                  <input id="a-cupo" data-clave="timeoutCounter.max" type="number" min="0" max="4" step="1" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Sesión</h2>
+            </div>
+            <div class="panel__cuerpo">
+              <p class="apunte" id="a-sesion" style="margin-top: 2px">—</p>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px">
+                <button class="boton boton--terciario" type="button" id="a-salir">
+                  Cerrar sesión
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <div id="avisos" style="margin: 22px 0"></div>
+    </main>
+
+    <!-- socket.io se reutiliza del overlay: mismo fichero, misma versión, y
+         así el panel tampoco pide nada por red a un tercero. -->
+    <script type="module" src="js/panel.js"></script>
+  </body>
+</html>

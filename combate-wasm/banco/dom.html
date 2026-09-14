@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>banco · DOM</title>
+
+<!--
+  LA VERSIÓN DE REFERENCIA, SIN TOCAR.
+
+  El marcado de aquí abajo es el de `combate/index.html`, letra por letra, y el
+  CSS y el JavaScript son los ficheros de producción: no hay una copia del
+  pintor para el banco, porque entonces el número que saliera no diría nada
+  sobre lo que corre en un torneo.
+
+  Dos cosas cambian, y las dos son del banco y no del HUD:
+
+  1. La base apunta a `combate/`, así que todas las rutas relativas —el CSS,
+     el arte local, el propio `combate.js`— se resuelven igual que si la página
+     estuviera allí.
+
+  2. El mapa de importación sustituye el adaptador real por uno que espera una
+     escena en vez de abrir un socket. `combate.js` pide `./js/datos.js` como
+     siempre y recibe el de mentira sin enterarse.
+
+  Y las tipografías se sirven de la carpeta del repositorio en lugar de pedirlas
+  a Google: el banco tiene que dar el mismo resultado dos veces seguidas, y una
+  fuente que tarda es un fotograma medido con la de reserva.
+-->
+<base href="../../combate/">
+
+<script type="importmap">
+{
+  "imports": {
+    "./js/datos.js": "../combate-wasm/banco/datos-falso.js"
+  }
+}
+</script>
+
+<link rel="stylesheet" href="../fonts.css">
+<link rel="stylesheet" href="./css/tokens.css">
+<link rel="stylesheet" href="./css/hud.css">
+<link rel="stylesheet" href="./css/combate.css">
+</head>
+<body>
+
+<div class="escenario">
+  <div class="marcador" id="marcador"></div>
+  <div class="ronda-chip" id="ronda"></div>
+  <div class="aleta aleta--izq"></div>
+  <div class="aleta aleta--der"></div>
+  <div class="serie serie--izq" id="serie-izq"></div>
+  <div class="serie serie--der" id="serie-der"></div>
+
+  <div class="columna columna--izq" id="col-izq"></div>
+  <div class="columna columna--der" id="col-der"></div>
+
+  <div class="marca">EASY OPEN · easyhud.net</div>
+</div>
+
+<script src="./js/escenario.js?v=2"></script>
+<script type="module" src="./js/combate.js"></script>
+
+<script type="module">
+import { ESCENAS, SECUENCIAS, prepara, preparaSecuencia } from "../combate-wasm/banco/escenas.js";
+import { pon } from "../combate-wasm/banco/datos-falso.js";
+
+/* Las mismas once caras que carga el lienzo, y por el mismo motivo: que la
+   primera maquetación no se haga con la fuente de reserva. */
+import { precargaFuentes } from "../combate-wasm/web/recursos.js";
+await precargaFuentes();
+
+const params = new URLSearchParams(location.search);
+const secuencia = SECUENCIAS.find((s) => s.nombre === params.get("secuencia"));
+const escena = ESCENAS.find((e) => e.nombre === (params.get("escena") ?? "completa"));
+
+if (secuencia === undefined && escena === undefined) throw new Error("no existe esa escena");
+pon(secuencia === undefined ? prepara(escena) : preparaSecuencia(secuencia, "desde"));
+
+/*
+ * Hay que esperar dos cosas antes de dejar que nadie mire: que el arte del CDN
+ * esté pintado y que las animaciones de entrada hayan terminado. Las tarjetas
+ * entran escalonadas —38ms por tarjeta sobre 300 de animación—, así que medio
+ * segundo sobra; se espera a que el navegador diga que no queda ninguna
+ * corriendo, que es más honrado que contar milisegundos.
+ */
+async function asentado() {
+  await new Promise((r) => setTimeout(r, 700));
+  for (let intento = 0; intento < 80; intento++) {
+    const imagenes = [...document.images];
+    const faltan = imagenes.filter((i) => i.getAttribute("src") && !i.complete);
+    const animando = document.getAnimations().filter((a) => a.playState === "running");
+    if (faltan.length === 0 && animando.length === 0) return;
+    await new Promise((r) => setTimeout(r, 50));
+  }
+}
+
+await asentado();
+
+/*
+ * Con una secuencia queda la segunda mitad: dar el salto de estado y PARAR el
+ * reloj de animación en un instante concreto.
+ *
+ * El navegador deja hacerlo: cada transición y cada animación en curso es un
+ * objeto que se puede pausar y al que se le puede poner el tiempo a mano. Sin
+ * esto habría que capturar en tiempo real y acertar al milisegundo, y una
+ * captura que llega tres milisegundos tarde acusaría de error de fidelidad lo
+ * que es una diferencia de reloj.
+ *
+ * Hay que forzar el recálculo de estilo ANTES de recoger las animaciones: una
+ * transición no existe hasta que el navegador ha visto el cambio.
+ */
+if (secuencia !== undefined) {
+  const t = Number(params.get("t") ?? 0);
+  pon(preparaSecuencia(secuencia, "hasta"));
+  void document.body.offsetHeight;
+
+  /*
+   * Hay que esperar el tiempo DE VERDAD antes de parar el reloj.
+   *
+   * No todo lo que pasa en esta pantalla lo lleva el motor de animación: el
+   * pintor usa temporizadores para quitar una clase cuando acaba su destello y
+   * para esconder la tarjeta que ya terminó de irse, y esos van con el reloj
+   * del sistema. Si se congelan las animaciones en el milisegundo 950 sin
+   * haber dejado pasar 950 milisegundos, las ocho tarjetas del duelo siguen
+   * ocupando sitio y la superviviente se queda donde no va: media pantalla de
+   * diferencia que no es de fidelidad, es del banco.
+   *
+   * Esperar da el estado correcto pero con la imprecisión del reloj —unos
+   * milisegundos de más—, así que después SÍ se congela y se fija el instante
+   * exacto. Lo de esperar arregla los temporizadores; lo de congelar, la
+   * precisión.
+   */
+  await new Promise((r) => setTimeout(r, t));
+  for (const a of document.getAnimations()) {
+    a.pause();
+    a.currentTime = t;
+  }
+  /* Un fotograma para que lo pausado llegue a pintarse. */
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+}
+
+document.title = "listo";
+window.bancoListo = true;
+</script>
+</body>
+</html>

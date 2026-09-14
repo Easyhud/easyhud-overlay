@@ -1,0 +1,163 @@
+/* ══ Cartel de 700 × 260 ═══════════════════════════════════════════════════
+   Ronda ganada, pausa y avisos son la MISMA pieza con tres contenidos: misma
+   caja, mismo sitio, mismo ritmo interior. Lo que cambia es el texto, el color
+   y el logo del fondo. Si tocas la caja aquí, cambia en las tres.            */
+
+:root {
+  --t-cartel: var(--move-slow);        /* 420 ms, el ritmo de los carteles */
+  --ease-cartel: var(--ease);          /* cubic-bezier(.22, .61, .24, 1) */
+}
+
+/* Velo sobre la captura: la oscurece lo justo para que el cartel despegue. */
+/*
+ * El velo, apagado.
+ *
+ * Oscurecía la pantalla entera para que el cartel destacara sobre la captura
+ * de fondo. Encima del vídeo de verdad eso es atenuar la partida durante
+ * cada ronda ganada, y no se puede: el cartel tiene que destacar por sí
+ * mismo. Se deja el elemento para no tocar el marcado.
+ */
+.velo {
+  position: absolute; inset: 0;
+  background: none;
+}
+
+.cartel {
+  position: absolute;
+  top: 214px; left: 50%; translate: -50% 0;
+  width: 700px; height: 260px;
+  box-sizing: border-box;
+  display: flex; flex-direction: column; justify-content: center;
+  overflow: hidden;
+  border-radius: 4px;
+  background: linear-gradient(160deg, rgb(38 41 49 / 97%), rgb(14 16 20 / 97%));
+  /*
+   * Sin sombra.
+   *
+   * Un overlay va encima del juego, y el HUD de VALORANT no proyecta
+   * sombras: en cuanto una pieza las tiene, deja de parecer parte del juego
+   * y parece una ventana pegada encima. La profundidad la dan el color y el
+   * filete del bando, no una sombra.
+   */
+}
+
+/* Filete inferior, en el color de quien manda el cartel. */
+.cartel__filo {
+  position: absolute; left: 0; bottom: 0;
+  width: 100%; height: 4px; z-index: 2;
+  background: var(--c);
+}
+
+/* Cuerpo: el ritmo vertical NO va con hueco uniforme. La caja de Oswald a
+   64 px es más corta que sus glifos, así que el aire declarado y el que se ve
+   no coinciden; se compensa con márgenes ópticos en el dato mayor. */
+.cartel__cuerpo {
+  position: relative; z-index: 2;
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 0;
+  padding: 0 40px;
+}
+.cartel__etq {
+  font-family: 'Poppins', sans-serif;
+  font-size: 15px; font-weight: 600;
+  letter-spacing: .26em; text-transform: uppercase;
+  color: var(--cl);
+}
+.cartel__dato {
+  font-family: 'Oswald', sans-serif;
+  font-size: 64px; font-weight: 700; line-height: 1;
+  letter-spacing: .02em; text-transform: uppercase;
+  color: #fff; white-space: nowrap;
+  margin: 9px 0 11px;          /* márgenes ópticos, no un gap */
+}
+.cartel__pie {
+  display: flex; align-items: center; gap: 12px;
+  font-size: 12px; font-weight: 600;
+  letter-spacing: .2em; text-transform: uppercase;
+  color: #c9cad0;
+}
+.cartel__punto { width: 3px; height: 3px; border-radius: 50%; background: #6b6e76; }
+
+/* ── logo extruido al fondo ───────────────────────────────────────────────
+   Capas OPACAS del mismo logo, oscurecidas hacia atrás. Con capas
+   semitransparentes cada borde se suma al siguiente y parece un halo borroso
+   en vez de un canto sólido. */
+.cartel__fondo {
+  position: absolute; top: 50%; right: -40px; translate: 0 -50%;
+  width: 260px; height: 260px;
+  z-index: 0; pointer-events: none;
+  opacity: .42;
+}
+.cartel__fondo > div {
+  position: relative; width: 100%; height: 100%;
+  transform-origin: center center;
+  animation: cartel-orbita 9s ease-in-out infinite;
+}
+.cartel__fondo i {
+  position: absolute; inset: 0;
+  background: center / contain no-repeat;
+  display: block;
+}
+@keyframes cartel-orbita {
+  0%   { transform: rotate(-4deg) translate(-6px, 3px) scale(1); }
+  50%  { transform: rotate(4deg)  translate(6px, -3px) scale(1.05); }
+  100% { transform: rotate(-4deg) translate(-6px, 3px) scale(1); }
+}
+
+/* ══ Entrada y salida ══════════════════════════════════════════════════════
+   El cartel se abre desde su eje y el contenido sube detrás. El sostén del
+   0,01 % va SOLO en las entradas: hace que el primer fotograma sea el estado
+   final, así el cartel se ve completo si el reloj de animación no corre
+   (captura, pestaña de fondo). En las salidas NO debe estar, o el recorrido
+   se convierte en un corte seco al final.                                   */
+@keyframes cartel-entra {
+  0%    { clip-path: inset(0 0 0 0); }
+  0.01% { clip-path: inset(0 50% 0 50%); }
+  100%  { clip-path: inset(0 0 0 0); }
+}
+@keyframes cartel-sale {
+  0%   { clip-path: inset(0 0 0 0); }
+  100% { clip-path: inset(0 50% 0 50%); }
+}
+@keyframes cartel-sube {
+  0%    { opacity: 1; transform: none; }
+  0.01% { opacity: 0; transform: translateY(14px); }
+  100%  { opacity: 1; transform: none; }
+}
+@keyframes cartel-baja {
+  0%   { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(14px); }
+}
+
+.es-entra.cartel,
+.es-entra .cartel { animation: cartel-entra var(--t-cartel) var(--ease-cartel) both; }
+.es-sale.cartel,
+.es-sale .cartel  { animation: cartel-sale  var(--t-cartel) var(--ease-cartel) both; }
+.es-entra.cartel .cartel__cuerpo,
+.es-entra .cartel .cartel__cuerpo { animation: cartel-sube var(--t-cartel) var(--ease-cartel) 80ms both; }
+.es-sale.cartel .cartel__cuerpo,
+.es-sale .cartel .cartel__cuerpo  { animation: cartel-baja var(--t-cartel) var(--ease-cartel) both; }
+
+/* ── barra de pruebas ─────────────────────────────────────────────────────
+   Solo para revisar los estados; no forma parte del HUD. Borra su <script>
+   del HTML para producción. */
+.estados {
+  position: fixed; left: 50%; translate: -50% 0; bottom: 9px; z-index: 80;
+  display: flex; align-items: center; gap: 8px;
+  height: 50px; padding: 0 14px; box-sizing: border-box;
+  border-radius: 6px; background: rgb(10 12 16 / 92%);
+  box-shadow: none;
+  font-family: 'Poppins', sans-serif;
+}
+.estados__etq { margin-right: 4px; font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #8b8d94; }
+.estados__btn { padding: 7px 12px; border: 0; border-radius: 4px; cursor: pointer; background: #22252c; color: #d7d8dd; font-family: inherit; font-size: 12px; font-weight: 600; }
+.estados__btn--pri { background: var(--atk-light); color: #08090c; }
+
+/* ══ AÑADIDO FUERA DEL PAQUETE DE DISEÑO ═══════════════════════════════════
+   El mapa que se está jugando, en los marcadores de serie. Tercer estado:
+   ni ganado ni vacío. Trazo del color del equipo —relleno significa ganado—
+   y `outline` en vez de `box-shadow`, que aquí no se usan sombras. */
+.serie i.en-curso {
+  outline: 2px solid var(--cl);
+  outline-offset: -2px;
+}

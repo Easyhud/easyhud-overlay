@@ -1,0 +1,132 @@
+{
+  "umbral": 0.1,
+  "fecha": "2026-09-12T09:30:01.268Z",
+  "filas": [
+    {
+      "nombre": "completa",
+      "distintos": 2528,
+      "pct": 0.12191358024691357,
+      "detalle": "diez vivos, todo el arte, insignias de seis siete y ocho lados"
+    },
+    {
+      "nombre": "bajas",
+      "distintos": 1893,
+      "pct": 0.09129050925925926,
+      "detalle": "tres muertos: tarjeta corta, retrato en gris, pie apagado, cero sin barra"
+    },
+    {
+      "nombre": "sin-dato",
+      "distintos": 2512,
+      "pct": 0.12114197530864196,
+      "detalle": "cinco jugadores sin su cliente: cartel en vez de un cero falso"
+    },
+    {
+      "nombre": "observado",
+      "distintos": 2511,
+      "pct": 0.12109375,
+      "detalle": "el foco ámbar: trazo de 2px y dos resplandores interiores"
+    },
+    {
+      "nombre": "nombres-largos",
+      "distintos": 2646,
+      "pct": 0.12760416666666666,
+      "detalle": "el corte con puntos suspensivos tiene que caer en la misma letra"
+    },
+    {
+      "nombre": "spike",
+      "distintos": 2775,
+      "pct": 0.13382523148148148,
+      "detalle": "el chip de ronda pasa a cuenta atrás"
+    },
+    {
+      "nombre": "duelo",
+      "distintos": 1842,
+      "pct": 0.08883101851851852,
+      "detalle": "uno contra uno: ocho tarjetas fuera y las dos columnas al centro"
+    },
+    {
+      "nombre": "minimo",
+      "distintos": 2390,
+      "pct": 0.11525848765432099,
+      "detalle": "el realizador pone su marcador: la franja de arriba se apaga entera"
+    },
+    {
+      "nombre": "un-mapa",
+      "distintos": 2528,
+      "pct": 0.12191358024691357,
+      "detalle": "serie a un mapa: no se pintan marcadores de serie"
+    },
+    {
+      "nombre": "cargas",
+      "distintos": 2486,
+      "pct": 0.11988811728395062,
+      "detalle": "rombos de una dos y tres cargas, y habilidades gastadas"
+    },
+    {
+      "nombre": "golpe-60ms",
+      "distintos": 4674,
+      "pct": 0.2254050925925926,
+      "detalle": "daño, baja, habilidad gastada y definitiva que se llena, a la vez"
+    },
+    {
+      "nombre": "golpe-160ms",
+      "distintos": 4600,
+      "pct": 0.2218364197530864,
+      "detalle": "daño, baja, habilidad gastada y definitiva que se llena, a la vez"
+    },
+    {
+      "nombre": "golpe-300ms",
+      "distintos": 4313,
+      "pct": 0.2079957561728395,
+      "detalle": "daño, baja, habilidad gastada y definitiva que se llena, a la vez"
+    },
+    {
+      "nombre": "golpe-900ms",
+      "distintos": 2272,
+      "pct": 0.1095679012345679,
+      "detalle": "daño, baja, habilidad gastada y definitiva que se llena, a la vez"
+    },
+    {
+      "nombre": "camara-60ms",
+      "distintos": 4364,
+      "pct": 0.21045524691358028,
+      "detalle": "el cambio de cámara: el foco ámbar se cruza en 220ms"
+    },
+    {
+      "nombre": "camara-110ms",
+      "distintos": 4754,
+      "pct": 0.2292631172839506,
+      "detalle": "el cambio de cámara: el foco ámbar se cruza en 220ms"
+    },
+    {
+      "nombre": "camara-220ms",
+      "distintos": 4625,
+      "pct": 0.2230420524691358,
+      "detalle": "el cambio de cámara: el foco ámbar se cruza en 220ms"
+    },
+    {
+      "nombre": "entra-duelo-150ms",
+      "distintos": 5178,
+      "pct": 0.24971064814814817,
+      "detalle": "uno contra uno: ocho tarjetas se van y las columnas viajan al centro"
+    },
+    {
+      "nombre": "entra-duelo-300ms",
+      "distintos": 5258,
+      "pct": 0.2535686728395062,
+      "detalle": "uno contra uno: ocho tarjetas se van y las columnas viajan al centro"
+    },
+    {
+      "nombre": "entra-duelo-520ms",
+      "distintos": 1698,
+      "pct": 0.08188657407407408,
+      "detalle": "uno contra uno: ocho tarjetas se van y las columnas viajan al centro"
+    },
+    {
+      "nombre": "entra-duelo-950ms",
+      "distintos": 1842,
+      "pct": 0.08883101851851852,
+      "detalle": "uno contra uno: ocho tarjetas se van y las columnas viajan al centro"
+    }
+  ]
+}

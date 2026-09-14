@@ -1,0 +1,186 @@
+/* ══ Base ══════════════════════════════════════════════════════════════════
+   Todas las pantallas son un lienzo fijo de 1920×1080 escalado al viewport.
+   El escalado NO se puede hacer en CSS puro: scale() exige un número y
+   100vw/1920 sigue siendo una longitud. Lo aplica js/escenario.js. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+
+/*
+ * Fondo TRANSPARENTE, no el color de página.
+ *
+ * Esto va encima del vídeo del juego en OBS: cualquier color opaco aquí tapa
+ * la partida. El paquete de diseño traía `var(--ink)` porque se miraba
+ * suelto en un navegador, con una captura de fondo para encuadrar. Esa
+ * captura ya no está y este color tampoco puede estar.
+ */
+html, body { background: transparent; }
+
+body {
+  color: #f2f2f3;
+  font-family: 'Poppins', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+a { color: var(--atk); }
+a:hover { color: var(--atk-light); }
+
+.escenario {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - var(--toolbar) / 2);
+  width: 1920px;
+  height: 1080px;
+  overflow: hidden;
+  transform-origin: center center;
+  /* transform lo escribe js/escenario.js */
+}
+.fondo {
+  position: absolute;
+  inset: 0;
+  background: center / cover no-repeat;
+}
+
+/* ══ Marcador superior ═════════════════════════════════════════════════════
+   Permanente: no entra ni sale con el resto. Deja libre el hueco central,
+   que es la zona segura del contador nativo del juego. */
+.marcador {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: stretch;
+  height: 60px;
+  font-family: 'Oswald', sans-serif;
+}
+.marcador__hueco { width: var(--safe-gap); margin: 0 -28px; }
+
+.equipo {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  flex: 0 0 220px;
+  height: 100%;
+  padding: 0 40px 4px;
+  background:
+    linear-gradient(90deg, rgb(0 0 0 / 0%) 45%, color-mix(in srgb, var(--c) 26%, transparent) 100%),
+    linear-gradient(180deg, rgb(255 255 255 / 7%) 0%, rgb(255 255 255 / 0%) 42%),
+    var(--panel);
+  box-shadow: var(--panel-edge);
+  /* Cuña: la punta apunta hacia FUERA en cada lado. */
+  clip-path: path('M 5,0 L 215,0 Q 220,0 220,5 L 220,55 Q 220,60 215,60 L 35,60 Q 30,60 27.76,55.53 L 2.24,4.47 Q 0,0 5,0 Z');
+}
+.equipo--der {
+  flex-direction: row-reverse;
+  clip-path: path('M 5,0 L 215,0 Q 220,0 217.76,4.47 L 192.24,55.53 Q 190,60 185,60 L 5,60 Q 0,60 0,55 L 0,5 Q 0,0 5,0 Z');
+}
+.equipo__filete {
+  position: absolute;
+  bottom: 0;
+  left: 32px;
+  width: 184px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--c);
+}
+.equipo--der .equipo__filete { left: 4px; }
+.equipo__logo { position: relative; z-index: 2; width: 38px; height: 38px; flex: 0 0 auto; object-fit: contain; }
+.equipo__tri {
+  position: relative; z-index: 2;
+  font-size: 21px; font-weight: 600; letter-spacing: .08em; line-height: 1;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 45%);
+}
+.equipo__sep { flex: 1; }
+.equipo__tanto {
+  position: relative; z-index: 2;
+  font-size: 29px; font-weight: 700; line-height: 1;
+  padding-right: 14px;
+  text-shadow: 0 2px 6px rgb(0 0 0 / 45%);
+}
+.equipo--der .equipo__tanto { padding-right: 0; padding-left: 14px; }
+
+/* Aletas del contador: triángulos rectángulos apuntando hacia fuera. */
+.aleta {
+  position: absolute;
+  top: 0;
+  width: 42px;
+  height: 72px;
+  z-index: 4;
+  background: #0f1923;
+}
+.aleta--izq {
+  right: calc(50% + 68px);
+  clip-path: path('M 5,0 L 37,0 Q 42,0 42,5 L 42,68 Q 42,72 39.98,68.54 L 2.52,4.32 Q 0,0 5,0 Z');
+}
+.aleta--der {
+  left: calc(50% + 68px);
+  clip-path: path('M 5,0 L 37,0 Q 42,0 39.98,3.46 L 2.02,68.54 Q 0,72 0,68 L 0,5 Q 0,0 5,0 Z');
+}
+.ronda-chip {
+  position: absolute;
+  top: 6px; left: 50%;
+  translate: -50% 0;
+  z-index: 4;
+  width: 200px;
+  text-align: center;
+  font-size: 10px; font-weight: 600; letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #e6e7ea;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgb(0 0 0 / 80%);
+}
+/* Marcadores de serie: se encienden de dentro hacia fuera. */
+.serie { position: absolute; top: 66px; display: flex; gap: 5px; z-index: 3; }
+.serie--izq { right: calc(50% + 120px); flex-direction: row-reverse; }
+.serie--der { left: calc(50% + 120px); }
+.serie i { width: 20px; height: 9px; border-radius: 3px; background: rgb(255 255 255 / 26%); }
+.serie i.on { background: var(--cl); }
+
+/* ══ Animaciones ═══════════════════════════════════════════════════════════
+   REGLA DEL SISTEMA: el fotograma 0% es el estado FINAL VISIBLE y el salto al
+   inicial ocurre en 0.01%. Así, si el reloj de animación del contexto está
+   parado (iframes throttled, capturas), el contenido se ve igual en vez de
+   quedarse invisible por el relleno 'both'. */
+@keyframes entra-izq {
+  0%    { opacity: 1; transform: none; }
+  0.01% { opacity: 0; transform: translateX(-70px); }
+  100%  { opacity: 1; transform: none; }
+}
+@keyframes sale-izq { 0% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(-70px); } }
+@keyframes entra-der {
+  0%    { opacity: 1; transform: none; }
+  0.01% { opacity: 0; transform: translateX(70px); }
+  100%  { opacity: 1; transform: none; }
+}
+@keyframes sale-der { 0% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateX(70px); } }
+/* Apertura desde el eje: carteles y bandas. */
+@keyframes abre-eje {
+  0%    { clip-path: inset(0 0 0 0); }
+  0.01% { clip-path: inset(0 50% 0 50%); }
+  100%  { clip-path: inset(0 0 0 0); }
+}
+@keyframes cierra-eje { 0% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 50% 0 50%); } }
+@keyframes sube {
+  0%    { opacity: 1; transform: none; }
+  0.01% { opacity: 0; transform: translateY(14px); }
+  100%  { opacity: 1; transform: none; }
+}
+@keyframes baja { 0% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(14px); } }
+@keyframes late { 0%, 100% { opacity: 1; } 50% { opacity: .55; } }
+/* Impacto recibido. */
+@keyframes golpe { 0% { opacity: 0; } 12% { opacity: .85; } 100% { opacity: 0; } }
+/* Ultimate lista: anillo que se abre una vez. */
+@keyframes anillo {
+  0%   { opacity: .9; transform: scale(1); }
+  100% { opacity: 0;  transform: scale(2.5); }
+}
+
+.entra-izq { animation: entra-izq var(--move) var(--ease) both; }
+.sale-izq  { animation: sale-izq  var(--move) var(--ease) both; }
+.entra-der { animation: entra-der var(--move) var(--ease) both; }
+.sale-der  { animation: sale-der  var(--move) var(--ease) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 1ms !important; animation-delay: 0ms !important; }
+}

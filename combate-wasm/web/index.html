@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Easy HUD · combate</title>
+<link rel="stylesheet" href="../../fonts.css">
+<style>
+  /* Fondo transparente: esto va encima del vídeo del juego en OBS y
+     cualquier color opaco aquí tapa la partida. */
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  canvas {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform-origin: center center;
+  }
+</style>
+</head>
+<body>
+<!--
+  COMBATE — en directo, sobre lienzo.
+
+  Toda la pantalla es este elemento. No hay marcado que leer: la composición
+  vive dentro de `escena.wasm` y lo que cruza hasta el JS son órdenes de
+  dibujo numeradas.
+-->
+<canvas id="hud" width="1920" height="1080"></canvas>
+
+<script type="module">
+  import { monta } from "./hud.js";
+  import { suscribe } from "../../combate/js/datos.js";
+
+  const hud = await monta({ lienzo: document.getElementById("hud"), suscribe });
+  hud.arranca();
+</script>
+</body>
+</html>

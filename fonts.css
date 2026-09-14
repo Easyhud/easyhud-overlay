@@ -1,0 +1,38 @@
+/*
+ * GENERADO por tools/fetch-fonts.mjs — no editar a mano.
+ *
+ * Tipografías autoalojadas: el overlay no pide fuentes por red. Ver
+ * fonts/NOTICE.md para la licencia.
+ */
+
+@font-face {
+  font-family: 'Oswald';
+  font-style: normal;
+  font-weight: 500 700;
+  font-display: block;
+  src: url('./fonts/oswald-var.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url('./fonts/poppins-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url('./fonts/poppins-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Poppins';
+  font-style: normal;
+  font-weight: 600;
+  font-display: block;
+  src: url('./fonts/poppins-600.woff2') format('woff2');
+}

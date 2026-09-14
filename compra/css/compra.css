@@ -1,0 +1,310 @@
+/* ══ Fase de compra ════════════════════════════════════════════════════════
+   OJO con --atk-light: en combate vale el celeste-verdoso #0affbf porque lo
+   necesita la barra de vida. Compra usa el verde suave del original, así que
+   tiene su propio claro y su propia curva; tocar los tokens rompería combate. */
+:root {
+  --atk-claro: #63e0bb;
+  --ease-compra: cubic-bezier(.16, .84, .28, 1);
+}
+/*
+   Cinco filas a todo el ancho, cada una enfrentando a los dos rivales. La
+   mitad derecha es el espejo exacto de la izquierda. */
+.tablero { position: absolute; bottom: 16px; left: 0; width: 1920px; display: flex; flex-direction: column; gap: 4px; }
+
+.fila { display: flex; align-items: stretch; width: 100%; height: 62px; overflow: hidden; }
+.mitad {
+  position: relative;
+  display: flex; align-items: center; gap: 10px;
+  flex: 1 1 0; min-width: 0;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding-left: 18px;
+  box-shadow: none;
+  background: linear-gradient(90deg,
+    color-mix(in srgb, var(--c) 20%, #14161b) 0%,
+    color-mix(in srgb, var(--c) 5%, #15171c) 34%,
+    rgb(19 21 26 / 96%) 100%);
+}
+.mitad--der {
+  flex-direction: row-reverse;
+  padding-left: 0; padding-right: 18px;
+  background: linear-gradient(270deg,
+    color-mix(in srgb, var(--c) 20%, #14161b) 0%,
+    color-mix(in srgb, var(--c) 5%, #15171c) 34%,
+    rgb(19 21 26 / 96%) 100%);
+}
+.mitad__filo { position: absolute; top: 0; bottom: 0; left: 0; width: 4px; background: var(--c); }
+.mitad--der .mitad__filo { left: auto; right: 0; }
+.fila__sep { width: 3px; flex: 0 0 auto; background: rgb(255 255 255 / 14%); }
+/* El claro de cada bando: el atacante usa el verde suave de compra, no el
+   celeste-verdoso que necesita la barra de vida en combate. */
+.mitad:not(.mitad--der) { --cl: var(--atk-claro); }
+.tiempos { --cl: var(--atk-claro); }
+.banda__mitad--der .tiempos { --cl: var(--def-light); }
+
+/* Separadores: cada bloque de datos es una casilla. */
+.corte { width: 1px; height: 100%; flex: 0 0 auto; background: rgb(255 255 255 / 9%); }
+
+/* Dinero: gasto de la ronda y saldo pesan IGUAL (21px los dos). El bloque
+   tiene ancho fijo para que los números no bailen entre filas. */
+.dinero { display: flex; align-items: center; justify-content: center; gap: 7px; width: 158px; flex: 0 0 auto; }
+.mitad--der .dinero { flex-direction: row-reverse; }
+.dinero__gasto { font-family: 'Oswald', sans-serif; font-size: 21px; font-weight: 500; line-height: 1; color: #a8aab1; font-variant-numeric: tabular-nums; }
+.dinero__icono { width: 13px; height: 13px; flex: 0 0 auto; filter: brightness(0) invert(1); background: center / contain no-repeat; }
+.mitad--der .dinero__icono { order: 2; }
+.dinero__saldo { font-family: 'Oswald', sans-serif; font-size: 21px; font-weight: 600; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+.mitad--der .dinero__saldo { order: 1; }
+
+/* Habilidades: las tres básicas juntas, la definitiva separada — es otra
+   categoría, no una habilidad más. */
+.equipo-hab { display: flex; align-items: center; justify-content: center; gap: 26px; width: 196px; flex: 0 0 auto; }
+.mitad--der .equipo-hab { flex-direction: row-reverse; }
+.basicas { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; }
+.mitad--der .basicas { flex-direction: row-reverse; }
+.hab-c { display: flex; flex-direction: column; align-items: center; gap: 3px; flex: 0 0 auto; }
+.hab-c__icono { width: 23px; height: 23px; filter: brightness(0) invert(1); opacity: .92; background: center / contain no-repeat; }
+.hab-c__icono--vacio { opacity: .2; }
+.hab-c__cargas { display: flex; gap: 3px; height: 4px; align-items: center; }
+.hab-c__cargas i { width: 4px; height: 4px; rotate: 45deg; border-radius: 1px; display: block; background: rgb(255 255 255 / 20%); }
+.hab-c__cargas i.on { background: var(--cl); }
+
+/* Insignia de definitiva: polígono de tantos lados como puntos cuesta. */
+.ulti-c { position: relative; display: grid; place-items: center; width: 40px; height: 40px; flex: 0 0 auto; }
+.ulti-c__trazo { position: absolute; inset: -4px; z-index: 0; background: #1a1c22; }
+.ulti-c__dentro { position: relative; display: grid; place-items: center; width: 30px; height: 30px; z-index: 2; background: #1a1c22; }
+.ulti-c__icono { width: 18px; height: 18px; position: relative; z-index: 3; filter: brightness(0) invert(1); opacity: .5; background: center / contain no-repeat; }
+.ulti-c--lista .ulti-c__icono { opacity: 1; }
+
+/* Escudo y armas: el escudo es el icono real del juego, no una cifra. Dos
+   ranuras fijas de arma — la primaria vacía deja su hueco a la vista, porque
+   no comprar arma también es información. */
+.equipo-arma { display: flex; align-items: center; justify-content: center; gap: 16px; width: 200px; flex: 0 0 auto; box-sizing: border-box; }
+.mitad--der .equipo-arma { flex-direction: row-reverse; }
+.escudo-c { width: 24px; height: 24px; flex: 0 0 auto; filter: brightness(0) invert(1); opacity: .95; background: center / contain no-repeat; }
+.escudo-c--sin { opacity: 0; }
+.arma-sec { width: 34px; height: 20px; flex: 0 0 auto; filter: brightness(0) invert(1); opacity: .92; background: center / contain no-repeat; }
+.arma-pri { width: 86px; height: 22px; flex: 0 0 auto; filter: brightness(0) invert(1); opacity: .92; background: center / contain no-repeat; }
+.arma-pri--vacia { opacity: 0; }
+/* El cañón apunta al centro de la pantalla: el bando izquierdo va espejado. */
+.mitad:not(.mitad--der) .arma-sec,
+.mitad:not(.mitad--der) .arma-pri { scale: -1 1; }
+
+/* Identidad: retrato a sangre, nick y KDA, con fondo propio. Ancho FIJO: con
+   dos elementos elásticos por fila las divisiones verticales bailaban. */
+.ident {
+  display: flex; align-items: center; gap: 14px;
+  height: 100%; width: 300px; flex: 0 0 auto;
+  /* 300 de contenido MÁS 18 de aire, igual que el original. */
+  box-sizing: content-box;
+  padding-right: 18px;
+  background: linear-gradient(90deg, rgb(30 33 40 / 92%), rgb(22 25 31 / 92%));
+}
+.mitad--der .ident { flex-direction: row-reverse; padding-right: 0; padding-left: 18px; background: linear-gradient(270deg, rgb(30 33 40 / 92%), rgb(22 25 31 / 92%)); }
+.ident__retrato { width: 62px; height: 100%; flex: 0 0 auto; background: top center / cover no-repeat; }
+.ident__nick { font-family: 'Oswald', sans-serif; font-size: 21px; font-weight: 500; line-height: 1.24; letter-spacing: .03em; color: #fff; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.mitad--der .ident__nick { text-align: right; }
+.ident__kda { font-family: 'Oswald', sans-serif; font-size: 19px; font-weight: 600; line-height: 1; letter-spacing: .03em; color: #c9cad0; width: 70px; flex: 0 0 auto; font-variant-numeric: tabular-nums; text-align: left; }
+.mitad--der .ident__kda { text-align: right; }
+.elastico { flex: 1; }
+
+/* ══ Banda de serie ════════════════════════════════════════════════════════
+   Dos mitades que se abren por el eje entre las rondas 12 y 13, cada una
+   arrastrando su bloque de equipo, sus tiempos y sus doce rondas. */
+.banda { width: 1920px; height: 70px; flex: 0 0 auto; display: flex; align-items: stretch; margin-bottom: 6px; }
+/* Sin sombra: el HUD del juego no las tiene, y con ella la banda parece una
+   ventana pegada encima en vez de parte del juego. */
+.banda__mitad { flex: 1 1 0; min-width: 0; display: flex; align-items: stretch; }
+
+.banco {
+  position: relative;
+  overflow: hidden;
+  display: flex; align-items: center; gap: 16px;
+  width: 430px; flex: 0 0 auto;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 0 26px;
+  justify-content: flex-end;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--c) 88%, #05070a) 0%, var(--c) 100%);
+}
+.banco--der { flex-direction: row-reverse; background: linear-gradient(270deg, color-mix(in srgb, var(--c) 88%, #05070a) 0%, var(--c) 100%); }
+/* Logo extruido de fondo, media banda de alto: capas OPACAS con paso corto.
+   Con capas semitransparentes cada borde se suma y parece un halo borroso. */
+.extruido { position: absolute; top: 50%; left: -20px; translate: 0 -50%; width: 230px; height: 230px; z-index: 0; pointer-events: none; opacity: .5; }
+.banco--der .extruido { left: auto; right: -20px; }
+.extruido > div { position: relative; width: 100%; height: 100%; animation: logo-orbit 9s ease-in-out infinite; }
+.extruido i { position: absolute; inset: 0; background: center / contain no-repeat; }
+@keyframes logo-orbit {
+  0%   { transform: rotate(-2.5deg) scale(.98); }
+  50%  { transform: rotate(2.5deg)  scale(1.03); }
+  100% { transform: rotate(-2.5deg) scale(.98); }
+}
+.banco__texto { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; }
+.banco--der .banco__texto { align-items: flex-start; }
+.banco__tri { font-family: 'Oswald', sans-serif; font-size: 34px; font-weight: 700; line-height: 1; letter-spacing: .05em; color: #fff; }
+.banco__fila { display: flex; align-items: center; gap: 6px; }
+.banco--der .banco__fila { flex-direction: row-reverse; }
+.banco__etq { font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #fff; }
+.banco__icono { width: 13px; height: 13px; flex: 0 0 auto; filter: brightness(0) invert(1); background: center / contain no-repeat; }
+.banco__val { font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 700; line-height: 1; color: #fff; font-variant-numeric: tabular-nums; }
+
+.tiempos { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; width: 110px; flex: 0 0 auto; height: 100%; background: rgb(14 16 21 / 96%); }
+.tiempos__etq { font-size: 9px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #8b8d94; }
+.tiempos__pips { display: flex; gap: 5px; }
+.tiempos__pips i { width: 22px; height: 4px; display: block; border-radius: 2px; background: rgb(255 255 255 / 18%); }
+.tiempos__pips i.on { background: var(--cl); }
+
+/* Historial: cada ronda es una columna de dos casillas. Arriba el bando de
+   ataque, abajo el de defensa. La casilla del ganador lleva su color y el
+   icono del motivo; la de enfrente, el número. Las rondas por jugar funden
+   las dos casillas en un rectángulo único. */
+.historial { flex: 1; min-width: 0; display: flex; align-items: stretch; justify-content: center; gap: 2px; height: 100%; box-sizing: border-box; overflow: hidden; background: rgb(10 12 16 / 96%); }
+.hcol { position: relative; display: flex; flex-direction: column; gap: 2px; flex: 1 1 0; min-width: 0; padding: 2px 0; }
+.hcel {
+  display: flex; align-items: center; justify-content: center;
+  width: 100%; flex: 1 1 0; box-sizing: border-box;
+  font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: rgb(255 255 255 / 6%); color: #e6e7ea;
+}
+.hcel--gana { color: #08090c; font-size: 14px; }
+.hcel--atk { background: var(--atk); }
+.hcel--def { background: var(--def); }
+.hcel i { width: 17px; height: 17px; filter: brightness(0) invert(1); background: center / contain no-repeat; }
+.hcel--pend { display: grid; place-items: center; }
+
+
+/* ══ ANIMACIONES DE ESTADO ═════════════════════════════════════════════════
+   La compra entra al acabar la ronda anterior y sale cuando arranca la
+   siguiente. Cada estado es una CLASE que se pone o se quita.
+
+   ┌ estado ──────────────┬ clase ──────────────┬ dónde va ──────────────────┐
+   │ entra el tablero     │ .es-entra           │ .tablero                   │
+   │ sale el tablero      │ .es-sale            │ .tablero                   │
+   │ compran (gasta)      │ .es-compra          │ .mitad (quitar a 420ms)    │
+   │ ultimate lista       │ .ulti-c--lista      │ .ulti-c                    │
+   └──────────────────────┴─────────────────────┴────────────────────────────┘
+
+   Convención de TODOS los @keyframes: el 0% es el estado final visible y el
+   salto al inicial ocurre en el 0.01%. Así, si el reloj de animación no corre
+   (captura, pestaña en segundo plano), el tablero se ve completo en vez de
+   vacío. */
+:root {
+  --t-mueve: 300ms;   /* entrada y salida: el mismo gesto al derecho y al revés */
+  --t-desfase: 38ms;  /* retardo acumulado entre filas */
+  --t-compra: 420ms;
+}
+
+/* ── las filas entran por su filo ─────────────────────────────────────────
+   Cada mitad viene de su propio lado de la pantalla, igual que las columnas
+   de combate: así el gesto es el mismo en las dos vistas. */
+/* El sostén del 0,01 % va SOLO en las entradas: si el reloj de animación no
+   corre (captura, pestaña de fondo), el tablero se ve completo. En las salidas
+   el recorrido arranca en el primer fotograma, o se vería un corte seco. */
+@keyframes compra-entra-izq {
+  0%    { opacity: 1; transform: none; }
+  0.01% { opacity: 0; transform: translateX(-70px); }
+  100%  { opacity: 1; transform: none; }
+}
+@keyframes compra-entra-der {
+  0%    { opacity: 1; transform: none; }
+  0.01% { opacity: 0; transform: translateX(70px); }
+  100%  { opacity: 1; transform: none; }
+}
+@keyframes compra-sale-izq {
+  0%   { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateX(-70px); }
+}
+@keyframes compra-sale-der {
+  0%   { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateX(70px); }
+}
+.es-entra .mitad:not(.mitad--der),
+.es-entra .fila__sep { animation: compra-entra-izq var(--t-mueve) var(--ease-compra) both; }
+.es-entra .mitad--der { animation: compra-entra-der var(--t-mueve) var(--ease-compra) both; }
+.es-sale  .mitad:not(.mitad--der),
+.es-sale  .fila__sep { animation: compra-sale-izq  var(--t-mueve) var(--ease-compra) both; }
+.es-sale  .mitad--der { animation: compra-sale-der  var(--t-mueve) var(--ease-compra) both; }
+
+/* El desfase por fila lo declara el CSS, no hace falta calcularlo en JS. Va
+   DESPUÉS del atajo `animation`, que si no lo repone a 0. */
+.fila:nth-child(1) { --i: 0; } .fila:nth-child(2) { --i: 1; }
+.fila:nth-child(3) { --i: 2; } .fila:nth-child(4) { --i: 3; }
+.fila:nth-child(5) { --i: 4; }
+.es-entra .fila .mitad,
+.es-entra .fila .fila__sep,
+.es-sale .fila .mitad,
+.es-sale .fila .fila__sep { animation-delay: calc(var(--i) * var(--t-desfase)); }
+
+/* ── la banda se abre por el eje 12/13 ───────────────────────────────────
+   Cada mitad colapsa contra su borde EXTERIOR y entra desplazándose hacia el
+   centro, de modo que el corte entre la ronda 12 y la 13 es lo último que se
+   cierra. Los nombres dicen a qué mitad van: la izquierda colapsa por su
+   izquierda, no al revés. */
+@keyframes banda-entra-izq {
+  0%    { clip-path: inset(0 100% 0 0); transform: none; }
+  0.01% { clip-path: inset(0 100% 0 0); transform: translateX(-50%); }
+  100%  { clip-path: inset(0 0 0 0);    transform: none; }
+}
+@keyframes banda-entra-der {
+  0%    { clip-path: inset(0 0 0 100%); transform: none; }
+  0.01% { clip-path: inset(0 0 0 100%); transform: translateX(50%); }
+  100%  { clip-path: inset(0 0 0 0);    transform: none; }
+}
+@keyframes banda-sale-izq {
+  0%   { clip-path: inset(0 0 0 0);    transform: none; }
+  100% { clip-path: inset(0 100% 0 0); transform: translateX(-50%); }
+}
+@keyframes banda-sale-der {
+  0%   { clip-path: inset(0 0 0 0);    transform: none; }
+  100% { clip-path: inset(0 0 0 100%); transform: translateX(50%); }
+}
+.es-entra .banda__mitad--izq { animation: banda-entra-izq var(--t-mueve) var(--ease-compra) both; }
+.es-entra .banda__mitad--der { animation: banda-entra-der var(--t-mueve) var(--ease-compra) both; }
+.es-sale  .banda__mitad--izq { animation: banda-sale-izq  var(--t-mueve) var(--ease-compra) both; }
+.es-sale  .banda__mitad--der { animation: banda-sale-der  var(--t-mueve) var(--ease-compra) both; }
+
+/* ── compran ─────────────────────────────────────────────────────────────
+   El gasto aparece y el saldo baja: la cifra da un pulso corto para que se
+   vea de dónde sale el descuento. */
+@keyframes compra-gasto {
+  0%    { opacity: 1; transform: none; }
+  0.01% { opacity: 0; transform: translateX(6px); }
+  100%  { opacity: 1; transform: none; }
+}
+@keyframes compra-saldo {
+  0%    { transform: none; }
+  0.01% { transform: scale(1.12); }
+  100%  { transform: none; }
+}
+.dinero__saldo { transition: color 400ms ease; }
+.mitad.es-compra .dinero__gasto { animation: compra-gasto var(--t-compra) var(--ease-compra) both; }
+.mitad.es-compra .dinero__saldo { animation: compra-saldo var(--t-compra) var(--ease-compra) both; }
+
+/* ── ultimate lista ──────────────────────────────────────────────────────
+   Halo fijo, sin parpadeo: en directo, lo que late molesta. La clase ya se
+   aplica al pintar; el brillo del trazo lo pone el generador. */
+.ulti-c__trazo { transition: filter 500ms ease; }
+
+/* ── barra de pruebas ────────────────────────────────────────────────────
+   Solo para revisar los estados; no forma parte del HUD. */
+.estados {
+  position: fixed; left: 50%; translate: -50% 0; bottom: 9px; z-index: 80;
+  display: flex; align-items: center; gap: 8px;
+  height: 50px; padding: 0 14px; box-sizing: border-box;
+  border-radius: 6px; background: rgb(10 12 16 / 92%);
+  box-shadow: none;
+  font-family: 'Poppins', sans-serif;
+}
+.estados__etq { margin-right: 4px; font-size: 10px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: #8b8d94; }
+.estados__btn { padding: 7px 12px; border: 0; border-radius: 4px; cursor: pointer; background: #22252c; color: #d7d8dd; font-family: inherit; font-size: 12px; font-weight: 600; }
+.estados__btn--pri { background: var(--atk-claro); color: #08090c; }
+
+/* ══ AÑADIDO FUERA DEL PAQUETE DE DISEÑO ═══════════════════════════════════
+   El mapa que se está jugando, en los marcadores de serie. Tercer estado:
+   ni ganado ni vacío. Trazo del color del equipo —relleno significa ganado—
+   y `outline` en vez de `box-shadow`, que aquí no se usan sombras. */
+.serie i.en-curso {
+  outline: 2px solid var(--cl);
+  outline-offset: -2px;
+}

@@ -1,0 +1,45 @@
+/* ══ Pausa ═════════════════════════════════════════════════════════════════
+   Dos tipos, y la diferencia no es solo el texto:
+
+   · Tiempo muerto — lo pide un equipo, así que lleva SU color, su logo al
+     fondo y los tiempos que le quedan.
+   · Pausa técnica — la pide la producción: va en gris neutro, sin logo y sin
+     marcadores, porque no hay cupo que contar.                              */
+
+.pausa__reloj {
+  display: flex; align-items: center; gap: 20px;
+  width: 100%;
+  margin: 9px 0 11px;         /* mismos márgenes ópticos que el dato mayor */
+}
+.pausa__reloj .cartel__dato { margin: 0; }
+
+.pausa__pista {
+  position: relative; flex: 1;
+  height: 8px; border-radius: 2px; overflow: hidden;
+  background: rgb(255 255 255 / 12%);
+}
+.pausa__relleno {
+  position: absolute; left: 0; top: 0;
+  height: 8px; border-radius: 2px;
+  background: linear-gradient(90deg, var(--cl), var(--c));
+}
+
+/* Cupo de tiempos muertos, como marcadores: se cuentan de un vistazo, sin
+   leer «1 de 3». */
+.pausa__cupo { display: flex; align-items: center; gap: 12px; }
+.pausa__pips { display: flex; gap: 5px; }
+.pausa__pips i {
+  display: block;
+  width: 22px; height: 8px; border-radius: 3px;
+  background: rgb(255 255 255 / 20%);
+}
+.pausa__pips i.on { background: var(--cl); }
+
+.pausa__cab { display: flex; align-items: baseline; gap: 14px; }
+/* El tipo de pausa manda sobre quién la pide. */
+.pausa__tipo {
+  font-family: 'Oswald', sans-serif;
+  font-size: 34px; font-weight: 600; line-height: 1;
+  letter-spacing: .04em; text-transform: uppercase;
+  color: #fff;
+}

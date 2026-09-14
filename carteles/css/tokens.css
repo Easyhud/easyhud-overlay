@@ -1,0 +1,53 @@
+:root {
+  /* ── Paleta ───────────────────────────────────────────────────────────────
+     Dos bandos. El claro es el punto más brillante (vida, cifras vivas); el
+     plano es el color de identidad (filetes, rellenos). */
+  --atk: #43cfa4;
+  --atk-light: #0affbf;
+  --def: #e05561;
+  --def-light: #f0808a;
+
+  /* Tinta y grises */
+  --ink: #05070a;
+  --ink-2: #0b0d11;
+  --panel-a: rgb(38 41 49 / 96%);
+  --panel-b: rgb(18 20 25 / 95%);
+  --panel-dead-a: rgb(16 18 23 / 86%);
+  --panel-dead-b: rgb(8 9 12 / 82%);
+  --text: #ffffff;
+  --text-2: #d7d8dd;
+  --text-3: #c9cad0;
+  --text-mute: #9a9ca3;
+  --text-dim: #8b8d94;
+  --text-dead: #6b6e76;
+
+  /* Acentos funcionales */
+  --observed: #ffc857;      /* jugador observado */
+  --core: #4fd8ff;          /* núcleo de la spike */
+
+  /* Material de panel: gris en diagonal a 160°, filo superior claro. */
+  --panel: linear-gradient(160deg, var(--panel-a), var(--panel-b));
+  --panel-edge: inset 0 1px 0 rgb(255 255 255 / 10%);
+  --panel-shadow: 0 6px 18px rgb(0 0 0 / 45%);
+
+  /* Geometría */
+  --r: 4px;                 /* radio único del sistema */
+  --safe-gap: 196px;        /* hueco del contador nativo del juego */
+  --toolbar: 0px;          /* reserva inferior al escalar */
+
+  /* Movimiento */
+  --move: 300ms;            /* entrada/salida de columnas y filas */
+  --move-slow: 420ms;       /* carteles */
+  --stagger: 38ms;          /* desfase entre tarjetas */
+  --ease: cubic-bezier(.22, .61, .24, 1);
+  --ease-pop: cubic-bezier(.2, 1.5, .4, 1);
+}
+
+/* Tipografía: Oswald para dato, Poppins para etiqueta. Sin excepciones. */
+.dato { font-family: 'Oswald', sans-serif; font-variant-numeric: tabular-nums; }
+.etiqueta {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>banco · lienzo</title>
+<link rel="stylesheet" href="../../fonts.css">
+<style>
+  /* Sin escalado y pegado a la esquina: el banco captura la ventana entera a
+     1920×1080, igual que la versión DOM con su escala a 1. */
+  html, body { margin: 0; background: transparent; overflow: hidden; }
+  canvas { display: block; position: absolute; left: 0; top: 0; transform-origin: center center; }
+</style>
+</head>
+<body>
+<canvas id="hud" width="1920" height="1080"></canvas>
+
+<script type="module">
+import { monta } from "../web/hud.js";
+import { ESCENAS, SECUENCIAS, prepara, preparaSecuencia } from "./escenas.js";
+
+const params = new URLSearchParams(location.search);
+const secuencia = SECUENCIAS.find((s) => s.nombre === params.get("secuencia"));
+const escena = ESCENAS.find((e) => e.nombre === (params.get("escena") ?? "completa"));
+if (secuencia === undefined && escena === undefined) throw new Error("no existe esa escena");
+
+const hud = await monta({
+  lienzo: document.getElementById("hud"),
+  suscribe: null,
+  /* El banco de fidelidad mide a 1:1 y quiere el lienzo pegado a la esquina;
+     el de resolución sí necesita el escalado de producción. */
+  escalar: params.get("ajustar") === "1",
+});
+
+/*
+ * El reloj se elige a mano y no se deja correr.
+ *
+ * La escena se escribe en el instante cero y se pinta en el dos mil: dos
+ * segundos después, todas las transiciones y todas las entradas han terminado,
+ * que es el mismo sitio donde se le hace la foto a la versión DOM. Comparar un
+ * fotograma en movimiento contra otro exigiría que los dos relojes estuvieran
+ * sincronizados al milisegundo, y no lo están.
+ */
+const T0 = 0;
+const ASENTADO = 2000;
+
+const partida = secuencia === undefined ? prepara(escena) : preparaSecuencia(secuencia, "desde");
+hud.escribe(partida, T0);
+/* El primer pintado es el que da de alta las tarjetas y arranca sus relojes;
+   el segundo las encuentra ya asentadas. */
+hud.pinta(T0);
+hud.pinta(ASENTADO);
+
+/* El arte del CDN no está el primer fotograma. Se espera a tenerlo y se vuelve
+   a pintar con el MISMO reloj, así que el fotograma es idéntico salvo por las
+   imágenes que faltaban. */
+await hud.recursos.cargado();
+hud.pinta(ASENTADO);
+
+/*
+ * El salto de estado, si es una secuencia.
+ *
+ * El orden importa y es el mismo que en la versión DOM: primero se pinta EN el
+ * instante del salto —ahí es donde se deducen los sucesos comparando con la
+ * foto anterior— y solo después se avanza el reloj. Pintar directamente en
+ * `+t` haría que el destello de daño empezara en ese momento en lugar de
+ * llevar ya `t` milisegundos corriendo.
+ */
+if (secuencia !== undefined) {
+  const t = Number(params.get("t") ?? 0);
+  hud.escribe(preparaSecuencia(secuencia, "hasta"), ASENTADO);
+  hud.pinta(ASENTADO);
+  hud.pinta(ASENTADO + t);
+}
+
+await new Promise((r) => requestAnimationFrame(r));
+
+window.hud = hud;
+document.title = "listo";
+window.bancoListo = true;
+</script>
+</body>
+</html>

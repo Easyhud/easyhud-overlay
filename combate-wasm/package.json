@@ -1,0 +1,17 @@
+{
+  "name": "@easy-hud/combate-wasm",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pantalla de combate compuesta en WebAssembly y pintada en un lienzo",
+  "scripts": {
+    "build": "asc assembly/index.ts --config asconfig.json --target release",
+    "build:debug": "asc assembly/index.ts --config asconfig.json --target debug"
+  },
+  "devDependencies": {
+    "assemblyscript": "^0.27.31",
+    "pixelmatch": "^7.2.0",
+    "pngjs": "^7.0.0",
+    "puppeteer-core": "^25.10.0"
+  }
+}
