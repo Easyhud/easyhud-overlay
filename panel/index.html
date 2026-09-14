@@ -5,19 +5,34 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Panel · Easy HUD</title>
     <link rel="stylesheet" href="css/panel.css" />
+    <link rel="stylesheet" href="css/shell.css" />
   </head>
   <body>
     <!--
-      EL PANEL DE OPERADOR.
-      =====================
+      EL PANEL DE OPERADOR — y, desde el rediseño, TODA la interfaz del exe.
+      =====================================================================
 
       Esto NO es una pantalla de emisión: no sale por antena, sale en el
-      teléfono o en el segundo monitor del que realiza. Por eso rompe dos
-      costumbres del overlay a propósito:
+      segundo monitor del que realiza. Por eso rompe dos costumbres del
+      overlay a propósito:
 
-        - No hay lienzo fijo de 1920×1080 ni escalado. Aquí manda el
-          dispositivo, y el dispositivo suele ser un móvil en vertical.
+        - No hay lienzo fijo de 1920×1080 ni escalado. Aquí manda la ventana.
         - Sí hay interacción, foco visible y objetivos de 44 px.
+
+      ## Ya no hay versión web
+
+      Antes este mismo fichero se servía en dos sitios: el VPS, en
+      `easyhud.net/operador`, y una copia empaquetada dentro del exe. El mismo
+      documento bajo dos raíces distintas, que produjo dos fallos reales —el
+      botón de salir dejaba el panel en blanco, y la dirección de OBS salía con
+      el token dentro— y además era una puerta pública por donde copiarse el
+      código. Ahora vive sólo dentro del programa.
+
+      ## Es el documento de la ventana, no un iframe
+
+      El exe ya no monta una aplicación de Angular que meta esto en un iframe.
+      Esta página ES la ventana: `shell.js` le pone la barra de título, la
+      puerta de acceso y los atajos alrededor.
 
       ## Dos niveles, y el segundo no existe sin el primero
 
@@ -30,6 +45,35 @@
 
       Las pestañas no aparecen hasta que hay algo que gobernar.
     -->
+
+    <!-- LA BARRA DE TÍTULO. La ventana va sin marco nativo: toda la barra
+         arrastra (`-webkit-app-region: drag` en el CSS) y los botones no. -->
+    <div class="barra" id="barra">
+      <!-- La marca sale del propio panel, no de un icono del cliente: así este
+           documento no depende de ficheros de otro repo para pintarse. -->
+      <div class="barra__marca">
+        <img src="assets/wordmark-easy.svg" alt="Easy" class="barra__logo" width="42" height="16" />
+        <span class="barra__nombre" translate="no">HUD</span>
+      </div>
+      <div class="barra__botones">
+        <button class="barra__btn barra__btn--ancho" type="button" id="bt-atajos" title="Atajos de teclado">
+          <svg width="15" height="10" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
+            <rect x="0.5" y="0.5" width="15" height="10" rx="1.5" />
+            <path d="M3 3h1M6 3h1M9 3h1M12 3h1M3 6h1M6 6h1M9 6h1M12 6h1M4.5 8.5h7" stroke-linecap="round" />
+          </svg>
+          <span>Atajos</span>
+        </button>
+        <button class="barra__btn" type="button" id="bt-minimizar" aria-label="Minimizar">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="0" y="4.5" width="10" height="1" fill="currentColor" /></svg>
+        </button>
+        <button class="barra__btn" type="button" id="bt-maximizar" aria-label="Maximizar">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" /></svg>
+        </button>
+        <button class="barra__btn barra__btn--cerrar" type="button" id="bt-cerrar" aria-label="Cerrar">
+          <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M0 0 L10 10 M10 0 L0 10" stroke="currentColor" /></svg>
+        </button>
+      </div>
+    </div>
 
     <header class="cabecera">
       <div class="cabecera__caja">
@@ -558,8 +602,94 @@
       <div id="avisos" style="margin: 22px 0"></div>
     </main>
 
-    <!-- socket.io se reutiliza del overlay: mismo fichero, misma versión, y
-         así el panel tampoco pide nada por red a un tercero. -->
-    <script type="module" src="js/panel.js"></script>
+    <!-- LA PUERTA. Sin permiso de emisión vigente no se ve nada más. Se dibuja
+         ENCIMA del panel, no en su sitio: así el panel de debajo no se
+         desmonta y no pierde lo que el operador tuviera escrito. -->
+    <div class="acceso" id="acceso" hidden>
+      <div class="acceso__fondo" aria-hidden="true"></div>
+      <div class="acceso__caja">
+        <div class="acceso__cabeza">
+          <img src="assets/wordmark-easy.svg" alt="Easy" width="60" height="23" />
+          <span class="acceso__palabra" translate="no">HUD</span>
+          <span class="acceso__marcha" id="ac-marcha" data-vivo="no">
+            <i class="acceso__punto" aria-hidden="true"></i>
+            <span data-texto>Observador</span>
+          </span>
+        </div>
+
+        <form class="acceso__cuerpo" id="ac-form">
+          <h1 class="display">Entra con tu cuenta</h1>
+          <p class="apunte">
+            La misma con la que contrataste. El observador no arranca sin ella.
+          </p>
+
+          <label class="campo">
+            <span class="etiqueta">Correo</span>
+            <input
+              id="ac-correo"
+              name="correo"
+              type="email"
+              autocomplete="username"
+              spellcheck="false"
+              placeholder="tu@correo.com"
+            />
+          </label>
+
+          <label class="campo">
+            <span class="etiqueta">Contraseña</span>
+            <input
+              id="ac-contrasena"
+              name="contrasena"
+              type="password"
+              autocomplete="current-password"
+              placeholder="••••••••"
+            />
+          </label>
+
+          <p class="acceso__fallo" id="ac-fallo" role="alert" hidden></p>
+
+          <button class="boton" type="submit" id="ac-entrar">Entrar</button>
+
+          <button class="acceso__enlace" type="button" id="ac-web">
+            ¿No tienes cuenta? Créala en easyhud.net
+          </button>
+        </form>
+
+        <!-- Lo que se guarda y lo que no, dicho en la propia pantalla. Quien
+             teclea una contraseña en un PC prestado —que es lo normal en un
+             torneo— tiene derecho a saberlo sin buscar en ningún sitio. -->
+        <div class="acceso__pie">Se guarda la sesión, nunca la contraseña</div>
+      </div>
+    </div>
+
+    <!-- LOS ATAJOS. Teclas globales del programa, no del panel: siguen
+         funcionando aunque el panel pierda la conexión con el servidor. -->
+    <div class="dialogo" id="atajos" hidden>
+      <div class="dialogo__fondo" aria-hidden="true"></div>
+      <div class="dialogo__caja">
+        <div class="dialogo__cabeza">
+          <h2 class="display">Atajos de teclado</h2>
+        </div>
+        <div class="dialogo__cuerpo">
+          <p class="apunte">
+            Teclas globales para llevar la emisión desde este PC. Vienen apagadas
+            a propósito: un atajo global se come la tecla para todo el sistema,
+            incluido el juego.
+          </p>
+          <div class="atajos" id="at-lista"></div>
+          <p class="acceso__fallo" id="at-aviso" hidden></p>
+        </div>
+        <div class="dialogo__pie">
+          <button class="boton boton--terciario" type="button" id="at-cerrar">Cancelar</button>
+          <button class="boton" type="button" id="at-guardar">Guardar y aplicar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- `shell.js` es la entrada: envuelve al panel con la barra, la puerta y
+         los atajos, e importa `panel.js`. socket.io se reutiliza del overlay:
+         mismo fichero, misma versión, y así el panel tampoco pide nada por red
+         a un tercero. -->
+    <script type="module" src="js/shell.js"></script>
   </body>
 </html>

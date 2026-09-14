@@ -627,63 +627,39 @@ try {
 
 setInterval(pintaReloj, 250);
 
-/** Muestra el aviso de «inicia sesión» cuando no hay cuenta abierta. */
-function pideLogin(motivo) {
-  $('panel').hidden = true;
-  const a = $('asistente');
-  a.hidden = false;
-  a.innerHTML =
-    '<div style="display:flex;justify-content:center;padding:60px 0">' +
-    '<div class="panel" style="width:min(440px,100%)">' +
-    '<div class="panel__cabeza"><h2 class="display">Sin sesión</h2></div>' +
-    '<div class="panel__cuerpo">' +
-    `<p class="apunte">${motivo ?? 'Entra con tu cuenta de Easy HUD en el programa para abrir la consola de realización.'}</p>` +
-    '</div></div></div>';
-  $('rotulo-asistente').hidden = false;
-  pintaEstado('Sin sesión', false);
-}
-
 /**
- * Arranca el panel con la sesión que le pasa el programa.
+ * Arranca el panel con la sesión que le da el shell.
  *
- * El panel vive SOLO dentro del exe. No hay versión web: la sesión no se pide
- * por cookie ni hay pantalla de login aquí, llega inyectada en la dirección
- * (`endpoint`/`groupCode`/`token`) que pone el propio programa desde su sesión
- * ya iniciada.
+ * El panel vive SOLO dentro del exe y ya no se arranca solo: no lee la barra
+ * de direcciones ni pide nada por cookie. Quien tiene la sesión es el shell
+ * —el mismo documento, `shell.js`— y se la entrega aquí.
  *
- * Que no haya modo web es a propósito y se decidió así: tenerlo en dos sitios
- * —servido por el VPS y empaquetado en el exe— era el mismo fichero bajo dos
- * raíces distintas, y eso ya produjo dos fallos reales (el botón de salir
- * dejaba el panel en blanco, y la dirección de OBS salía con el token dentro).
+ * Que no haya versión web es a propósito. Tener el panel en dos sitios —
+ * servido por el VPS y empaquetado en el exe— era el mismo fichero bajo dos
+ * raíces distintas, y eso ya produjo dos fallos reales: el botón de salir
+ * dejaba el panel en blanco, y la dirección de OBS salía con el token dentro.
  * Una sola casa, un solo modo.
+ *
+ * @param {{endpoint: string, grupo: string, token: string, obs: string}} sesion
  */
-function inicia() {
-  const p = new URLSearchParams(location.search);
-  const grupo = p.get('groupCode');
-  const token = p.get('token');
-
-  if (!grupo || !token) {
-    return pideLogin('El programa todavía no ha entregado una sesión de emisión.');
-  }
-
-  cuenta = {
-    endpoint: p.get('endpoint') || location.origin,
-    grupo,
-    token,
-    /* Dónde apuntar OBS. Lo manda el programa, que es quien sabe en qué puerto
-       levantó su servidor local; el valor de aquí es solo el reparto por
-       defecto para no quedarnos sin nada que enseñar. */
-    obs: p.get('obs') || 'http://localhost:5310/',
-  };
+export function arranca(sesion) {
+  cuenta = sesion;
   modoPanel();
 }
 
-inicia();
-
-/* Cerrar sesión es cosa del programa, no del panel: el panel no tiene cookie
-   que borrar ni sitio a donde navegar. Mientras la sesión siga viviendo en el
-   shell, el botón no se pinta — antes navegaba a `/salir`, que dentro del exe
-   resuelve a una ruta inexistente y dejaba el panel en blanco sin vuelta
-   atrás. Vuelve cuando el login se mude aquí. */
-const botonSalir = $('a-salir');
-if (botonSalir !== null) botonSalir.hidden = true;
+/** Lo apaga cuando la sesión se va o caduca. Deja de mandar y suelta el socket. */
+export function apaga() {
+  if (enlace !== null) {
+    enlace.cierra();
+    enlace = null;
+  }
+  cuenta = null;
+  M = null;
+  mandando = false;
+  SALA = null;
+  const caja = $('panel');
+  if (caja !== null) caja.hidden = true;
+  const nav = $('nav');
+  if (nav !== null) nav.hidden = true;
+  pintaEstado('Sin sesión', false);
+}

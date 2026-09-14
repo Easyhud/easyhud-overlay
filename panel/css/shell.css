@@ -1,0 +1,366 @@
+/* ══ EL SHELL ═══════════════════════════════════════════════════════════════
+   Lo que envuelve al panel dentro del exe: barra de título, puerta de acceso y
+   diálogo de atajos.
+
+   Portado de `app.component.css` y `acceso.component.css` de Angular. Se
+   conserva el aspecto —barra estilo G HUB, rojo de grabación, Oswald— pero
+   **sin repetir un solo color**: todo sale de los tokens de `panel.css`, que
+   es la hoja que define la marca. Antes había dos sitios donde estaba escrito
+   `#08080a` y `#f5253b`; ahora hay uno.
+
+   Este fichero solo se carga dentro del programa. El panel no tiene versión
+   web, así que no hay caso en el que la barra de título estorbe.            */
+
+/* ── La barra de título ──────────────────────────────────────────────────── */
+
+:root {
+  /* El alto de la barra. La cabecera del panel se aparta justo esto. */
+  --barra: 34px;
+}
+
+/*
+ * La ventana va sin marco nativo, así que la barra tiene que hacer su trabajo:
+ * `drag` para mover la ventana. Los botones se sacan del área arrastrable, o
+ * no se podrían pulsar.
+ */
+.barra {
+  -webkit-app-region: drag;
+  position: sticky;
+  top: 0;
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--barra);
+  padding-left: 12px;
+  background: var(--void);
+  border-bottom: 1px solid var(--linea);
+  user-select: none;
+}
+
+.barra__marca {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.barra__logo {
+  height: 14px;
+  width: auto;
+  display: block;
+}
+
+.barra__nombre {
+  font-family: "Oswald", sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.14em;
+  color: var(--blanco);
+}
+
+.barra__botones {
+  -webkit-app-region: no-drag;
+  display: flex;
+  height: 100%;
+}
+
+.barra__btn {
+  width: 46px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: 0;
+  color: var(--gris);
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  transition:
+    background 0.12s,
+    color 0.12s;
+}
+
+/* El de atajos lleva texto, así que no cabe en 46 px. */
+.barra__btn--ancho {
+  width: auto;
+  padding: 0 12px;
+}
+
+.barra__btn:hover {
+  background: var(--linea);
+  color: var(--blanco);
+}
+
+/* Cerrar en rojo, como en cualquier ventana de Windows: es la convención y no
+   conviene ser original con el botón que tira el programa. */
+.barra__btn--cerrar:hover {
+  background: var(--rec);
+  color: #fff;
+}
+
+.barra__btn:focus-visible {
+  outline: 2px solid var(--rec-claro);
+  outline-offset: -2px;
+}
+
+/*
+ * La cabecera del panel se aparta el alto de la barra.
+ *
+ * Las dos son `sticky` con `top: 0`, y la barra gana en `z-index`. Sin esto, al
+ * desplazar, la navegación del panel se metería DEBAJO de la barra de título y
+ * desaparecería. Se corrige aquí y no en `panel.css` porque la barra solo
+ * existe dentro del programa.
+ */
+.cabecera {
+  top: var(--barra);
+}
+
+/* ── La puerta ───────────────────────────────────────────────────────────── */
+
+/*
+ * Va por encima de todo y tapa el panel entero, pero NO lo desmonta: el panel
+ * sigue debajo con lo que el operador tuviera escrito, y al entrar esto
+ * desaparece sin que se haya perdido nada.
+ */
+.acceso {
+  position: fixed;
+  inset: var(--barra) 0 0 0;
+  z-index: 1500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: auto;
+}
+
+.acceso__fondo {
+  position: absolute;
+  inset: 0;
+  background: var(--void);
+  /* Un halo rojo muy bajo, para que la puerta no sea un rectángulo negro. */
+  background-image: radial-gradient(60% 50% at 50% 0%, var(--rec-sombra), transparent 70%);
+}
+
+.acceso__caja {
+  position: relative;
+  width: min(430px, 100%);
+  background: var(--marco);
+  border: 1px solid var(--linea);
+}
+
+.acceso__cabeza {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--linea);
+}
+
+.acceso__palabra {
+  font-family: "Oswald", sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  color: var(--blanco);
+}
+
+/* El rótulo de estado: «Observador» en reposo, «Entrando» mientras comprueba. */
+.acceso__marcha {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.acceso__punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--linea-alta);
+}
+
+.acceso__marcha[data-vivo="si"] {
+  color: var(--rec-claro);
+}
+
+.acceso__marcha[data-vivo="si"] .acceso__punto {
+  background: var(--rec);
+  animation: acceso-late 1s ease-in-out infinite;
+}
+
+@keyframes acceso-late {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.acceso__cuerpo {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 22px 20px;
+}
+
+.acceso__cuerpo h1 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--blanco);
+}
+
+.acceso__fallo {
+  margin: 0;
+  padding: 9px 11px;
+  font-size: 13px;
+  color: var(--rec-claro);
+  background: var(--rec-sombra);
+  border-left: 2px solid var(--rec);
+}
+
+/* Un botón, no un `<a>`: no hay ninguna URL a la que navegar. Abrir la web es
+   cosa del proceso principal, que la manda al navegador del sistema. */
+.acceso__enlace {
+  align-self: flex-start;
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+  color: var(--gris);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.acceso__enlace:hover {
+  color: var(--blanco);
+}
+
+.acceso__pie {
+  padding: 11px 20px;
+  border-top: 1px solid var(--linea);
+  font-size: 12px;
+  color: var(--mute);
+}
+
+/* ── El diálogo de atajos ────────────────────────────────────────────────── */
+
+.dialogo {
+  position: fixed;
+  inset: 0;
+  z-index: 1800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow: auto;
+}
+
+.dialogo__fondo {
+  position: absolute;
+  inset: 0;
+  background: rgb(8 8 10 / 78%);
+}
+
+.dialogo__caja {
+  position: relative;
+  width: min(560px, 100%);
+  background: var(--marco);
+  border: 1px solid var(--linea);
+}
+
+.dialogo__cabeza {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--linea);
+}
+
+.dialogo__cabeza h2 {
+  margin: 0;
+  font-size: 18px;
+  color: var(--blanco);
+}
+
+.dialogo__cuerpo {
+  padding: 18px 20px;
+}
+
+.dialogo__pie {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 14px 20px;
+  border-top: 1px solid var(--linea);
+}
+
+/* ── La lista de atajos ──────────────────────────────────────────────────── */
+
+.atajos {
+  display: flex;
+  flex-direction: column;
+  margin-top: 14px;
+  border: 1px solid var(--linea);
+}
+
+.atajo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--tocable);
+  padding: 9px 12px;
+  background: var(--alzado);
+}
+
+.atajo + .atajo {
+  border-top: 1px solid var(--linea);
+}
+
+/* Marcado en rojo: tecla inválida, o dos mandos peleándose por la misma. */
+.atajo[data-mal="si"] {
+  background: var(--rec-sombra);
+}
+
+.atajo__on {
+  display: flex;
+  align-items: center;
+}
+
+.atajo__texto {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.atajo__nombre {
+  font-size: 14px;
+  color: var(--blanco);
+}
+
+.atajo__nota {
+  font-size: 12px;
+  color: var(--mute);
+}
+
+.atajo[data-mal="si"] .atajo__nota {
+  color: var(--rec-claro);
+}
+
+/* La tecla se enseña en monoespaciada: hay que poder distinguir F1 de FI. */
+.atajo__tecla {
+  min-width: 132px;
+  justify-content: center;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-size: 13px;
+}
+
+.atajo__tecla:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
