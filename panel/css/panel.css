@@ -71,10 +71,14 @@
 
 html {
   color-scheme: dark;
+  /* Sin esto, la zona por debajo del contenido asoma con el gris por defecto
+     de color-scheme:dark (más claro que --void) y la página parece recortada. */
+  background: var(--void);
 }
 
 body {
   margin: 0;
+  min-height: 100vh;
   background: var(--void);
   color: var(--blanco);
   font-family: 'Poppins', system-ui, sans-serif;
@@ -221,12 +225,12 @@ h3.display {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 0 14px;
+  padding: 0 15px;
   border: 0;
   border-right: 1px solid var(--linea);
   background: transparent;
   font-family: 'Poppins', system-ui, sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 500;
   color: var(--gris);
   white-space: nowrap;
@@ -236,12 +240,6 @@ h3.display {
 .nav__celda:hover {
   color: #fff;
   background: var(--marco);
-}
-
-.nav__orden {
-  font-size: 10px;
-  letter-spacing: 0.1em;
-  color: var(--mute);
 }
 
 .nav__celda[aria-current='page'] {
@@ -258,13 +256,23 @@ h3.display {
   background: var(--rec);
 }
 
-/* ── Estado, a la derecha ──────────────────────────────────────────────── */
+/* ── Estado, a la IZQUIERDA (arriba del sidebar) ───────────────────────────── */
 
+/* El estado vive en la barra de título (34px), pegado a la izquierda para caer
+   justo ENCIMA del sidebar (el dashboard arranca en inset:34px). `margin-right:
+   auto` empuja los botones de ventana a la derecha. No arrastra la ventana. */
 .estado {
-  margin-left: auto;
+  margin-right: auto;
   display: flex;
   align-items: stretch;
   flex: 0 0 auto;
+  height: var(--barra, 34px);
+  -webkit-app-region: no-drag;
+}
+/* En la esquina izquierda, la primera celda no lleva línea a su izquierda. */
+.estado__celda:first-child { border-left: 0; padding-left: 4px; }
+.estado__celda--torneo .estado__logo {
+  height: 18px;
 }
 
 .estado__celda {
@@ -285,6 +293,37 @@ h3.display {
   font-family: 'Oswald', sans-serif;
   letter-spacing: 0.06em;
   color: var(--gris);
+}
+
+/* Torneo y mapa vivos, a la derecha junto al estado: en Oswald, como datos.
+   El torneo se trunca si es largo, para no empujar el reloj y el código. */
+/* La esencia del torneo: logo + nombre, a la derecha. El nombre se trunca si es
+   largo, para no desbordar la cabecera. */
+.estado__celda--torneo {
+  font-family: 'Oswald', sans-serif;
+  letter-spacing: 0.06em;
+  color: var(--blanco);
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 240px;
+}
+.estado__logo {
+  height: 22px;
+  width: auto;
+  max-width: 60px;
+  object-fit: contain;
+  flex: 0 0 auto;
+}
+.estado__celda--torneo span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.estado__celda--mapa {
+  font-family: 'Oswald', sans-serif;
+  letter-spacing: 0.06em;
+  color: var(--blanco);
 }
 
 /* El punto. Late SOLO cuando hay emisión, y es lo único que se mueve en todo
@@ -367,9 +406,12 @@ h3.display {
 
 /* ── Panel: un bloque de trabajo con su título ─────────────────────────── */
 
+/* Sin caja: el panel es transparente y sin borde, para que todo viva sobre el
+   mismo fondo oscuro de la barra de arriba (--void). Los campos de texto y las
+   tarjetas de equipo llevan su propio fondo, así que no se pierde estructura. */
 .panel {
-  border: 1px solid var(--linea);
-  background: var(--marco);
+  border: none;
+  background: transparent;
   margin-top: 22px;
 }
 
@@ -378,12 +420,11 @@ h3.display {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--linea);
+  padding: 13px 0;
 }
 
 .panel__cuerpo {
-  padding: 16px;
+  padding: 16px 0;
 }
 
 .rejilla {
@@ -465,13 +506,56 @@ h3.display {
    con temperatura, no rojo) y el punto latiendo. Sigue sin ser un botón rojo:
    el rojo informa, no decora.                                              */
 
+/* La caja envuelve el mando y su tecla: la tecla es un botón aparte, encima de
+   la esquina inferior izquierda, para que se pueda recambiar aunque el mando
+   esté deshabilitado. */
+.mando-caja {
+  position: relative;
+  display: flex;
+}
+.mando-caja > .mando {
+  flex: 1 1 auto;
+  width: 100%;
+}
+
+/* El chip de la tecla del mando. */
+.mando__tecla {
+  position: absolute;
+  left: 13px;
+  bottom: 12px;
+  z-index: 2;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--void);
+  border: 1px solid var(--linea);
+  color: var(--mute);
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.mando__tecla:hover {
+  color: var(--blanco);
+  border-color: var(--linea-alta);
+}
+.mando__tecla[data-activo='no'] {
+  color: var(--gris);
+}
+.mando__tecla[data-capturando='si'] {
+  color: var(--rec-claro);
+  border-color: var(--rec);
+}
+
 .mando {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-  min-height: 78px;
-  padding: 13px 15px;
+  min-height: 92px;
+  padding: 13px 15px 36px;
   border: 1px solid var(--linea-alta);
   border-radius: 0;
   background: var(--alzado);
@@ -861,9 +945,9 @@ h3.display {
   flex-wrap: wrap;
   gap: 8px 22px;
   align-items: baseline;
-  padding: 12px 16px;
-  border: 1px solid var(--linea);
-  background: var(--alzado);
+  padding: 12px 0;
+  border: none;
+  background: transparent;
   margin-top: 22px;
 }
 
@@ -886,9 +970,10 @@ h3.display {
 
 .god__equipo {
   --equipo: var(--linea-alta);
-  border: 1px solid var(--linea);
+  position: relative;
+  border: none;
   border-top: 3px solid var(--equipo);
-  background: var(--marco);
+  background: transparent;
   padding: 14px;
 }
 
@@ -897,11 +982,11 @@ h3.display {
    el contenido. Se pone según `data-bando` que fija el panel. */
 .god__equipo[data-bando="atk"] {
   --equipo: #ff4655;
-  background: linear-gradient(180deg, rgb(255 70 85 / 16%), var(--marco) 62%);
+  background: linear-gradient(180deg, rgb(255 70 85 / 16%), transparent 62%);
 }
 .god__equipo[data-bando="def"] {
   --equipo: #2ad4c2;
-  background: linear-gradient(180deg, rgb(42 212 194 / 16%), var(--marco) 62%);
+  background: linear-gradient(180deg, rgb(42 212 194 / 16%), transparent 62%);
 }
 
 /* La cabecera del equipo: logo grande y nombre. El de la derecha se refleja
@@ -909,7 +994,7 @@ h3.display {
    se lean sin pensar. */
 .god__cab {
   display: flex;
-  align-items: center;
+  align-items: stretch;
   gap: 12px;
 }
 
@@ -918,9 +1003,14 @@ h3.display {
   text-align: right;
 }
 
+/* El logo es tan alto como el bloque de contenido (nombre + meta + botón de
+   mover): `align-self: stretch` lo iguala a la altura de la fila, y el ancho es
+   fijo —72px, casi cuadrado— porque `aspect-ratio` no cuaja con el estirado del
+   flex. La imagen entra con `contain`, así que cualquier proporción encaja. */
 .god__logo {
-  width: 52px;
-  height: 52px;
+  align-self: stretch;
+  width: 72px;
+  height: auto;
   flex: 0 0 auto;
   background: center / contain no-repeat;
   background-color: var(--void);
@@ -949,21 +1039,26 @@ h3.display {
   color: var(--mute);
 }
 
-/* La alineación. Cada jugador: un punto de estado, su nick y su agente. */
+/* La alineación. Cada jugador como una fila del Lobby: plana, separada por un
+   filete fino, con más aire. Misma escala que los slots de Pre-partida. */
 .roster {
-  margin-top: 14px;
+  margin-top: 16px;
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .jug {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 8px 10px;
-  border: 1px solid var(--linea);
-  background: var(--alzado);
+  gap: 11px;
+  min-height: 52px;
+  padding: 11px 6px;
+  border: none;
+  border-bottom: 1px solid var(--linea);
+  background: transparent;
+}
+.roster .jug:last-child {
+  border-bottom: 0;
 }
 
 .god__equipo--der .jug {
@@ -992,14 +1087,29 @@ h3.display {
   background: var(--rec);
 }
 
+/* Rango + nombre como una unidad: NO se invierte aunque la fila del equipo
+   derecho esté en row-reverse, así el rango queda siempre a la izquierda del
+   nombre. `.jug__id` es lo que crece y empuja al agente al otro extremo. */
+.jug__id {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+.god__equipo--der .jug__id {
+  justify-content: flex-end;
+}
+
 .jug__nick {
   font-family: 'Oswald', sans-serif;
-  font-weight: 600;
-  font-size: 14px;
-  letter-spacing: 0.01em;
+  font-weight: 500;
+  font-size: 17px;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
   color: var(--blanco);
-  flex: 1 1 auto;
+  flex: 0 1 auto;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1007,14 +1117,24 @@ h3.display {
 }
 
 .jug__agente {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--gris);
   flex: 0 0 auto;
 }
 
-/* El bloque de edición del equipo: siempre visible bajo la alineación, para
-   que el realizador tenga dónde poner nombre, tricode y logo sin salir de la
-   vista. Se separa con un filete para que se lea como «zona de ajuste». */
+/* Icono de rango, pegado al nombre. La fila del equipo derecho es row-reverse,
+   así que queda simétrico (izquierda del nick a la izq., derecha a la der.). */
+.jug__rango {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+/* El bloque de edición del equipo: nombre, tricode y logo. Antes estaba
+   siempre abierto; ahora la vista de directo queda limpia y editar es un gesto
+   explícito —el lápiz del nombre o del logo—. Se separa con un filete para que
+   se lea como «zona de ajuste». */
 .edita {
   margin-top: 12px;
   padding-top: 12px;
@@ -1022,6 +1142,92 @@ h3.display {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+/* Oculto salvo cuando la tarjeta está en modo edición (lo marca panel.js con
+   `data-editando` al pulsar cualquier lápiz de la tarjeta). */
+.god__equipo:not([data-editando]) .edita {
+  display: none;
+}
+
+/* ── Edición inline: lápiz junto al nombre y al logo ─────────────────────── */
+.god__id {
+  min-width: 0;
+}
+
+.god__nombre-fila {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.god__equipo--der .god__nombre-fila {
+  flex-direction: row-reverse;
+}
+
+/* El lápiz del nombre y el botón de mover comparten el mismo botón «fantasma»:
+   contorno fino, sin relleno, que se enciende al pasar por encima. */
+.god__lapiz,
+.god__mueve {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+  border: 1px solid var(--linea);
+  color: var(--mute);
+  cursor: pointer;
+  font: inherit;
+  line-height: 0;
+  padding: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+.god__lapiz:hover,
+.god__mueve:hover {
+  color: var(--blanco);
+  border-color: var(--linea-alta);
+}
+.god__lapiz:focus-visible,
+.god__mueve:focus-visible {
+  outline: 2px solid var(--rec);
+  outline-offset: 1px;
+}
+
+/* El botón de mover el equipo al otro lado va bajo el meta, como una acción de
+   ajuste que no compite con el nombre. */
+.god__mueve {
+  margin-top: 8px;
+  padding: 5px 9px;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.god__equipo--der .god__mueve {
+  margin-left: auto;
+}
+
+/* Tarjeta en edición: el lápiz se viste con el rojo de antena para que se vea
+   que ese equipo está abierto. */
+.god__equipo[data-editando] .god__lapiz {
+  color: var(--rec-claro);
+  border-color: var(--rec);
+}
+
+/* El lápiz de editar va en la esquina superior INTERIOR de la tarjeta (mira al
+   centro): arriba-derecha en la izquierda, arriba-izquierda en la derecha. */
+.god__equipo > .god__lapiz {
+  position: absolute;
+  top: 8px;
+  z-index: 2;
+}
+.god__equipo:not(.god__equipo--der) > .god__lapiz {
+  right: 8px;
+}
+.god__equipo--der > .god__lapiz {
+  left: 8px;
 }
 
 /* ── El centro: marcador y herramientas ─────────────────────────────────── */
@@ -1032,14 +1238,54 @@ h3.display {
   gap: 12px;
 }
 
+/* El cuadro del marcador: recuadro fino con un leve realce, para que el score
+   se lea como un bloque propio en medio de la mesa. */
+.marcador-caja {
+  border: 1px solid var(--linea-alta);
+  background: linear-gradient(180deg, rgb(255 255 255 / 4%), transparent 70%);
+  padding: 14px 18px 12px;
+}
+
 .marcador {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 14px;
-  padding: 10px 0;
+  padding: 6px 0;
+  border: none;
+  background: transparent;
+}
+
+/* El tile del mapa actual: imagen de fondo a lo ancho, con el nombre grande
+   abajo-izquierda sobre un degradado, como las cartas del selector de mapa. */
+.mapa-tile {
+  position: relative;
+  aspect-ratio: 16 / 6.5;
+  background: var(--void) center / cover no-repeat;
   border: 1px solid var(--linea);
-  background: var(--marco);
+  overflow: hidden;
+}
+.mapa-tile[data-sinimg='si'] {
+  background: linear-gradient(120deg, var(--panel, #16161b), var(--void));
+}
+.mapa-tile::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, transparent 35%, rgb(8 8 10 / 88%));
+}
+.mapa-tile__nombre {
+  position: absolute;
+  left: 14px;
+  bottom: 11px;
+  z-index: 1;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 24px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--blanco);
+  text-shadow: 0 2px 10px rgb(0 0 0 / 75%);
 }
 
 .marcador__n {
@@ -1070,6 +1316,35 @@ h3.display {
 /* En la vista god los mandos van apilados en el centro, no en rejilla ancha. */
 .god__centro .rejilla {
   grid-template-columns: 1fr 1fr;
+}
+
+/* Rótulo (lower third) plegable: la cabecera es el disparador; el cuerpo solo
+   sale al abrir. Sin el triángulo nativo del <summary>. */
+.lt__cab {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  user-select: none;
+}
+.lt__cab::-webkit-details-marker {
+  display: none;
+}
+.lt__chevron {
+  margin-left: auto;
+  color: var(--mute);
+  transition: transform 0.15s ease;
+  flex: 0 0 auto;
+}
+.lt[open] .lt__chevron {
+  transform: rotate(180deg);
+}
+.lt__cab:hover .lt__chevron {
+  color: var(--gris);
+}
+.lt[open] .lt__cab {
+  border-bottom: 1px solid var(--linea);
 }
 
 @container panel (width < 900px) {
@@ -1145,7 +1420,7 @@ h3.display {
     border-top: 1px solid var(--linea);
   }
 
-  .nav__celda:first-child {
+  .nav__grupo:first-child {
     padding-left: var(--canal);
   }
 
@@ -1165,3 +1440,1648 @@ h3.display {
     gap: 4px;
   }
 }
+
+/* ══ PRE-PARTIDA: espejo de la lobby de VALORANT ═══════════════════════════ */
+.prep {
+  display: flex;
+  gap: 34px;
+  align-items: center;
+  margin-top: 40px;
+}
+.prep__lado {
+  flex: 0 0 250px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+/* Encabezado de sección en la columna de config (y de cámaras): rótulo tenue,
+   como los «MATCH SETTINGS» / «CAMERAS» de una lobby. */
+.prep__cfg-h {
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--mute);
+  margin-bottom: 12px;
+}
+/* Config compacta: cada dato en una fila, etiqueta a la izquierda y valor a la
+   derecha, para que se lea de un vistazo y ocupe poco alto. */
+.prep__cfg {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--linea);
+}
+.prep__item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.prep__k {
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--mute);
+}
+.prep__v {
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--blanco);
+  line-height: 1.1;
+  text-align: right;
+}
+/* El código, héroe de la columna: caja marcada, cifra grande y centrada. */
+.prep__code .etiqueta {
+  display: block;
+  margin-bottom: 8px;
+}
+.prep__code-fila {
+  display: flex;
+  gap: 8px;
+}
+.prep__code-fila input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'Oswald', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-align: center;
+  color: var(--blanco);
+  background: var(--void);
+  border: 1px solid var(--linea-alta);
+  padding: 10px 8px;
+}
+/* Cámaras: bloque secundario bajo el código, separado con un filete. */
+.prep__cam {
+  padding-top: 18px;
+  border-top: 1px solid var(--linea);
+}
+
+.prep__lobby {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: grid;
+  gap: 14px 18px;
+  position: relative;
+}
+/* LOBBY: tres columnas, sin centro (Attackers · Defenders · Observers). */
+.prep__lobby[data-fase='lobby'] {
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-areas: 'atk def obs';
+}
+.prep__lobby[data-fase='lobby'] .prep__col--centro {
+  display: none;
+}
+/* VIVO: Defenders a la derecha, controles al centro, Observers en fila abajo. */
+.prep__lobby[data-fase='vivo'] {
+  grid-template-columns: 1fr 0.92fr 1fr;
+  grid-template-areas:
+    'atk centro def'
+    'obs obs obs';
+}
+.prep__col--atk {
+  grid-area: atk;
+}
+.prep__col--def {
+  grid-area: def;
+}
+.prep__col--obs {
+  grid-area: obs;
+}
+.prep__col--centro {
+  grid-area: centro;
+  border-top: 0;
+  padding-top: 6px;
+  gap: 12px;
+}
+.prep__col--centro .rejilla {
+  grid-template-columns: 1fr 1fr;
+}
+/* En vivo: sin editar equipos ni intercambiar (la partida ya corre), y los
+   coaches se ocultan. Observers pasa a fila horizontal. */
+/* En vivo se ocultan switch de lados y coaches (no aplican en plena partida),
+   PERO el lápiz de editar equipo SE MANTIENE: durante el juego puede haber que
+   corregir nombre/tricode/logo de un equipo, y eso empuja al overlay al vuelo. */
+.prep__lobby[data-fase='vivo'] .prep__switch,
+.prep__lobby[data-fase='vivo'] .prep__cab--coach,
+.prep__lobby[data-fase='vivo'] .prep__slots--coach {
+  display: none;
+}
+.prep__lobby[data-fase='vivo'] .prep__col--obs {
+  border-top: 1px solid var(--linea);
+  margin-top: 4px;
+  padding-top: 8px;
+}
+.prep__lobby[data-fase='vivo'] .prep__col--obs .prep__slots {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px 20px;
+}
+.prep__lobby[data-fase='vivo'] .prep__col--obs .prep__slot {
+  border-bottom: 0;
+  min-width: 180px;
+  flex: 0 1 auto;
+}
+
+/* Switch único, centrado en el canal entre la tarjeta de atacantes y la de
+   defensores, montado sobre la línea de color de arriba. Intercambia equipos. */
+.prep__switch {
+  position: absolute;
+  top: -34px;
+  left: 0;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 2px;
+  background: transparent;
+  border: 0;
+  color: var(--gris);
+  cursor: pointer;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  transition: color 0.12s;
+}
+.prep__switch svg {
+  width: 22px;
+  height: 22px;
+}
+.prep__switch:hover {
+  color: var(--blanco);
+}
+.prep__switch:focus-visible {
+  outline: 2px solid var(--rec);
+  outline-offset: 2px;
+}
+
+/* Cada columna con la esencia de los cards de Directo: línea de color arriba y
+   un tinte que se desvanece en el fondo. Nada de bloques sólidos. */
+.prep__col {
+  --equipo: var(--linea-alta);
+  display: flex;
+  flex-direction: column;
+  align-self: start;
+  border-top: 3px solid var(--equipo);
+  padding: 0 6px;
+}
+.prep__col--atk {
+  --equipo: #ff4655;
+  background: linear-gradient(180deg, rgb(255 70 85 / 14%), transparent 42%);
+}
+.prep__col--def {
+  --equipo: #2ad4c2;
+  background: linear-gradient(180deg, rgb(42 212 194 / 14%), transparent 42%);
+}
+.prep__col--obs {
+  --equipo: var(--linea-alta);
+}
+
+/* La cabecera es solo el rótulo en Oswald: el color lo da la línea de arriba. */
+.prep__cab {
+  padding: 15px 4px 12px;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blanco);
+}
+.prep__col--obs .prep__cab {
+  color: var(--gris);
+}
+.prep__cab--coach {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--linea);
+  font-size: 10px;
+  color: var(--mute);
+}
+
+/* Los slots, como filas de jugador en Directo: planas, separadas por un filete
+   fino, sin caja. El hueco vacío es un guion tenue, no un recuadro. */
+.prep__slots {
+  display: flex;
+  flex-direction: column;
+}
+.prep__slot {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 12px 6px;
+  border-bottom: 1px solid var(--linea);
+}
+.prep__slots .prep__slot:last-child {
+  border-bottom: 0;
+}
+.prep__slot .jug__nick {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 500;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--blanco);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.prep__slot--vacio {
+  color: var(--mute);
+  opacity: 0.5;
+  font-size: 14px;
+}
+/* Los dos cuadraditos —SOLO en la columna de observadores— : moderador (gris) y
+   broadcast/HUD (azul). Apagados = contorno tenue y vacío. Encendidos = se
+   rellenan de su color y muestran un tick blanco dentro. */
+.prep__cuadros {
+  display: inline-flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.prep__cuad {
+  width: 14px;
+  height: 14px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--linea-alta);
+  color: #fff;
+}
+.prep__cuad svg {
+  width: 10px;
+  height: 10px;
+  visibility: hidden;
+}
+.prep__slot[data-mod='si'] .prep__cuad--mod {
+  background: var(--gris);
+  border-color: var(--gris);
+}
+.prep__slot[data-mod='si'] .prep__cuad--mod svg {
+  visibility: visible;
+  color: var(--void);
+}
+.prep__slot[data-hud='si'] .prep__cuad--hud {
+  background: #29a3e0;
+  border-color: #29a3e0;
+  box-shadow: 0 0 6px rgb(41 163 224 / 55%);
+}
+.prep__slot[data-hud='si'] .prep__cuad--hud svg {
+  visibility: visible;
+}
+
+/* READY (jugador con el cliente de Easy HUD): texto chiquito verde a la derecha
+   del nombre. Solo sale cuando el cliente está presente. */
+.prep__ready {
+  flex: 0 0 auto;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #3ddc84;
+  padding: 2px 6px;
+  border: 1px solid rgb(61 220 132 / 45%);
+}
+/* NO APP: el jugador aún no tiene el cliente de Easy HUD. Apagado, sin alarma. */
+.prep__noapp {
+  flex: 0 0 auto;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--mute);
+  padding: 2px 6px;
+  border: 1px solid var(--linea);
+}
+.prep__slot .jug__rango {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  object-fit: contain;
+}
+
+/* Cabecera editable de cada columna (Attackers / Defenders): reusa el diseño
+   de identidad de Directo —logo, nombre, tricode, mover— pero encajado en la
+   columna, no como card aparte. Es la cabecera de la columna en sí. */
+.prep__jefe {
+  container-type: inline-size;
+  padding: 14px 4px 12px;
+  position: relative;
+}
+.prep__jefe .god__cab,
+.prep__jefe-cab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  /* Deja aire a la derecha para el lápiz, que va absoluto en esa esquina. */
+  padding-right: 26px;
+}
+/* Logo a escala de columna: más chico que en Directo. */
+.prep__jefe .god__logo {
+  width: 52px;
+}
+.prep__jefe .god__nombre {
+  font-size: clamp(16px, 6cqw, 22px);
+}
+.prep__jefe .god__id {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+/* Contador de mapas ganados de la serie (BO3/5): número grande a la derecha de
+   la cabecera del equipo, tintado con su color. Solo sale con formato > BO1. */
+.prep__serie {
+  flex: 0 0 auto;
+  align-self: center;
+  margin-left: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Oswald', sans-serif;
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1;
+  min-width: 1ch;
+  text-align: center;
+  color: var(--equipo, var(--blanco));
+}
+/* Campeón de la serie: una estrella dorada a la izquierda del score. Se lee de
+   un vistazo quién ganó el BO, sin marco. */
+.prep__serie[data-campeon='si'] {
+  color: var(--blanco);
+}
+.prep__serie[data-campeon='si']::before {
+  content: '★';
+  font-size: 0.55em;
+  line-height: 1;
+  color: #ffc53d;
+}
+/* La zona de ajuste (nombre / tricode / logo) se despliega hacia abajo solo
+   cuando la tarjeta está en edición —igual que en Directo, con el lápiz. */
+.prep__jefe:not([data-editando]) .edita {
+  display: none;
+}
+/* El lápiz vive en la esquina superior interior de la cabecera. */
+.prep__jefe > .god__lapiz {
+  position: absolute;
+  top: 10px;
+  right: 6px;
+  z-index: 2;
+}
+/* En edición, el lápiz se enciende con el rojo de antena. */
+.prep__jefe[data-editando] > .god__lapiz {
+  color: var(--rec-claro);
+  border-color: var(--rec);
+}
+
+/* ══ Menú de inicio — dashboard con sidebar ═════════════════════════════════
+   Ocupa toda la ventana bajo la barra de título. Sidebar izquierdo + contenido. */
+.menu {
+  position: fixed;
+  inset: var(--barra, 34px) 0 0 0;
+  z-index: 1500;
+  display: flex;
+  background: var(--void, #08080a);
+  background-image: radial-gradient(60% 50% at 50% 0%, var(--rec-sombra, rgb(120 20 20 / 20%)), transparent 70%);
+}
+.menu[hidden] { display: none; }
+
+/* ── Rail de contextos (como los servidores de Discord) ── */
+.rail {
+  flex: 0 0 62px; width: 62px;
+  background: rgb(0 0 0 / 45%);
+  border-right: 1px solid var(--linea, rgb(255 255 255 / 8%));
+  display: flex; flex-direction: column; align-items: center;
+  gap: 8px; padding: 12px 0;
+}
+.rail__ico {
+  position: relative;
+  width: 44px; height: 44px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 14px;
+  background: rgb(255 255 255 / 6%);
+  color: var(--gris);
+  cursor: pointer;
+  transition: border-radius .16s ease, background .16s ease, color .16s ease;
+}
+.rail__ico .ico { width: 22px; height: 22px; }
+.rail__ico:hover { border-radius: 13px; background: var(--atk, #43cfa4); color: #05070a; }
+.rail__ico.is-activo { border-radius: 13px; background: rgb(255 255 255 / 13%); color: #fff; }
+/* Pastilla indicadora del activo (Discord). */
+.rail__ico.is-activo::before {
+  content: ''; position: absolute; left: -13px; top: 50%; translate: 0 -50%;
+  width: 4px; height: 26px; border-radius: 0 4px 4px 0; background: #fff;
+}
+.rail__sep { width: 26px; height: 1px; background: var(--linea, rgb(255 255 255 / 12%)); }
+.rail__ico--add { color: var(--atk, #43cfa4); }
+
+/* ── Sidebar del contexto (grupos + iconos, estilo shadcn) ── */
+.sb {
+  flex: 0 0 236px;
+  width: 236px;
+  border-right: 1px solid var(--linea, rgb(255 255 255 / 10%));
+  background: rgb(255 255 255 / 2%);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sb__head {
+  display: flex; align-items: center;
+  height: 52px; padding: 0 18px;
+  border-bottom: 1px solid var(--linea, rgb(255 255 255 / 8%));
+}
+.sb__ctx {
+  font-family: 'Oswald', sans-serif;
+  font-size: 16px; font-weight: 600; letter-spacing: .02em;
+  color: var(--blanco, #fff);
+  white-space: nowrap;
+}
+
+.sb__body { flex: 1; overflow: auto; padding: 10px 8px; display: flex; flex-direction: column; gap: 10px; }
+.sb__group { display: flex; flex-direction: column; gap: 2px; }
+.sb__label {
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 10px; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--gris);
+  padding: 8px 10px 4px;
+  white-space: nowrap;
+}
+
+/* Los ítems de navegación (shadcn SidebarMenuButton). */
+.menu__item {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%;
+  text-align: left;
+  padding: 9px 10px;
+  border: 0; border-radius: 8px;
+  background: transparent;
+  color: var(--blanco, #fff);
+  font-family: 'Oswald', sans-serif;
+  font-size: 15px; font-weight: 500; letter-spacing: .01em;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .12s ease, color .12s ease;
+}
+.menu__item .ico { flex: 0 0 auto; width: 18px; height: 18px; opacity: .85; }
+.menu__item span { flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.menu__item:hover { background: rgb(255 255 255 / 6%); }
+.menu__item.is-activo { background: rgb(255 255 255 / 10%); color: #fff; }
+.menu__item.is-activo .ico { color: #fff; opacity: 1; }
+.menu__item--soon { opacity: .5; }
+.menu__item--soon::after {
+  content: 'soon';
+  font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--gris);
+}
+
+.menu__cont { flex: 1; padding: 44px 52px; overflow: auto; }
+.menu__panel { display: none; }
+.menu__panel.is-activo { display: block; }
+.menu__panel .apunte { margin-top: 8px; line-height: 1.5; }
+.menu__panel .boton { margin-top: 22px; }
+
+.menu__formatos { display: flex; gap: 10px; margin-top: 8px; max-width: 420px; }
+.menu__fmt {
+  flex: 1; padding: 18px 0; border-radius: 8px;
+  background: rgb(255 255 255 / 5%); border: 1px solid var(--linea, rgb(255 255 255 / 14%));
+  color: var(--blanco, #fff); cursor: pointer;
+  font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 600; letter-spacing: .04em;
+  transition: border-color .15s ease, background .15s ease;
+}
+.menu__fmt:hover { background: rgb(255 255 255 / 9%); border-color: var(--atk, #43cfa4); }
+
+/* ══ Dashboard — cabeceras, listas, cards, tags, diálogos ═══════════════════ */
+.dash__head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 22px; }
+.dash__acc { display: flex; gap: 10px; }
+.dash__lista { display: flex; flex-direction: column; gap: 8px; }
+.dash__lista--grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.dash__vacio { color: var(--gris); font-size: 14px; padding: 20px 2px; }
+
+.fila { display: flex; align-items: center; gap: 12px; padding: 11px 14px; border-radius: 10px; background: var(--alzado); border: 1px solid var(--linea); }
+.fila__logo { width: 34px; height: 34px; flex: 0 0 auto; border-radius: 6px; background: center / contain no-repeat var(--marco); }
+.fila__txt { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.fila__txt b { font-family: 'Oswald', sans-serif; font-size: 16px; }
+.fila__txt span { font-size: 12px; color: var(--gris); }
+.fila__acc { display: flex; align-items: center; gap: 6px; }
+.fila__vs { display: flex; align-items: center; gap: 10px; flex: 0 0 auto; font-family: 'Oswald', sans-serif; }
+.fila__eq { font-size: 16px; font-weight: 600; min-width: 46px; text-align: center; }
+.fila__sc { font-size: 15px; color: var(--gris); font-variant-numeric: tabular-nums; }
+.fila__meta { display: flex; align-items: center; gap: 6px; flex: 1; flex-wrap: wrap; }
+.fila__nom { font-size: 12px; color: var(--gris); }
+
+/* Tags NEUTRALES (regla de marca: sin verde/color de equipo como acento). El
+   único color es el rojo --rec, y solo para «en antena» (Live). */
+.tag { font-family: 'Oswald', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; padding: 3px 7px; border-radius: 5px; background: var(--marco); border: 1px solid var(--linea); color: var(--gris); }
+.tag--to { color: var(--blanco); }
+.tag--live { background: var(--rec); border-color: var(--rec); color: #fff; }
+.tag--done { opacity: .55; }
+.tag--draft { opacity: .8; }
+
+.eqc { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; background: var(--alzado); border: 1px solid var(--linea); }
+.eqc__logo { width: 38px; height: 38px; flex: 0 0 auto; border-radius: 6px; background: center / contain no-repeat; display: grid; place-items: center; font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 700; color: #fff; }
+.eqc__logo--vacio { background: var(--marco); color: var(--gris); }
+.eqc__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.eqc__txt b { font-family: 'Oswald', sans-serif; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eqc__txt span { font-size: 12px; color: var(--gris); }
+.eqc__acc { display: flex; gap: 4px; }
+
+.ic-btn { width: 28px; height: 28px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--gris); cursor: pointer; font-size: 14px; transition: background .12s ease, color .12s ease; }
+.ic-btn:hover { background: var(--marco); color: #fff; }
+.ic-btn--del:hover { background: var(--marco); color: var(--rec-claro); }
+.boton--mini { padding: 6px 12px; font-size: 12px; }
+
+.dlg { border: 1px solid var(--linea, rgb(255 255 255 / 12%)); border-radius: 12px; background: var(--marco, #101216); color: var(--blanco, #fff); padding: 0; width: min(440px, 92vw); }
+.dlg::backdrop { background: rgb(0 0 0 / 55%); }
+.dlg__form { display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; }
+.dlg__form h2 { margin: 0 0 4px; }
+.dlg__pie { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+/* Empty-state por tab: icono + título + subtítulo + CTA, centrado. */
+.vacio { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; min-height: 320px; padding: 40px 20px; }
+.vacio__ico { width: 50px; height: 50px; color: var(--linea-alta); }
+.vacio__tit { font-family: 'Oswald', sans-serif; font-size: 22px; font-weight: 600; text-transform: uppercase; color: var(--blanco); margin: 8px 0 0; }
+.vacio__sub { font-size: 13px; color: var(--gris); max-width: 44ch; margin: 0; line-height: 1.55; }
+.vacio .boton { margin-top: 14px; }
+
+/* ── Sidebar footer: la cuenta (SidebarFooter estilo shadcn) ── */
+.sb__foot { border-top: 1px solid var(--linea); padding: 10px; }
+.sb__acc { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 8px; }
+.sb__acc-av { width: 34px; height: 34px; flex: 0 0 auto; border-radius: 8px; background: var(--linea-alta); display: grid; place-items: center; font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 700; color: #fff; }
+.sb__acc-txt { display: flex; flex-direction: column; min-width: 0; }
+.sb__acc-txt b { font-family: 'Poppins', system-ui, sans-serif; font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sb__acc-txt span { font-size: 11px; color: var(--gris); }
+
+/* ── Template chooser ── */
+.tpl__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; max-width: 820px; }
+.tpl__card { text-align: left; border: 1px solid var(--linea); border-radius: 10px; background: var(--alzado); padding: 0; overflow: hidden; cursor: pointer; transition: border-color .12s ease; }
+.tpl__card:hover { border-color: var(--linea-alta); }
+.tpl__card--activa { border-color: var(--gris); }
+.tpl__prev { height: 118px; display: grid; place-items: center; background: linear-gradient(135deg, #14161b, #0b0d11); border-bottom: 1px solid var(--linea); font-family: 'Oswald', sans-serif; font-size: 18px; font-weight: 600; letter-spacing: .14em; color: #fff; }
+.tpl__meta { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; }
+.tpl__meta b { font-family: 'Oswald', sans-serif; font-size: 15px; }
+
+/* ── Sidebar header (logo + ocultar) + estado colapsado ── */
+.sb__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; height: 52px; padding: 0 12px 0 16px; border-bottom: 1px solid var(--linea); }
+.sb__logo { display: inline-flex; align-items: center; gap: 8px; }
+.sb__logo img { display: block; height: 15px; width: auto; }
+.sb__logo b { font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 600; letter-spacing: .08em; color: #fff; }
+.sb__hide { flex: 0 0 auto; display: grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 7px; background: transparent; color: var(--gris); cursor: pointer; transition: background .12s ease, color .12s ease; }
+.sb__hide:hover { background: var(--marco); color: #fff; }
+.sb__hide .ico { width: 18px; height: 18px; }
+
+.menu.is-colapsado .sb { flex-basis: 62px; width: 62px; }
+.menu.is-colapsado .sb__logo,
+.menu.is-colapsado .sb__label,
+.menu.is-colapsado .menu__item span,
+.menu.is-colapsado .menu__item--soon::after,
+.menu.is-colapsado .sb__acc-txt { display: none; }
+/* Colapsado: TODOS los iconos centrados en la misma línea vertical del rail de
+   62px (centro = 31px). Cada elemento tiene un icono de tamaño distinto, así que
+   su padding-left se calcula para que el CENTRO del icono caiga en 31:
+     · toggle 30px → 16 + 15 = 31
+     · nav .ico 18px → 22 +  9 = 31
+     · avatar 34px → 14 + 17 = 31                                            */
+.menu.is-colapsado .sb__top { justify-content: flex-start; padding: 0 16px; }
+.menu.is-colapsado .menu__item { justify-content: flex-start; padding: 9px 22px; }
+.menu.is-colapsado .sb__foot { padding: 8px; }
+.menu.is-colapsado .sb__acc { justify-content: flex-start; padding: 6px 14px; }
+
+/* Footer de cuenta como botón */
+.sb__acc { width: 100%; border: 0; background: transparent; text-align: left; cursor: pointer; }
+.sb__acc:hover { background: var(--marco); }
+
+/* Avatares con foto (footer + Account) */
+.sb__acc-av.con-foto, .acc__av.con-foto { background-size: cover; background-position: center; color: transparent; }
+
+/* Panel Account */
+.acc { display: flex; flex-direction: column; gap: 26px; max-width: 540px; }
+.acc__foto { display: flex; align-items: center; gap: 18px; }
+.acc__av { width: 74px; height: 74px; flex: 0 0 auto; border-radius: 12px; background: var(--linea-alta); display: grid; place-items: center; font-family: 'Oswald', sans-serif; font-size: 24px; font-weight: 700; color: #fff; }
+.acc__foto-txt { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
+.acc__campos { display: grid; grid-template-columns: repeat(2, minmax(0, 220px)); gap: 16px; }
+.acc__campos .valor { margin-top: 4px; }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   SISTEMA DE DISEÑO v2 — densidad + movimiento
+   Encargo: "usa animaciones buenas para todo, estás metiendo mucho padding".
+   Dos arreglos: apretar el espacio (el dashboard es una mesa de trabajo, no un
+   hero) y añadir movimiento con criterio. Respeta la marca: monocromo, naranja
+   prohibido, color de equipo solo en piezas de equipo, rojo --rec = en antena.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Escala de espaciado, base 4, apretada a propósito. */
+  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
+  --sp-5: 20px; --sp-6: 24px; --sp-7: 32px; --sp-8: 40px;
+  --pad-pagina: clamp(20px, 2.2cqw, 32px);
+
+  /* Curvas y duraciones (el movimiento sustituye al color que no podemos usar). */
+  --ease-out:  cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in:   cubic-bezier(0.55, 0, 1, 0.45);
+  --ease-io:   cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-snap: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-fast: 120ms;  --dur: 200ms;  --dur-slow: 320ms;
+}
+
+/* Body a 14px: en una tool densa, 15px infla cada fila e input un punto de más. */
+body { font-size: 14px; }
+
+/* ── Espaciado apretado (remapeo del spec) ── */
+.menu__cont { padding: var(--sp-5) var(--pad-pagina); }
+.dash__head { margin-bottom: var(--sp-4); padding-top: var(--sp-1); }
+.dash__head h1.display { font-size: clamp(22px, 3cqw, 30px); line-height: 1; letter-spacing: 0.01em; }
+.panel__cabeza h2.display { font-size: clamp(18px, 2cqw, 24px); }
+.menu__panel .boton { margin-top: var(--sp-4); }
+.dash__lista { gap: var(--sp-1); }
+.dash__lista--grid { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: var(--sp-2); }
+.fila { padding: var(--sp-2) var(--sp-3); }
+.eqc  { padding: var(--sp-2) var(--sp-3); }
+.vacio { min-height: 200px; padding: var(--sp-7) var(--sp-4); }
+.dlg__form { padding: var(--sp-5); gap: var(--sp-3); }
+.panel { margin-top: var(--sp-4); }
+.panel__cuerpo { padding: var(--sp-3) 0; }
+.panel__cabeza { padding: var(--sp-2) 0; }
+.sb__body { padding: var(--sp-2); gap: var(--sp-2); }
+.acc { gap: var(--sp-5); }
+.acc__foto { gap: var(--sp-4); }
+.acc__av { width: 64px; height: 64px; }
+.prep { gap: var(--sp-6); margin-top: var(--sp-6); }
+
+/* Settings en 2 columnas en ventana ancha: mata el scroll largo. */
+@container panel (width >= 1040px) {
+  #vista-ajustes.is-activo { display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-4) var(--sp-6); align-items: start; }
+  #vista-ajustes.is-activo > .panel { margin-top: 0; }
+}
+
+/* ── Movimiento ── */
+/* 3.1 Cambio de panel (fade + slide al alternar .is-activo). */
+.menu__panel.is-activo { animation: panel-in var(--dur) var(--ease-out) both; }
+.vista:not([hidden]) { animation: panel-in var(--dur) var(--ease-out) both; }
+@keyframes panel-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 3.2 Hover de fila y card (realce sobrio, sin la sombra roja de acción). */
+.fila, .eqc, .tpl__card {
+  transition: border-color var(--dur-fast) var(--ease-out),
+              background var(--dur-fast) var(--ease-out),
+              transform var(--dur-fast) var(--ease-out);
+}
+.fila:hover, .eqc:hover { border-color: var(--linea-alta); background: var(--marco); transform: translateX(2px); }
+
+/* 3.3 Entrada de lista con stagger (db.js pone --i por hijo). */
+@keyframes fila-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.dash__lista > *, .dash__lista--grid > * { animation: fila-in var(--dur) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 28ms); }
+
+/* 3.4 Diálogos: backdrop + escala, entrada Y salida (@starting-style). */
+.dlg {
+  opacity: 0; transform: translateY(8px) scale(0.98);
+  transition: opacity var(--dur) var(--ease-out), transform var(--dur) var(--ease-out),
+              overlay var(--dur) allow-discrete, display var(--dur) allow-discrete;
+}
+.dlg[open] { opacity: 1; transform: translateY(0) scale(1); }
+@starting-style { .dlg[open] { opacity: 0; transform: translateY(8px) scale(0.98); } }
+.dlg::backdrop {
+  background: rgb(0 0 0 / 0%); backdrop-filter: blur(0px);
+  transition: background var(--dur) var(--ease-out), backdrop-filter var(--dur) var(--ease-out),
+              overlay var(--dur) allow-discrete, display var(--dur) allow-discrete;
+}
+.dlg[open]::backdrop { background: rgb(0 0 0 / 55%); backdrop-filter: blur(2px); }
+@starting-style { .dlg[open]::backdrop { background: rgb(0 0 0 / 0%); backdrop-filter: blur(0px); } }
+
+/* 3.5 Press de botón (microrrebote de confirmación). */
+.boton { transition: transform var(--dur-fast) var(--ease-snap), box-shadow var(--dur-fast) var(--ease-out); }
+.boton:active:not(:disabled) { transform: translate(0, 0) scale(0.97); }
+
+/* 3.6 Colapso del sidebar: el ancho se anima (etiquetas siguen con display:none). */
+.sb { transition: flex-basis var(--dur-slow) var(--ease-io), width var(--dur-slow) var(--ease-io); }
+
+/* 3.7 Cambio de avatar/foto (cross-fade al entrar la imagen). */
+.sb__acc-av, .acc__av { transition: color var(--dur) var(--ease-out); }
+.sb__acc-av.con-foto, .acc__av.con-foto { animation: foto-in var(--dur-slow) var(--ease-out); }
+@keyframes foto-in { from { opacity: 0.4; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }
+
+/* 3.8 Toggle monocromo (checkbox de Settings). */
+.campo input[type='checkbox'] {
+  -webkit-appearance: none; appearance: none;
+  width: 40px; height: 22px; min-height: 22px; border-radius: 999px;
+  border: 1px solid var(--linea-alta); background: var(--void);
+  position: relative; cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+.campo input[type='checkbox']::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 16px; height: 16px; border-radius: 50%; background: var(--gris);
+  transition: transform var(--dur) var(--ease-snap), background var(--dur-fast) var(--ease-out);
+}
+.campo input[type='checkbox']:checked { border-color: var(--blanco); }
+.campo input[type='checkbox']:checked::after { transform: translateX(18px); background: var(--blanco); }
+
+/* 3.9 Entrada encadenada del empty-state. */
+.vacio { animation: panel-in var(--dur-slow) var(--ease-out) both; }
+.vacio__ico { animation: foto-in var(--dur-slow) var(--ease-out) both; }
+.vacio__tit { animation: fila-in var(--dur) var(--ease-out) 60ms both; }
+.vacio__sub { animation: fila-in var(--dur) var(--ease-out) 110ms both; }
+.vacio .boton { animation: fila-in var(--dur) var(--ease-out) 160ms both; }
+
+/* 3.10 Pulso "en antena" para la fila/tag Live (mismo --rec, solo su halo). */
+@keyframes anillo-vivo {
+  0% { box-shadow: 0 0 0 0 rgb(245 37 59 / 45%); }
+  70% { box-shadow: 0 0 0 6px rgb(245 37 59 / 0%); }
+  100% { box-shadow: 0 0 0 0 rgb(245 37 59 / 0%); }
+}
+.tag--live { animation: anillo-vivo 1.8s var(--ease-out) infinite; }
+.fila--match:has(.tag--live) { border-color: var(--rec); }
+
+/* 3.11 Reduced-motion: ampliar a transiciones y scroll. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition-duration: 1ms !important; scroll-behavior: auto !important; }
+}
+
+/* ── Panel Account: filas editables inline + solo lectura ── */
+.acc__foto-btns { display: flex; gap: var(--sp-2); flex-wrap: wrap; }
+.acc__foto-txt { display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-start; }
+.acc__lista { display: flex; flex-direction: column; gap: var(--sp-1); }
+.acc__fila {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-2) var(--sp-3); border-radius: 10px;
+  background: var(--alzado); border: 1px solid var(--linea);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.acc__fila:hover { border-color: var(--linea-alta); }
+.acc__fila--ro { background: transparent; }
+.acc__meta { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
+.acc__val { font-family: 'Poppins', system-ui, sans-serif; font-size: 14px; color: var(--blanco); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.acc__fila--ro .acc__val { color: var(--gris); }
+.acc__lapiz { flex: 0 0 auto; }
+.acc__link { font-size: 12px; color: var(--gris); text-decoration: none; border-bottom: 1px solid var(--linea-alta); transition: color var(--dur-fast) var(--ease-out); }
+.acc__link:hover { color: var(--blanco); }
+.acc__edita { display: flex; align-items: center; gap: var(--sp-2); flex: 1; }
+.acc__input {
+  flex: 1; min-width: 0; padding: 7px 10px; border-radius: 8px;
+  background: var(--void); border: 1px solid var(--linea-alta); color: var(--blanco);
+  font-family: 'Poppins', system-ui, sans-serif; font-size: 14px;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.acc__input:focus { outline: none; border-color: var(--blanco); }
+.acc__pie { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); margin-top: var(--sp-2); }
+.acc__flash { font-size: 12px; color: var(--gris); opacity: 0; transition: opacity var(--dur) var(--ease-out); }
+.acc__flash.vis { opacity: 1; }
+.acc__error { margin: 0; font-size: 12px; color: var(--rec-claro, #ff6b7a); }
+
+/* ── Colapso del sidebar más suave ──────────────────────────────────────────
+   Antes el icono saltaba al centro (justify-content:center re-centraba en la
+   barra aún ancha) y LUEGO se achicaba. Ahora el centrado es por padding, que
+   sí se puede transicionar, así el icono se DESLIZA al centro a la vez que el
+   ancho baja. El ancho de .sb ya se anima en el bloque de movimiento. */
+.menu__item, .sb__top, .sb__acc { transition: padding var(--dur-slow) var(--ease-io); }
+
+/* ══════════════════════════════════════════════════════════════════════════
+   FONDO VALORANT (primer pase) — el dashboard deja de ser negro plano y se
+   asienta sobre un splash de mapa real (valorant-api.com, el mismo mapa que
+   leemos del juego). Un scrim oscuro fuerte mantiene el texto blanco legible;
+   los paneles/cards siguen encima con su fondo. Da identidad de juego sin robar
+   claridad. La dirección visual completa (hero, cards con mapa, agentes) llega
+   del spec y se integra encima de esto.
+   ══════════════════════════════════════════════════════════════════════════ */
+:root {
+  /* Elevación en capas (solo bordes de tarjeta, nunca sobre texto). */
+  --elev-1: 0 1px 2px rgb(0 0 0 / 40%);
+  --elev-2: 0 4px 14px rgb(0 0 0 / 45%), 0 1px 3px rgb(0 0 0 / 55%);
+  --elev-3: 0 12px 34px rgb(0 0 0 / 55%), 0 2px 8px rgb(0 0 0 / 60%);
+  /* Glass: translucidez sobre --void + realce de borde. */
+  --glass: rgb(20 21 26 / 74%);
+  --glass-alto: rgb(28 29 36 / 80%);
+  --glass-borde: rgb(255 255 255 / 8%);
+  --glass-blur: 14px;
+  /* Scrims reutilizables. */
+  --scrim-diag: linear-gradient(105deg, rgb(8 8 10 / 95%) 30%, rgb(8 8 10 / 60%) 62%, transparent 100%);
+  --scrim-izq: linear-gradient(90deg, rgb(8 8 10 / 94%) 20%, rgb(8 8 10 / 55%) 60%, transparent 100%);
+  /* Resultado como DATO (no cromo): verde/rojo apagado, distinto del --rec. */
+  --gana: #3ddc84;
+  --pierde: #e0555f;
+}
+.img-fondo { background-position: center; background-size: cover; background-repeat: no-repeat; }
+
+/* Backdrop de página: splash de mapa MUY borroso tras todo el dashboard, como
+   ambiente (el hero lleva el mapa nítido). Fijo por defecto a Ascent; JS puede
+   cambiarlo al mapa en juego con --pagina-img. Scrim casi opaco + blur alto: es
+   atmósfera, jamás compite con una fila. */
+.menu { background-color: var(--void); }
+.menu::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  /* Fondo de marca NEUTRO (no un mapa): oscuro con glow rojo arriba + una segunda
+     luz fría abajo-derecha para dar profundidad. Nada de splash aquí — el mapa
+     solo vive donde es contextual (hero + fila en vivo). */
+  background:
+    radial-gradient(75% 55% at 50% -8%, rgb(130 22 22 / 20%), transparent 60%),
+    radial-gradient(55% 60% at 100% 108%, rgb(34 36 48 / 45%), transparent 72%),
+    linear-gradient(158deg, #0e0f15 0%, #0a0b0f 55%, var(--void) 100%);
+}
+.menu > * { position: relative; z-index: 1; }
+
+/* Glass en las tarjetas: reemplaza el fondo plano por translúcido con profundidad
+   y realce de borde. El texto sigue legible (panel ~74% opaco sobre el scrim). */
+.fila, .eqc, .acc__fila, .tpl__card, .dlg {
+  background: var(--glass);
+  border-color: var(--glass-borde);
+  box-shadow: var(--elev-1), inset 0 1px 0 rgb(255 255 255 / 5%);
+  backdrop-filter: blur(var(--glass-blur));
+}
+.fila:hover, .eqc:hover {
+  background: var(--glass-alto);
+  box-shadow: var(--elev-2), inset 0 1px 0 rgb(255 255 255 / 7%);
+}
+.sb { background: rgb(12 13 16 / 66%); backdrop-filter: blur(10px); }
+
+/* PCs flojos / usuarios que reducen transparencia: sin blur, fondo sólido. */
+@media (prefers-reduced-transparency: reduce) {
+  .fila, .eqc, .acc__fila, .tpl__card, .dlg, .sb { backdrop-filter: none; background: var(--alzado); }
+  .menu::before { filter: none; opacity: .28; }
+}
+
+/* ══ Hero de Matches: el golpe premium al abrir el dashboard ════════════════
+   Muestra el match en vivo (o el próximo) con el splash del mapa a sangre por la
+   derecha. Si algo falta, se oculta (no rompe la lista). */
+.hero {
+  position: relative; border-radius: 16px; overflow: hidden; min-height: 190px;
+  margin-bottom: var(--sp-5); border: 1px solid var(--glass-borde);
+  background: var(--glass); box-shadow: var(--elev-2); isolation: isolate;
+}
+.hero[hidden] { display: none; }
+.hero__img { position: absolute; inset: 0; z-index: 0; }
+.hero__scrim { position: absolute; inset: 0; z-index: 1; background: var(--scrim-diag); }
+.hero:not([data-img='si']) .hero__img { display: none; }
+.hero:not([data-img='si'])::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background: radial-gradient(120% 100% at 100% 0%, #16171d, var(--void) 70%);
+}
+.hero__cont { position: relative; z-index: 2; display: flex; flex-direction: column;
+  gap: var(--sp-3); padding: var(--sp-6); height: 100%; }
+.hero__kick { font-family: 'Poppins', system-ui, sans-serif; font-size: 10px; font-weight: 700;
+  letter-spacing: .18em; text-transform: uppercase; color: var(--gris); }
+.hero[data-vivo='si'] .hero__kick { color: var(--rec-claro); display: inline-flex; align-items: center; gap: 7px; }
+.hero[data-vivo='si'] .hero__kick::before { content: ''; width: 8px; height: 8px; border-radius: 50%;
+  background: var(--rec); animation: late 1.6s ease-in-out infinite; }
+.hero__vs { display: flex; align-items: center; gap: var(--sp-4); }
+.hero__eq { display: flex; align-items: center; gap: var(--sp-3); flex: 1; min-width: 0; }
+.hero__eq--b { justify-content: flex-end; text-align: right; }
+.hero__logo { width: 56px; height: 56px; flex: 0 0 auto; border-radius: 10px;
+  background-color: rgb(0 0 0 / 40%); border: 1px solid var(--linea-alta);
+  background-size: contain; background-position: center; background-repeat: no-repeat; }
+.hero__nom { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: clamp(20px, 2.4cqw, 30px);
+  text-transform: uppercase; letter-spacing: .01em; color: var(--blanco);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 2px 12px rgb(0 0 0 / 60%); }
+.hero__sc { font-family: 'Oswald', sans-serif; font-weight: 700; font-size: clamp(30px, 4cqw, 46px);
+  line-height: 1; color: var(--blanco); flex: 0 0 auto; font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 14px rgb(0 0 0 / 70%); }
+.hero__pie { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; margin-top: auto; }
+.hero__mapa, .hero__torneo { font-family: 'Oswald', sans-serif; font-size: 13px; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--gris); }
+.hero__pie .boton { margin-top: 0; margin-left: auto; }
+
+/* ══ Fila de match "rica": logos grandes + marcador héroe + mapa si vivo ═══════ */
+/* Layout robusto a cualquier formato: el duelo (A · marcador · B) es un bloque
+   flex simétrico —A pegado al centro por la derecha, B por la izquierda— así el
+   marcador SIEMPRE queda centrado sin importar el largo de los nombres. La info
+   (formato/estado/torneo) y las acciones van fijas a la derecha. */
+.fila--match {
+  display: flex; align-items: center; gap: var(--sp-4);
+  position: relative; overflow: hidden;
+  padding: var(--sp-2) var(--sp-4); min-height: 72px;
+  cursor: pointer;
+}
+.fila--match[data-img='si']::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background-image: var(--scrim-izq), var(--fm-img);
+  background-size: cover, cover; background-position: center, center right;
+  background-repeat: no-repeat, no-repeat; opacity: 0.85;
+}
+.fila--match > * { position: relative; z-index: 1; }
+
+.fm__duelo { flex: 1 1 auto; display: flex; align-items: center; gap: var(--sp-4); min-width: 0; }
+.fm__lado { flex: 1 1 0; display: flex; align-items: center; gap: var(--sp-3); min-width: 0; }
+.fm__lado--a { justify-content: flex-end; }
+.fm__lado--b { justify-content: flex-start; }
+.fm__lado--a .fm__nom { text-align: right; }
+.fm__logo { width: 40px; height: 40px; flex: 0 0 auto; border-radius: 8px;
+  background-color: var(--void); border: 1px solid var(--linea); box-shadow: var(--elev-1);
+  display: grid; place-items: center; background-size: contain; background-position: center; background-repeat: no-repeat; }
+.fm__logo--txt { font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .04em; color: var(--gris); }
+.fm__nom { font-family: 'Oswald', sans-serif; font-size: clamp(16px, 1.5cqw, 20px);
+  font-weight: 600; letter-spacing: .02em; text-transform: uppercase; color: var(--blanco);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Marcador: el foco. Cifra grande tabular; separador tenue. Ancho mínimo fijo
+   para que la columna del marcador quede alineada entre filas. */
+.fm__marcador { flex: 0 0 auto; min-width: 84px; justify-content: center;
+  display: inline-flex; align-items: baseline; gap: 7px;
+  font-family: 'Oswald', sans-serif; font-weight: 700; font-size: 30px; line-height: 1;
+  color: var(--blanco); font-variant-numeric: tabular-nums; }
+.fm__marcador i { color: var(--mute); font-style: normal; font-size: 20px; }
+
+/* Info a ancho fijo: no empuja el duelo cuando cambia formato/torneo. */
+.fm__info { flex: 0 0 auto; width: 210px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.fm__tags { display: flex; align-items: center; gap: var(--sp-1); }
+.fm__sub { font-size: 11px; color: var(--gris); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Acciones: Start siempre; los iconos aparecen al pasar el ratón (menos ruido). */
+.fila--match .fila__acc { flex: 0 0 auto; }
+.fila--match .fila__acc .ic-btn { opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); }
+.fila--match:hover .fila__acc .ic-btn { opacity: 1; }
+
+.fila--match[data-estado='live'] .tag--live .punto { animation: late 1.6s ease-in-out infinite; }
+.fila--match[data-estado='done'] { opacity: .8; }
+
+@container panel (width < 820px) {
+  .fila--match { flex-wrap: wrap; }
+  .fm__duelo { order: 1; flex-basis: 100%; }
+  .fila--match .fila__acc { order: 2; margin-left: auto; }
+  .fila--match .fila__acc .ic-btn { opacity: 1; }
+  .fm__info { order: 3; width: auto; flex-direction: row; align-items: center; gap: var(--sp-2); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TRASPASO DEL DISEÑO — dashboard de Matches (Claude-design handoff)
+   El fundador entregó un mockup del panel de operador; esto lo replica sobre los
+   datos reales. Es el "look" nuevo SOLO del dashboard de Matches: rail de iconos,
+   hero, barra de filtros y parrilla de cards. Va al FINAL para ganar por cascada
+   a la maqueta anterior (.hero/.fila--match/.sb) sin borrarla. Respeta el manual:
+   monocromo, naranja prohibido; el color de equipo vive solo en barras de equipo
+   (.hero__bar / .mc__bar); el rojo --rec sigue significando "en antena".
+   Piezas del diseño que NO se portan 1:1 (y por qué):
+     · Toggle claro/oscuro del rail → el panel es dark-only por manual de marca,
+       no hay tema claro que alternar. Se omite el botón.
+     · Iconos de acción "solo al hover" → en punteros sí; en táctil (el panel se
+       usa desde el móvil) quedan visibles para poder tocarlos.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Fondo del dashboard (ambiente del diseño): oscuro + dos luces frías tenues
+      (azul/verde, ambientales, NO color de equipo ni acento) + grano sutil. ── */
+.menu::before {
+  content: '';
+  position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(44% 44% at 92% -6%, rgb(91 140 255 / 12%), transparent 70%),
+    radial-gradient(44% 44% at -6% 106%, rgb(76 217 136 / 9%), transparent 70%),
+    linear-gradient(158deg, #0e0f15 0%, #0a0b0f 55%, var(--void) 100%);
+}
+
+/* ── Rail de iconos (siempre compacto, 60px; sin colapsar) ── */
+.menu .sb,
+.menu.is-colapsado .sb {
+  flex: 0 0 60px; width: 60px; min-width: 60px;
+  background: rgb(13 14 18 / 55%); backdrop-filter: blur(20px) saturate(160%);
+  border-right: 1px solid rgb(255 255 255 / 8%);
+  display: flex; flex-direction: column; align-items: center; overflow: visible;
+}
+.menu .sb__top {
+  width: 100%; height: auto; margin: 0; padding: 16px 0;
+  display: flex; justify-content: center;
+  border-bottom: 1px solid rgb(255 255 255 / 8%);
+}
+/* El logo del rail se ve SIEMPRE (aunque quede una clase is-colapsado antigua en
+   localStorage, que ocultaba el logo en el sidebar viejo). */
+.menu .sb__logo,
+.menu.is-colapsado .sb__logo { display: inline-flex; align-items: center; gap: 0; }
+.menu .sb__logo b { display: none; }
+.menu .sb__logo img { display: block; height: 16px; width: auto; }
+.menu .sb__hide { display: none; } /* el rail ya es compacto: sin botón de colapsar */
+.menu .sb__body {
+  width: 100%; flex: 1; padding: 14px 0 0; gap: 2px; overflow: visible;
+  display: flex; flex-direction: column; align-items: center;
+}
+.menu .sb__group { width: 100%; align-items: center; gap: 2px; }
+.menu .sb__label { display: none; }
+.menu.is-colapsado .menu__item,
+.menu .menu__item {
+  width: 42px; height: 42px; padding: 0; border-radius: 0;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--gris);
+}
+.menu .menu__item span { display: none; }
+.menu .menu__item .ico { width: 19px; height: 19px; opacity: 1; }
+.menu .menu__item:hover { background: rgb(255 255 255 / 6%); color: #fff; }
+.menu .menu__item.is-activo { background: rgb(255 255 255 / 6%); color: #fff; box-shadow: inset 2px 0 0 var(--rec); }
+.menu .sb__foot { width: 100%; border-top: 0; padding: 0 0 14px; margin-top: auto; display: flex; justify-content: center; }
+.menu.is-colapsado .sb__acc,
+.menu .sb__acc { width: 42px; height: 42px; padding: 0; justify-content: center; border-radius: 0; }
+.menu .sb__acc:hover { background: rgb(255 255 255 / 6%); }
+.menu .sb__acc-txt { display: none; }
+.menu .sb__acc-av { width: 34px; height: 34px; border-radius: 0; }
+
+/* ── Hero (diseño): splash a sangre, ON AIR, barras de color, marcador grande ── */
+.menu .hero {
+  border-radius: 0; min-height: 260px; margin-bottom: 24px; box-shadow: none;
+  border: 1px solid rgb(255 255 255 / 8%); background: var(--marco);
+}
+.menu .hero__img { filter: brightness(.55) saturate(1.05); }
+.menu .hero__scrim { background: linear-gradient(120deg, rgb(8 8 10 / 75%) 0%, rgb(8 8 10 / 44%) 55%, rgb(8 8 10 / 75%) 100%); }
+.menu .hero__cont { padding: 30px 32px; gap: 22px; justify-content: space-between; min-height: 260px; }
+.hero__top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.menu .hero__kick {
+  display: inline-flex; align-items: center; gap: 8px;
+  font-family: 'Poppins', system-ui, sans-serif; font-size: 11px; font-weight: 600;
+  letter-spacing: .2em; text-transform: uppercase; color: #e8e8ea;
+  padding: 6px 14px; background: rgb(255 255 255 / 8%); border: 1px solid rgb(255 255 255 / 14%);
+}
+.menu .hero[data-vivo='si'] .hero__kick { color: var(--rec-claro); background: rgb(245 37 59 / 12%); border-color: rgb(245 37 59 / 30%); }
+.hero__foot {
+  font-family: 'Oswald', sans-serif; font-size: 12px; letter-spacing: .08em; text-transform: uppercase;
+  color: #d8d9db; padding: 6px 14px; background: rgb(255 255 255 / 6%); border: 1px solid rgb(255 255 255 / 10%);
+}
+.menu .hero__vs { gap: 28px; flex-wrap: wrap; }
+.menu .hero__eq { flex: 0 1 auto; gap: 12px; }
+.hero__bar { flex: none; width: 6px; height: 34px; border-radius: 4px; background: var(--linea-alta); }
+.menu .hero__nom { font-size: clamp(22px, 4cqw, 32px); font-weight: 600; text-shadow: 0 2px 12px rgb(0 0 0 / 60%); }
+.menu .hero__sc { font-size: clamp(36px, 7cqw, 58px); }
+.menu .hero__vs .boton { margin-left: auto; margin-top: 0; }
+
+/* ── Barra de filtros ── */
+.fbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.fbar__pills { display: flex; gap: 10px; flex-wrap: wrap; }
+.fbar__sp { margin-left: auto; }
+.fbar--filtros { padding: 12px 14px; border: 1px solid rgb(255 255 255 / 8%); background: rgb(13 14 18 / 40%); margin-bottom: 18px; }
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px;
+  border: 1px solid rgb(255 255 255 / 8%); background: rgb(255 255 255 / 5%);
+  color: var(--gris); font-family: 'Poppins', system-ui, sans-serif; font-size: 12px;
+  text-transform: uppercase; letter-spacing: .04em; cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out), border-color var(--dur-fast) var(--ease-out);
+}
+.pill b { color: #fff; font-weight: 600; }
+.pill--live b { color: var(--rec-claro); }
+.pill:hover { background: rgb(255 255 255 / 10%); }
+.pill.is-on { border-color: rgb(255 255 255 / 30%); color: #fff; }
+.fbar__div { width: 1px; height: 22px; background: rgb(255 255 255 / 10%); flex: none; }
+.chip {
+  height: 36px; padding: 0 14px; display: inline-flex; align-items: center;
+  border: 0; background: transparent; color: #e8e8ea;
+  font-family: 'Poppins', system-ui, sans-serif; font-size: 11px; font-weight: 600; cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+.chip:hover { background: rgb(255 255 255 / 12%); }
+.chip.is-on { background: rgb(255 255 255 / 16%); color: #fff; }
+.fdrop {
+  height: 36px; padding: 0 28px 0 10px; color: #f2f2f3; font-size: 12px; color-scheme: dark;
+  background-color: rgb(255 255 255 / 6%); border: 1px solid rgb(255 255 255 / 10%);
+  appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0L5 6L10 0' stroke='%23A0A2A8' fill='none'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center;
+}
+.fdrop:focus { outline: none; border-color: var(--blanco); }
+.fclear { margin-left: auto; background: transparent; border: 0; color: var(--gris); font-size: 11px; text-decoration: underline; cursor: pointer; }
+.fclear:hover { color: #fff; }
+
+/* ── Parrilla de cards de match ── */
+.dash__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 18px; }
+.dash__grid > * { animation: fila-in var(--dur) var(--ease-out) both; animation-delay: calc(var(--i, 0) * 28ms); }
+
+.mc {
+  position: relative; overflow: hidden; cursor: pointer; isolation: isolate;
+  min-height: 150px; background: #101116; border: 1px solid rgb(255 255 255 / 8%);
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.mc[data-img='si']::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background-image: var(--mc-img); background-size: cover; background-position: center;
+  filter: brightness(.62) saturate(1.1);
+}
+.mc:not([data-img='si'])::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background: linear-gradient(120deg, #16171d, var(--void));
+}
+.mc__scrim {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(180deg, rgb(8 8 10 / 69%) 0%, rgb(8 8 10 / 19%) 32%, rgb(8 8 10 / 25%) 58%, rgb(8 8 10 / 94%) 100%);
+}
+.mc:hover { border-color: rgb(255 255 255 / 22%); }
+.mc__cont {
+  position: relative; z-index: 2; padding: 18px; min-height: 200px;
+  display: flex; flex-direction: column; gap: 16px; justify-content: space-between;
+}
+.mc__top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mc__estado {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'Oswald', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: .12em;
+  text-transform: uppercase; color: #e8e8ea;
+}
+.mc__estado .punto { width: 7px; height: 7px; background: #e8e8ea; }
+.mc[data-estado='live'] .mc__estado { color: var(--rec-claro); }
+.mc[data-estado='live'] .mc__estado .punto { background: var(--rec); animation: late 1.6s ease-in-out infinite; }
+.mc[data-estado='done'] { opacity: .9; }
+.mc__fmt {
+  font-family: 'Oswald', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: .08em; color: #e8e8ea;
+  padding: 4px 9px; background: rgb(0 0 0 / 45%); border: 1px solid rgb(255 255 255 / 12%);
+}
+.mc__duelo { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mc__lado { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.mc__lado--b { justify-content: flex-end; }
+.mc__bar { flex: none; width: 4px; height: 16px; border-radius: 3px; }
+.mc__tri {
+  font-family: 'Oswald', sans-serif; font-size: 15px; font-weight: 600; text-transform: uppercase; color: #fff;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.mc__sc {
+  flex: none; display: inline-flex; align-items: baseline; gap: 5px;
+  font-family: 'Oswald', sans-serif; font-size: 20px; font-weight: 700; color: #fff;
+  font-variant-numeric: tabular-nums; text-shadow: 0 1px 6px rgb(8 8 10 / 75%);
+}
+.mc__sc i { font-style: normal; color: var(--mute); }
+.mc__pie {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding-top: 10px; border-top: 1px solid rgb(255 255 255 / 12%);
+}
+.mc__sub { font-size: 12px; color: #e8e8ea; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mc__acc { flex: none; display: flex; gap: 4px; }
+.mc__ic {
+  width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
+  background: rgb(255 255 255 / 8%); color: #e8e8ea; border: 0; cursor: pointer; font-size: 11px;
+  transition: background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+.mc__ic:hover { background: rgb(255 255 255 / 18%); color: #fff; }
+.mc__ic--del:hover { background: rgb(245 37 59 / 30%); color: var(--rec-claro); }
+
+/* Iconos de acción al hover en puntero; en táctil quedan visibles (móvil). */
+@media (hover: hover) {
+  .mc__acc { opacity: 0; transition: opacity var(--dur-fast) var(--ease-out); }
+  .mc:hover .mc__acc { opacity: 1; }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .menu .sb { backdrop-filter: none; background: var(--alzado); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TRASPASO DEL DISEÑO — RESTO DE VISTAS (Claude-design handoff, 2ª fase)
+   El bloque anterior portó SOLO el dashboard de Matches. Este extiende el MISMO
+   idioma del mockup al resto del panel de operador (Teams, Tournaments, Template,
+   Settings, Account, diálogos, lobby/pre-partida, asistente y puerta/barra) para
+   que NINGUNA vista quede con el look viejo (esquinas redondeadas + card plana)
+   al lado de una nueva.
+
+   Es sólo CSS + un par de acentos en los renderers (colorEquipo en Teams, backdrop
+   en Tournaments). Respeta el manual de marca del mockup: oscuro, esquinas vivas
+   (radio 0), superficies "glass", color de equipo SOLO en piezas de equipo
+   (filete), y el rojo --rec reservado a "en antena". Va al final para ganar por
+   cascada a los estilos v1/v2 sin borrarlos.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Tokens compartidos del diseño (definidos una vez, reutilizados en todo) ── */
+:root {
+  --d-radio: 0;                                   /* esquinas vivas del mockup */
+  --d-glass: rgb(13 14 18 / 55%);                 /* superficie glass del panel */
+  --d-glass-alto: rgb(20 21 26 / 74%);            /* glass en hover/elevado */
+  --d-borde: rgb(255 255 255 / 8%);               /* borde de card/panel */
+  --d-borde-alto: rgb(255 255 255 / 22%);         /* borde en hover/activo */
+  --d-blur: blur(20px) saturate(160%);            /* desenfoque del glass */
+  --d-card: #101116;                              /* base sólida de card (mc/tpl) */
+  --d-in-fondo: rgb(255 255 255 / 5%);            /* input translúcido del mockup */
+  --d-in-borde: rgb(255 255 255 / 10%);
+  --d-in-foco: rgb(255 255 255 / 40%);
+}
+
+/* ── Campos: input/select/textarea translúcidos, como el mockup ─────────────
+   El diseño usa campos de cristal (blanco al 5%) con borde tenue y foco a blanco
+   40%, no negro sólido. Sólo afecta a `.campo` (que vive únicamente en el panel). */
+.campo input,
+.campo select,
+.campo textarea {
+  background: var(--d-in-fondo);
+  border-color: var(--d-in-borde);
+  border-radius: var(--d-radio);
+}
+.campo input:focus,
+.campo select:focus,
+.campo textarea:focus {
+  border-color: var(--d-in-foco);
+}
+/* El estado "sucio" (tocado sin guardar) sigue ganando: rojo = pendiente. */
+.campo[data-sucio='si'] input,
+.campo[data-sucio='si'] select { border-color: var(--rec); }
+
+/* ── Section header reutilizable: el rótulo pequeño en versalitas del mockup.
+   Los .panel__cabeza del panel ya combinan h2.display + .etiqueta; aquí sólo se
+   afina la etiqueta para que lea igual en todas las vistas. ── */
+.etiqueta {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gris);
+}
+
+/* ══ Paneles de contenido como cards glass (Settings + Asistente) ════════════
+   En el mockup cada bloque de config es una card de cristal oscuro con borde
+   tenue. Los .panel del panel eran transparentes; aquí se les da cuerpo. Se
+   mantiene la lógica (ids, data-clave) intacta: sólo cambia la piel. */
+#vista-ajustes .panel,
+#asistente .panel {
+  background: var(--d-glass);
+  border: 1px solid var(--d-borde);
+  border-radius: var(--d-radio);
+  box-shadow: var(--elev-1);
+  backdrop-filter: var(--d-blur);
+  margin-top: var(--sp-4);
+}
+/* El contenido del panel llevaba padding sólo vertical (vivía sobre el fondo);
+   dentro de una card necesita respiro horizontal. */
+#vista-ajustes .panel__cabeza,
+#vista-ajustes .panel__cuerpo,
+#asistente .panel__cabeza,
+#asistente .panel__cuerpo { padding-left: 18px; padding-right: 18px; }
+#asistente .panel__cabeza,
+#vista-ajustes .panel__cabeza { border-bottom: 1px solid var(--d-borde); }
+
+/* ── Asistente: la card del paso se cuelga del raíl de pasos como un solo bloque
+   (raíl arriba, panel abajo, sin costura). Ambos con el mismo glass + borde. ── */
+#asistente .pasos {
+  background: var(--d-glass);
+  border-color: var(--d-borde);
+  backdrop-filter: var(--d-blur);
+}
+#asistente .panel { border-top: 0; margin-top: 0; }
+#asistente .pie-paso { border-top: 1px solid var(--d-borde); padding: 14px 18px; }
+
+@media (prefers-reduced-transparency: reduce) {
+  #vista-ajustes .panel,
+  #asistente .panel,
+  #asistente .pasos { backdrop-filter: none; background: var(--alzado); }
+}
+
+/* ══ Teams — card de equipo con filete de color y esquinas vivas ═════════════
+   colorEquipo() (db.js) alimenta --eq: el ÚNICO acento de color, como filete
+   lateral (regla de marca). Card glass, logo cuadrado, nombre + tricode. */
+.menu .eqc {
+  gap: 12px; padding: 12px 14px;
+  border-radius: var(--d-radio);
+  background: var(--d-glass); border: 1px solid var(--d-borde);
+  box-shadow: var(--elev-1); backdrop-filter: var(--d-blur);
+}
+.menu .eqc:hover { background: var(--d-glass-alto); border-color: var(--d-borde-alto); transform: translateX(2px); }
+.eqc__bar { flex: none; width: 4px; height: 34px; border-radius: var(--d-radio); background: var(--eq, var(--linea-alta)); }
+.menu .eqc__logo { border-radius: var(--d-radio); }
+
+/* ══ Tournaments — fila glass con backdrop opcional detrás de un scrim ═══════ */
+.menu .fila {
+  gap: 12px; padding: 12px 14px;
+  border-radius: var(--d-radio);
+  background: var(--d-glass); border: 1px solid var(--d-borde);
+  box-shadow: var(--elev-1); backdrop-filter: var(--d-blur);
+}
+.menu .fila:hover { background: var(--d-glass-alto); border-color: var(--d-borde-alto); transform: translateX(2px); }
+.menu .fila__logo { border-radius: var(--d-radio); background-color: rgb(0 0 0 / 40%); border: 1px solid var(--d-borde); }
+.menu .fila__logo--vacio { background-image: none; }
+/* Backdrop del torneo (mismo patrón que la card de match): imagen a sangre por
+   la derecha bajo un scrim que mantiene el texto legible. */
+.fila--to { position: relative; overflow: hidden; isolation: isolate; }
+.fila--to > * { position: relative; z-index: 1; }
+.fila--to[data-img='si']::before {
+  content: ''; position: absolute; inset: 0; z-index: 0;
+  background-image: var(--scrim-izq), var(--to-img);
+  background-size: cover, cover; background-position: center, center right;
+  background-repeat: no-repeat, no-repeat;
+}
+
+/* ══ Template — chooser + card activa en esquinas vivas y glass ══════════════ */
+.tpl__card { border-radius: var(--d-radio); background: var(--d-glass); border: 1px solid var(--d-borde); }
+.tpl__card:hover { border-color: var(--d-borde-alto); }
+.tpl__card--activa { border-color: var(--blanco); }
+.tpl__prev { border-radius: 0; border-bottom: 1px solid var(--d-borde); background: linear-gradient(135deg, #16171d, var(--void)); }
+
+/* ══ Account — avatar, filas editables y solo-lectura en el nuevo idioma ═════ */
+.acc__av { border-radius: var(--d-radio); background: var(--linea-alta); }
+.menu .acc__fila { border-radius: var(--d-radio); background: var(--d-glass); border: 1px solid var(--d-borde); backdrop-filter: var(--d-blur); }
+.menu .acc__fila--ro { background: transparent; backdrop-filter: none; }
+.menu .acc__fila:hover { border-color: var(--d-borde-alto); }
+.acc__input { border-radius: var(--d-radio); background: var(--d-in-fondo); border-color: var(--d-in-borde); }
+.acc__input:focus { border-color: var(--d-in-foco); }
+.acc__link { border-bottom-color: var(--d-in-borde); }
+
+/* ══ Etiquetas/tags e íconos de acción — esquinas vivas ═════════════════════ */
+.tag { border-radius: var(--d-radio); }
+.ic-btn { border-radius: var(--d-radio); }
+.ic-btn:hover { background: rgb(255 255 255 / 10%); }
+.ic-btn--del:hover { background: rgb(245 37 59 / 22%); color: var(--rec-claro); }
+.menu__fmt { border-radius: var(--d-radio); }
+
+/* ══ Diálogos — modal de cristal oscuro, esquinas vivas, botones del sistema ═
+   Se conservan los ids/forms; sólo cambia la piel (dlg-team, -tournament,
+   -match, -pass). El backdrop y la animación de entrada ya viven en el v2. */
+.dlg {
+  border-radius: var(--d-radio);
+  background: var(--d-glass);
+  border: 1px solid var(--d-borde);
+  box-shadow: var(--elev-3);
+  backdrop-filter: var(--d-blur);
+}
+.dlg__form { gap: var(--sp-3); padding: var(--sp-5); }
+.dlg__form h2.display { font-size: clamp(18px, 2cqw, 22px); }
+.dlg__pie { padding-top: 6px; border-top: 1px solid var(--d-borde); margin-top: 4px; }
+@media (prefers-reduced-transparency: reduce) {
+  .dlg { backdrop-filter: none; background: var(--marco); }
+}
+
+/* ══ Lobby / pre-partida — afinar superficies al glass del diseño ════════════
+   La estructura ya sigue el idioma (esquinas vivas, filete de color por bando).
+   Aquí sólo se armonizan las cajas de config/código con el glass y se afina el
+   input del código de sala. Sin tocar la lógica (panel.js) ni el layout/grid. */
+.prep__code-fila input {
+  background: var(--d-in-fondo);
+  border-color: var(--d-in-borde);
+  border-radius: var(--d-radio);
+}
+.prep__code-fila input:focus { outline: none; border-color: var(--d-in-foco); }
+/* La caja del código, héroe de la columna: se marca como card glass tenue. */
+.prep__code {
+  padding: 14px; margin: 2px 0;
+  background: var(--d-glass); border: 1px solid var(--d-borde);
+  backdrop-filter: var(--d-blur);
+}
+.prep__cfg-h,
+.prep__code .etiqueta { color: var(--gris); letter-spacing: 0.14em; }
+
+/* ══ Barra de título + puerta de acceso — toque ligero al glass del diseño ═══
+   El markup de la puerta vive en index.html pero su piel está en shell.css
+   (fuera de alcance de edición); se refina desde aquí con especificidad
+   suficiente para ganar la cascada, sin tocar el drag ni la lógica de estado. */
+.acceso .acceso__caja {
+  background: var(--d-glass);
+  border: 1px solid var(--d-borde);
+  backdrop-filter: var(--d-blur);
+}
+.acceso .acceso__cabeza,
+.acceso .acceso__pie { border-color: var(--d-borde); }
+@media (prefers-reduced-transparency: reduce) {
+  .acceso .acceso__caja { backdrop-filter: none; background: var(--marco); }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   TRASPASO DEL DISEÑO — LOBBY / PRE-PARTIDA (Claude-design handoff, lobby)
+   Porta el look de la pantalla «lobby» del mockup del fundador a la vista real
+   (#vista-prepartida): raíl de iconos a la izquierda, fila superior con «←
+   Matches» + indicador LOBBY, tres columnas de cristal (Match settings · Teams
+   · Observers), filete de color BAJO la cabecera de cada equipo (verde ataque /
+   rojo defensa, como el mockup), marcador en color de bando, lápiz de edición y
+   slots con cuadro de «agente».
+
+   Sólo CSS: la lógica (panel.js), los ids, los data-* y el grid de fases
+   (lobby ⇄ vivo) quedan intactos. Va al final para ganar la cascada a los
+   estilos previos de .prep* sin borrarlos.
+
+   Nota de marca: el mockup usa rojo #F5253B para el punto LOBBY y para el filete
+   del equipo defensor. Se respeta el mockup por ser el objetivo explícito; el
+   rojo se mantiene SÓLO en esas piezas (bando/indicador), no en botones ni
+   acentos genéricos.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Carcasa: raíl fijo + contenido ── */
+.prep-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: calc(100vh - var(--barra, 34px) - 24px);
+}
+
+/* Raíl de iconos, réplica del sidebar del dashboard (que aquí no está visible).
+   Cada icono reabre el dashboard en su sección vía el evento 'abre-dashboard'. */
+.prep-rail {
+  flex: 0 0 60px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-right: 1px solid var(--d-borde);
+  background: rgb(13 14 18 / 50%);
+  backdrop-filter: var(--d-blur);
+}
+.prep-rail__logo {
+  width: 100%;
+  padding: 16px 0;
+  display: flex;
+  justify-content: center;
+  border-bottom: 1px solid var(--d-borde);
+  margin-bottom: 12px;
+}
+.prep-rail__ico {
+  width: 42px;
+  height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 0;
+  color: var(--gris);
+  cursor: pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.prep-rail__ico .ico { width: 19px; height: 19px; }
+.prep-rail__ico:hover { color: #fff; background: rgb(255 255 255 / 6%); }
+.prep-rail__ico.is-activo { color: #fff; }
+.prep-rail__ico:focus-visible { outline: 2px solid var(--rec); outline-offset: -2px; }
+.prep-rail__sp { flex: 1; }
+.prep-rail__av {
+  width: 34px;
+  height: 34px;
+  margin: 8px 0 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #fff;
+  background: rgb(255 255 255 / 9%) center / cover no-repeat;
+  border: 1px solid var(--d-borde);
+  cursor: pointer;
+}
+.prep-rail__av:hover { background-color: rgb(255 255 255 / 16%); }
+.prep-rail__av.con-foto { color: transparent; }
+
+.prep-main {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 22px;
+}
+
+/* ── Fila superior: volver + indicador LOBBY + mapa + torneo ── */
+.prep-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 18px 0 4px;
+}
+.prep-top__back {
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--gris);
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.12s ease;
+}
+.prep-top__back:hover { color: var(--blanco); }
+.prep-top__live {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rec-claro);
+}
+/* El punto del indicador LOBBY late en rojo (como el mockup). */
+.prep-top__live .punto {
+  width: 7px;
+  height: 7px;
+  background: var(--rec);
+  animation: late 1.6s ease-in-out infinite;
+}
+.prep-top__map {
+  font-family: 'Oswald', sans-serif;
+  text-transform: uppercase;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--blanco);
+}
+.prep-top__to { font-size: 12px; color: var(--mute); }
+
+/* ── El bloque .prep, dentro del main: arriba del todo, sin centrar ── */
+.prep-main .prep {
+  margin-top: 34px; /* deja hueco para el switch (absolute, -34px) */
+  align-items: flex-start;
+  gap: 20px;
+}
+
+/* ── Columna de config y bloque de cámaras como cards de cristal ── */
+.prep__lado .prep__cfg,
+.prep__lado .prep__cam {
+  background: var(--d-glass);
+  border: 1px solid var(--d-borde);
+  backdrop-filter: var(--d-blur);
+  padding: 16px;
+}
+.prep__lado .prep__cfg { border-bottom: 1px solid var(--d-borde); }
+.prep__lado .prep__cam { padding-top: 16px; }
+
+/* ── Grid de la lobby: Observers algo más estrecho, como el mockup ── */
+.prep__lobby[data-fase='lobby'] { grid-template-columns: 1fr 1fr 0.72fr; }
+
+/* ── Columnas de equipo/observers: cards de cristal (sin relleno degradado) con
+      filete de color BAJO la cabecera, no encima. ── */
+.prep__col {
+  border-top: 0;
+  padding: 0;
+  background: var(--d-glass);
+  border: 1px solid var(--d-borde);
+  backdrop-filter: var(--d-blur);
+}
+.prep__col--atk { --equipo: #4cd988; background: var(--d-glass); }
+.prep__col--def { --equipo: #f5253b; background: var(--d-glass); }
+.prep__col--obs { --equipo: var(--linea-alta); background: var(--d-glass); }
+/* La columna central sólo existe en fase «vivo» (marcador + controles): no es una
+   card de equipo, así que se mantiene transparente y sin borde como antes. */
+.prep__col--centro {
+  background: transparent;
+  border: 0;
+  backdrop-filter: none;
+  padding-top: 6px;
+}
+
+/* Cabecera del equipo: filete de color abajo (el acento de bando). */
+.prep__jefe {
+  padding: 14px 16px 12px;
+  border-bottom: 2px solid var(--equipo);
+}
+.prep__jefe .god__logo {
+  width: 40px;
+  height: 40px;
+  align-self: center;
+}
+.prep__jefe .god__meta { color: var(--equipo); }
+/* Marcador de serie: número en color de bando, tamaño del mockup. */
+.prep__col .prep__serie { font-size: 22px; margin-left: 8px; }
+
+/* Rótulos y slots con el respiro horizontal de las cards. */
+.prep__cab { padding: 14px 16px 12px; }
+.prep__cab--coach { margin-top: 0; padding: 12px 16px 6px; }
+.prep__slot { padding: 10px 16px; min-height: 46px; }
+.prep__col--obs .prep__slot { padding: 9px 16px; }
+.prep__slot .jug__nick { font-size: 15px; }
+
+/* Cuadro de «agente» a la izquierda del nombre (jugador/coach): 26px. El vacío
+   —sin icono de rango— es una casilla tenue, como el mockup. */
+.jug__rango--vacia {
+  display: inline-block;
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  background: rgb(255 255 255 / 5%);
+}
+/* Slot vacío de jugador/coach: casilla + texto (los de observador van sin caja,
+   ya que esa columna lleva los dos cuadraditos como pieza inicial). */
+#prep-atk .prep__slot--vacio::before,
+#prep-def .prep__slot--vacio::before,
+.prep__slots--coach .prep__slot--vacio::before {
+  content: '';
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  background: rgb(255 255 255 / 5%);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .prep-rail,
+  .prep__lado .prep__cfg,
+  .prep__lado .prep__cam,
+  .prep__col--atk,
+  .prep__col--def,
+  .prep__col--obs { backdrop-filter: none; background: var(--alzado); }
+}
+
+/* Con poco ancho, el raíl y el contenido se apilan y la config baja de columna. */
+@media (max-width: 900px) {
+  .prep-shell { flex-direction: column; }
+  .prep-rail {
+    flex: 0 0 auto;
+    flex-direction: row;
+    border-right: 0;
+    border-bottom: 1px solid var(--d-borde);
+  }
+  .prep-rail__logo { width: auto; border-bottom: 0; border-right: 1px solid var(--d-borde); margin: 0 8px 0 0; padding: 0 14px; }
+  .prep-rail__sp { flex: 1; }
+  .prep-main { padding-left: 0; }
+}
+
+/* ── Logos de equipo (reemplazan la barra de color cuando el equipo tiene logo) ── */
+.mc__bar.con-logo {
+  width: 22px; height: 22px; border-radius: 3px;
+  background-size: cover; background-position: center; background-repeat: no-repeat;
+  border: 1px solid rgb(255 255 255 / 14%);
+}
+.hero__bar.con-logo {
+  width: 46px; height: 46px; border-radius: 4px;
+  background-size: cover; background-position: center; background-repeat: no-repeat;
+  border: 1px solid rgb(255 255 255 / 14%);
+}
+
+/* ── Dropdown de filtro: popup nativo OSCURO + opciones legibles ──
+   (sin color-scheme:dark el popup sale claro con el highlight azul del SO). */
+.fdrop, select { color-scheme: dark; }
+.fdrop option, select option { background: #0d0e12; color: #f2f2f3; }

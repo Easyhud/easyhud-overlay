@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -49,84 +49,40 @@
     <!-- LA BARRA DE TÍTULO. La ventana va sin marco nativo: toda la barra
          arrastra (`-webkit-app-region: drag` en el CSS) y los botones no. -->
     <div class="barra" id="barra">
-      <!-- La marca sale del propio panel, no de un icono del cliente: así este
-           documento no depende de ficheros de otro repo para pintarse. -->
-      <div class="barra__marca">
-        <img src="assets/wordmark-easy.svg" alt="Easy" class="barra__logo" width="42" height="16" />
-        <span class="barra__nombre" translate="no">HUD</span>
+      <!-- El logo vive ahora en el sidebar del dashboard, no en la barra. -->
+
+      <!-- El estado del partido vive en la barra: estado · mapa · torneo. Antes
+           tenía su propia fila (el header), que se quitó. -->
+      <div class="estado" id="estado" data-vivo="no">
+        <span class="estado__celda">
+          <i class="punto" aria-hidden="true"></i>
+          <span id="estado-texto">Not set up</span>
+        </span>
+        <span class="estado__celda estado__celda--mapa" id="estado-mapa" hidden>—</span>
+        <span class="estado__celda estado__celda--torneo" id="estado-torneo" hidden>
+          <img class="estado__logo" id="estado-torneo-logo" alt="" hidden />
+          <span id="estado-torneo-nombre"></span>
+        </span>
       </div>
+
       <div class="barra__botones">
-        <button class="barra__btn barra__btn--ancho" type="button" id="bt-atajos" title="Atajos de teclado">
-          <svg width="15" height="10" viewBox="0 0 16 11" fill="none" stroke="currentColor" stroke-width="1" aria-hidden="true">
-            <rect x="0.5" y="0.5" width="15" height="10" rx="1.5" />
-            <path d="M3 3h1M6 3h1M9 3h1M12 3h1M3 6h1M6 6h1M9 6h1M12 6h1M4.5 8.5h7" stroke-linecap="round" />
-          </svg>
-          <span>Atajos</span>
-        </button>
-        <button class="barra__btn" type="button" id="bt-minimizar" aria-label="Minimizar">
+        <button class="barra__btn" type="button" id="bt-minimizar" aria-label="Minimize">
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="0" y="4.5" width="10" height="1" fill="currentColor" /></svg>
         </button>
-        <button class="barra__btn" type="button" id="bt-maximizar" aria-label="Maximizar">
+        <button class="barra__btn" type="button" id="bt-maximizar" aria-label="Maximize">
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" /></svg>
         </button>
-        <button class="barra__btn barra__btn--cerrar" type="button" id="bt-cerrar" aria-label="Cerrar">
+        <button class="barra__btn barra__btn--cerrar" type="button" id="bt-cerrar" aria-label="Close">
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true"><path d="M0 0 L10 10 M10 0 L0 10" stroke="currentColor" /></svg>
         </button>
       </div>
     </div>
 
-    <header class="cabecera">
-      <div class="cabecera__caja">
-        <a class="marca" href="#" aria-label="Easy HUD">
-          <img class="marca__logo" src="assets/wordmark-easy.svg" alt="Easy" width="76" height="29" />
-          <span class="marca__palabra" translate="no">HUD</span>
-        </a>
-
-        <!-- Navegación del panel. Oculta durante la configuración: durante el
-             asistente el único camino es hacia delante. -->
-        <nav class="nav" id="nav" aria-label="Secciones del panel" hidden>
-          <button class="nav__celda" type="button" data-vista="directo" aria-current="page">
-            <span class="nav__orden">01</span>Directo
-          </button>
-          <button class="nav__celda" type="button" data-vista="torneo">
-            <span class="nav__orden">02</span>Torneo
-          </button>
-          <button class="nav__celda" type="button" data-vista="equipos">
-            <span class="nav__orden">03</span>Equipos
-          </button>
-          <button class="nav__celda" type="button" data-vista="serie">
-            <span class="nav__orden">04</span>Serie
-          </button>
-          <button class="nav__celda" type="button" data-vista="patrocinio">
-            <span class="nav__orden">05</span>Patrocinio
-          </button>
-          <button class="nav__celda" type="button" data-vista="ajustes">
-            <span class="nav__orden">06</span>Ajustes
-          </button>
-        </nav>
-
-        <!-- Durante el asistente la cabecera dice en qué paso vas, no si hay
-             emisión: todavía no puede haberla. -->
-        <span class="nav" id="rotulo-asistente" aria-hidden="true">
-          <span class="nav__celda" style="cursor: default">Consola de realización</span>
-        </span>
-
-        <div class="estado" id="estado" data-vivo="no">
-          <span class="estado__celda">
-            <i class="punto" aria-hidden="true"></i>
-            <span id="estado-texto">Sin configurar</span>
-          </span>
-          <span class="estado__celda estado__celda--reloj" id="estado-reloj">--:--</span>
-          <span class="estado__celda estado__celda--codigo" id="estado-codigo">···</span>
-        </div>
-      </div>
-    </header>
-
     <main class="caja">
       <!-- ══════════════════════════════════════════════════════════════════
            ASISTENTE
            ══════════════════════════════════════════════════════════════════ -->
-      <section id="asistente" aria-label="Configuración inicial">
+      <section id="asistente" aria-label="Initial setup">
         <div class="pasos" id="raíl"></div>
 
         <!-- ── 01 · PLANTILLA ─────────────────────────────────────────────
@@ -135,64 +91,64 @@
              perder el tiempo.                                              -->
         <section class="panel" data-paso="plantilla" hidden style="margin-top: 0">
           <div class="panel__cabeza">
-            <h2 class="display">01 · Plantilla</h2>
-            <span class="etiqueta" id="plan-nota">Incluidas en tu plan</span>
+            <h2 class="display">01 · Template</h2>
+            <span class="etiqueta" id="plan-nota">Included in your plan</span>
           </div>
           <div class="panel__cuerpo">
-            <div class="rejilla" id="plantillas" role="radiogroup" aria-label="Plantilla"></div>
+            <div class="rejilla" id="plantillas" role="radiogroup" aria-label="Template"></div>
             <p class="apunte" style="margin-top: 14px">
-              Se puede cambiar entre torneos. Cambia las direcciones de OBS, así que si ya las
-              tenías puestas hay que volver a copiarlas del último paso.
+              You can switch between tournaments. It changes the OBS addresses, so if you already
+              set them, copy them again from the last step.
             </p>
           </div>
           <div class="pie-paso">
-            <button class="boton boton--terciario" type="button" data-atras hidden>Atrás</button>
+            <button class="boton boton--terciario" type="button" data-atras hidden>Back</button>
             <span class="pie-paso__hueco"></span>
-            <button class="boton" type="button" data-avanza>Continuar</button>
+            <button class="boton" type="button" data-avanza>Continue</button>
           </div>
         </section>
 
         <!-- ── 02 · SERVIDOR ────────────────────────────────────────────── -->
         <section class="panel" data-paso="servidor" hidden style="margin-top: 0">
           <div class="panel__cabeza">
-            <h2 class="display">02 · Servidor y partido</h2>
-            <span class="etiqueta">Obligatorio</span>
+            <h2 class="display">02 · Server &amp; match</h2>
+            <span class="etiqueta">Required</span>
           </div>
           <div class="panel__cuerpo">
             <p class="apunte">
-              El código de grupo es el mismo que pusiste en el observador. Es lo que dice a qué
-              partido pertenece todo lo demás.
+              The group code is the same one you set in the observer. It's what tells everything
+              else which match it belongs to.
             </p>
             <div class="rejilla" style="margin-top: 14px">
               <label class="campo">
-                <span class="etiqueta">Servidor</span>
+                <span class="etiqueta">Server</span>
                 <input id="cfg-endpoint" type="url" spellcheck="false" placeholder="http://…:5200" />
               </label>
               <label class="campo">
-                <span class="etiqueta">Código de grupo</span>
+                <span class="etiqueta">Group code</span>
                 <input id="cfg-grupo" type="text" spellcheck="false" placeholder="123" />
               </label>
             </div>
             <div id="cfg-prueba" style="margin-top: 14px"></div>
           </div>
           <div class="pie-paso">
-            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
+            <button class="boton boton--terciario" type="button" data-atras>Back</button>
             <span class="pie-paso__hueco"></span>
-            <button class="boton boton--secundario" type="button" id="cfg-probar">Probar</button>
-            <button class="boton" type="button" data-avanza>Continuar</button>
+            <button class="boton boton--secundario" type="button" id="cfg-probar">Test</button>
+            <button class="boton" type="button" data-avanza>Continue</button>
           </div>
         </section>
 
         <!-- ── 03 · TORNEO ──────────────────────────────────────────────── -->
         <section class="panel" data-paso="torneo" hidden style="margin-top: 0">
           <div class="panel__cabeza">
-            <h2 class="display">03 · Torneo</h2>
-            <span class="etiqueta">Se puede saltar</span>
+            <h2 class="display">03 · Tournament</h2>
+            <span class="etiqueta">Optional</span>
           </div>
           <div class="panel__cuerpo">
             <div class="rejilla">
               <label class="campo">
-                <span class="etiqueta">Nombre</span>
+                <span class="etiqueta">Name</span>
                 <input id="t-nombre" data-clave="tournamentInfo.name" type="text" maxlength="64" />
               </label>
               <label class="campo">
@@ -200,147 +156,147 @@
                 <input id="t-logo" data-clave="tournamentInfo.logoUrl" type="url" placeholder="https://" />
               </label>
               <label class="campo">
-                <span class="etiqueta">Fondo (URL)</span>
+                <span class="etiqueta">Backdrop (URL)</span>
                 <input id="t-fondo" data-clave="tournamentInfo.backdropUrl" type="url" placeholder="https://" />
               </label>
             </div>
           </div>
           <div class="pie-paso">
-            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
-            <button class="boton boton--terciario" type="button" data-salta>Saltar</button>
+            <button class="boton boton--terciario" type="button" data-atras>Back</button>
+            <button class="boton boton--terciario" type="button" data-salta>Skip</button>
             <span class="pie-paso__hueco"></span>
-            <button class="boton" type="button" data-avanza>Continuar</button>
+            <button class="boton" type="button" data-avanza>Continue</button>
           </div>
         </section>
 
         <!-- ── 04 · EQUIPOS ─────────────────────────────────────────────── -->
         <section class="panel" data-paso="equipos" hidden style="margin-top: 0">
           <div class="panel__cabeza">
-            <h2 class="display">04 · Equipos</h2>
-            <span class="etiqueta">Se puede saltar</span>
+            <h2 class="display">04 · Teams</h2>
+            <span class="etiqueta">Optional</span>
           </div>
           <div class="panel__cuerpo">
             <p class="apunte">
-              Si el observador ya los mandó, aquí solo se corrigen. Lo que escribas manda sobre lo
-              que diga el cliente.
+              If the observer already sent them, you only correct them here. What you type wins
+              over what the client reports.
             </p>
             <div class="rejilla" style="margin-top: 14px">
               <div class="equipo">
-                <span class="etiqueta">Izquierda</span>
+                <span class="etiqueta">Left</span>
                 <label class="campo" style="margin-top: 6px">
-                  <span class="etiqueta">Nombre</span>
+                  <span class="etiqueta">Name</span>
                   <input id="e0-nombre" type="text" maxlength="32" />
                 </label>
                 <label class="campo" style="margin-top: 8px">
-                  <span class="etiqueta">Tricódigo</span>
+                  <span class="etiqueta">Tricode</span>
                   <input id="e0-tri" type="text" maxlength="4" />
                 </label>
               </div>
               <div class="equipo">
-                <span class="etiqueta">Derecha</span>
+                <span class="etiqueta">Right</span>
                 <label class="campo" style="margin-top: 6px">
-                  <span class="etiqueta">Nombre</span>
+                  <span class="etiqueta">Name</span>
                   <input id="e1-nombre" type="text" maxlength="32" />
                 </label>
                 <label class="campo" style="margin-top: 8px">
-                  <span class="etiqueta">Tricódigo</span>
+                  <span class="etiqueta">Tricode</span>
                   <input id="e1-tri" type="text" maxlength="4" />
                 </label>
               </div>
             </div>
           </div>
           <div class="pie-paso">
-            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
-            <button class="boton boton--terciario" type="button" data-salta>Saltar</button>
+            <button class="boton boton--terciario" type="button" data-atras>Back</button>
+            <button class="boton boton--terciario" type="button" data-salta>Skip</button>
             <span class="pie-paso__hueco"></span>
-            <button class="boton" type="button" data-avanza>Continuar</button>
+            <button class="boton" type="button" data-avanza>Continue</button>
           </div>
         </section>
 
         <!-- ── 05 · SERIE ───────────────────────────────────────────────── -->
         <section class="panel" data-paso="serie" hidden style="margin-top: 0">
           <div class="panel__cabeza">
-            <h2 class="display">05 · Serie</h2>
-            <span class="etiqueta">Se puede saltar</span>
+            <h2 class="display">05 · Series</h2>
+            <span class="etiqueta">Optional</span>
           </div>
           <div class="panel__cuerpo">
             <div class="rejilla">
               <label class="campo">
-                <span class="etiqueta">Formato</span>
+                <span class="etiqueta">Format</span>
                 <select id="s-formato" data-clave="seriesInfo.needed">
-                  <option value="1">BO1 · gana 1</option>
-                  <option value="2">BO3 · gana 2</option>
-                  <option value="3">BO5 · gana 3</option>
+                  <option value="1">BO1 · win 1</option>
+                  <option value="2">BO3 · win 2</option>
+                  <option value="3">BO5 · win 3</option>
                 </select>
               </label>
               <label class="campo">
-                <span class="etiqueta">Mapas ganados · izquierda</span>
+                <span class="etiqueta">Maps won · left</span>
                 <input id="s-izq" data-clave="seriesInfo.wonLeft" type="number" min="0" max="3" step="1" value="0" />
               </label>
               <label class="campo">
-                <span class="etiqueta">Mapas ganados · derecha</span>
+                <span class="etiqueta">Maps won · right</span>
                 <input id="s-der" data-clave="seriesInfo.wonRight" type="number" min="0" max="3" step="1" value="0" />
               </label>
             </div>
           </div>
           <div class="pie-paso">
-            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
-            <button class="boton boton--terciario" type="button" data-salta>Saltar</button>
+            <button class="boton boton--terciario" type="button" data-atras>Back</button>
+            <button class="boton boton--terciario" type="button" data-salta>Skip</button>
             <span class="pie-paso__hueco"></span>
-            <button class="boton" type="button" data-avanza>Continuar</button>
+            <button class="boton" type="button" data-avanza>Continue</button>
           </div>
         </section>
 
         <!-- ── 06 · PATROCINIO ──────────────────────────────────────────── -->
         <section class="panel" data-paso="patrocinio" hidden style="margin-top: 0">
           <div class="panel__cabeza">
-            <h2 class="display">06 · Patrocinadores</h2>
-            <span class="etiqueta">Se puede saltar</span>
+            <h2 class="display">06 · Sponsors</h2>
+            <span class="etiqueta">Optional</span>
           </div>
           <div class="panel__cuerpo">
             <div class="rejilla">
               <label class="campo">
-                <span class="etiqueta">Mostrar</span>
+                <span class="etiqueta">Show</span>
                 <select id="p-activo" data-clave="sponsorInfo.enabled">
                   <option value="false">No</option>
-                  <option value="true">Sí</option>
+                  <option value="true">Yes</option>
                 </select>
               </label>
               <label class="campo">
-                <span class="etiqueta">Segundos por logo</span>
+                <span class="etiqueta">Seconds per logo</span>
                 <input id="p-duracion" data-clave="sponsorInfo.duration" type="number" min="2" max="60" step="1" value="8" />
               </label>
             </div>
             <label class="campo" style="margin-top: 14px">
-              <span class="etiqueta">Logos · una URL por línea</span>
+              <span class="etiqueta">Logos · one URL per line</span>
               <textarea id="p-lista" rows="5" placeholder="https://…"></textarea>
             </label>
           </div>
           <div class="pie-paso">
-            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
-            <button class="boton boton--terciario" type="button" data-salta>Saltar</button>
+            <button class="boton boton--terciario" type="button" data-atras>Back</button>
+            <button class="boton boton--terciario" type="button" data-salta>Skip</button>
             <span class="pie-paso__hueco"></span>
-            <button class="boton" type="button" data-avanza>Continuar</button>
+            <button class="boton" type="button" data-avanza>Continue</button>
           </div>
         </section>
 
         <!-- ── 07 · LISTO ───────────────────────────────────────────────── -->
         <section class="panel" data-paso="listo" hidden style="margin-top: 0">
           <div class="panel__cabeza">
-            <h2 class="display">07 · Listo</h2>
-            <span class="etiqueta">Copia esto en OBS</span>
+            <h2 class="display">07 · Ready</h2>
+            <span class="etiqueta">Copy this into OBS</span>
           </div>
           <div class="panel__cuerpo">
             <p class="apunte">
-              Una fuente de navegador por pantalla, a 1920×1080. Son las mismas direcciones de
-              siempre; lo único que cambia es que ahora llevan la licencia dentro.
+              One browser source per screen, at 1920×1080. Same addresses as always; the only
+              change is that they now carry the license inside.
             </p>
             <div id="urls" style="margin-top: 14px; display: grid; gap: 10px"></div>
           </div>
           <div class="pie-paso">
-            <button class="boton boton--terciario" type="button" data-atras>Atrás</button>
+            <button class="boton boton--terciario" type="button" data-atras>Back</button>
             <span class="pie-paso__hueco"></span>
-            <button class="boton" type="button" id="termina">Abrir el panel</button>
+            <button class="boton" type="button" id="termina">Open panel</button>
           </div>
         </section>
       </section>
@@ -349,146 +305,251 @@
            PANEL
            ══════════════════════════════════════════════════════════════════ -->
       <div id="panel" hidden>
-        <!-- ══ 01 · DIRECTO · vista god ═══════════════════════════════════
-             Los dos equipos enfrentados, con logo y alineación, el marcador en
-             medio y las herramientas ahí mismo. La mesa de realización. -->
-        <section class="vista" id="vista-directo">
-          <!-- Cinta de contexto: ¿estoy mirando el partido que creo? -->
-          <div class="cinta" aria-label="Contexto del partido">
-            <span><span class="etiqueta">Torneo</span><b id="d-torneo">—</b></span>
-            <span><span class="etiqueta">Mapa</span><b id="d-mapa">—</b></span>
-            <span><span class="etiqueta">Fase</span><b id="d-fase">—</b></span>
-            <span
-              class="estado"
-              id="estado-directo"
-              data-vivo="no"
-              style="margin-left: auto; gap: 0"
-            >
-              <span class="estado__celda" style="border: 0; padding-right: 0">
-                <i class="punto" aria-hidden="true"></i><span id="estado-directo-txt">—</span>
-              </span>
-            </span>
-          </div>
+        <!-- ══ 00 · PRE-PARTIDA ═══════════════════════════════════════════
+             El primer paso: crear la sala (custom de VALORANT) y, si se quiere,
+             activar cámaras. La sala es independiente de las cámaras. -->
+        <section class="vista" id="vista-prepartida" hidden>
+          <!-- La lobby lleva su propio raíl de iconos, como el resto de la app.
+               El dashboard (#menu-inicio) tiene el suyo, pero se oculta al entrar
+               aquí, así que se replica uno equivalente. Cada icono NO navega dentro
+               de la lobby: reabre el dashboard en la sección pedida disparando el
+               evento 'abre-dashboard' (lo escucha db.js/montaDashboard). Así no se
+               toca shell.js ni se reestructura la carcasa. -->
+          <div class="prep-shell">
+            <aside class="prep-rail" aria-label="Sections">
+              <div class="prep-rail__logo" title="Easy HUD">
+                <img src="assets/wordmark-easy.svg" alt="Easy" width="34" height="13" />
+              </div>
+              <button class="prep-rail__ico is-activo" type="button" data-lobby-ir="matches" title="Matches" aria-label="Matches">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14"/><path d="M10 9l5 3-5 3z"/></svg>
+              </button>
+              <button class="prep-rail__ico" type="button" data-lobby-ir="tournaments" title="Tournaments" aria-label="Tournaments">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+              </button>
+              <button class="prep-rail__ico" type="button" data-lobby-ir="teams" title="Teams" aria-label="Teams">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </button>
+              <button class="prep-rail__ico" type="button" data-lobby-ir="template" title="Template" aria-label="Template">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+              </button>
+              <span class="prep-rail__sp"></span>
+              <button class="prep-rail__ico" type="button" data-lobby-ir="settings" title="Settings" aria-label="Settings">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              </button>
+              <button class="prep-rail__av" type="button" id="lrail-av" data-lobby-ir="account" title="Account" aria-label="Account">EA</button>
+            </aside>
 
-          <div class="god">
-            <!-- Equipo izquierda -->
-            <div class="god__equipo" id="lado-0" style="--equipo: var(--rec)">
-              <div class="god__cab">
-                <div class="god__logo" id="logo-0"></div>
-                <div>
-                  <span class="god__nombre" id="nombre-0">—</span>
-                  <span class="god__meta" id="meta-0">—</span>
+            <div class="prep-main">
+              <!-- Fila superior del mockup: volver a Matches, indicador LOBBY con
+                   punto rojo latiendo, mapa y torneo. -->
+              <div class="prep-top">
+                <button class="prep-top__back" type="button" data-lobby-ir="matches">← Matches</button>
+                <span class="prep-top__live"><i class="punto" aria-hidden="true"></i>Lobby</span>
+                <span class="prep-top__map" id="prep-top-mapa">—</span>
+                <span class="prep-top__to" id="prep-top-torneo"></span>
+              </div>
+
+              <div class="prep">
+            <!-- Config de la sala, como la barra lateral de la lobby de VALORANT. -->
+            <aside class="prep__lado">
+              <div class="prep__cfg">
+                <div class="prep__cfg-h">Match settings</div>
+                <div class="prep__item"><span class="prep__k">Queue</span><span class="prep__v">Custom</span></div>
+                <div class="prep__item"><span class="prep__k">Mode</span><span class="prep__v" id="prep-modo">—</span></div>
+                <div class="prep__item"><span class="prep__k">Map</span><span class="prep__v" id="prep-mapa">—</span></div>
+                <div class="prep__item"><span class="prep__k">Server</span><span class="prep__v" id="prep-servidor">—</span></div>
+                <div class="prep__item"><span class="prep__k">Access</span><span class="prep__v" id="prep-cerrada">—</span></div>
+              </div>
+
+              <!-- El código es lo que se comparte: una vez existe, es el héroe de
+                   esta columna. Grande y copiable de un toque. -->
+              <div class="prep__code">
+                <span class="etiqueta">Lobby code · tap to copy</span>
+                <div class="prep__code-fila">
+                  <input id="cam-sala" type="text" readonly value="—" />
+                  <button class="boton boton--terciario" type="button" id="cam-copiar">Copy</button>
                 </div>
               </div>
-              <div class="roster" id="roster-0"></div>
-              <div class="edita">
+
+              <button class="boton" type="button" id="cam-generar" style="width: 100%">Create lobby</button>
+
+              <!-- CALL PLAYERS (mockup): invita a los jugadores a la sala. Hoy el
+                   servidor no expone ninguna acción para esto (los exes de jugador
+                   se unen con el código), así que queda PRESENTE pero inerte. No se
+                   inventa backend: ver el TODO del handler en panel.js. -->
+              <button class="boton boton--secundario" type="button" id="cam-llamar" style="width: 100%; margin-top: 12px">Call players</button>
+
+              <!-- Cámaras: bloque secundario, aparte de la sala. La sala funciona
+                   sin ellas. -->
+              <div class="prep__cam">
+                <div class="prep__cfg-h">Cameras · optional</div>
                 <label class="campo">
-                  <span class="etiqueta">Nombre del equipo</span>
-                  <input id="ed-nombre-0" data-eq="0" data-campo="name" type="text" maxlength="32" />
+                  <span class="etiqueta">Player cams</span>
+                  <select id="cam-activar" data-clave="playercamsInfo.enable">
+                    <option value="false">Off</option>
+                    <option value="true">On</option>
+                  </select>
                 </label>
-                <div class="rejilla" style="grid-template-columns: 1fr 1fr">
-                  <label class="campo">
-                    <span class="etiqueta">Tricode</span>
-                    <input id="ed-tri-0" data-eq="0" data-campo="tricode" type="text" maxlength="4" />
-                  </label>
-                  <label class="campo">
-                    <span class="etiqueta">Logo (URL)</span>
-                    <input id="ed-logo-0" data-eq="0" data-campo="url" type="url" placeholder="https://" />
-                  </label>
+                <p class="apunte" id="cam-estado" style="margin-top: 12px">No lobby yet. Press “Create lobby”.</p>
+              </div>
+            </aside>
+
+            <!-- La lobby: dos equipos con coach y los observadores, como el juego.
+                 La identidad de cada equipo (nombre, tricode, logo, mover) se
+                 edita AQUÍ, en la cabecera de su columna. En Directo solo se
+                 muestra. El «Mover» intercambia la identidad entre lados. -->
+            <!-- La misma vista en dos momentos: en «lobby» son 3 columnas
+                 (Attackers · Defenders · Observers); al empezar la partida
+                 («vivo») Defenders se va a la derecha, el centro pasa a ser
+                 marcador+controles y Observers baja a una fila. Solo cambia el
+                 grid: mismas piezas, diseño de lobby. -->
+            <div class="prep__lobby" id="match-cols" data-fase="lobby">
+              <!-- Un único switch centrado sobre las dos tarjetas: intercambia la
+                   identidad de los equipos (izquierda ⇄ derecha) sin tocar a los
+                   jugadores. Sustituye a los dos botones «Mover». -->
+              <button class="prep__switch" type="button" data-orden="intercambiaEquipos" aria-label="Swap the two teams">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 4L3 8l4 4" /><path d="M3 8h13" /><path d="M17 20l4-4-4-4" /><path d="M21 16H8" /></svg>
+                <span>Switch teams</span>
+              </button>
+              <div class="prep__col prep__col--atk">
+                <div class="prep__jefe" id="pl-0" data-bando="atk">
+                  <button class="god__lapiz" type="button" data-editar aria-label="Edit the left team">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2L6 12l-3 1 1-3z" /></svg>
+                  </button>
+                  <div class="prep__jefe-cab">
+                    <div class="god__logo" id="prep-logo-0"></div>
+                    <div class="god__id">
+                      <span class="god__nombre" id="prep-nombre-0">Attackers</span>
+                      <span class="god__meta" id="prep-meta-0">Attack</span>
+                    </div>
+                    <span class="prep__serie" id="prep-serie-0" hidden>0</span>
+                  </div>
+                  <div class="edita">
+                    <label class="campo">
+                      <span class="etiqueta">Team name</span>
+                      <input id="ed-nombre-0" data-eq="0" data-campo="name" type="text" maxlength="32" />
+                    </label>
+                    <div class="rejilla" style="grid-template-columns: 1fr 1fr">
+                      <label class="campo">
+                        <span class="etiqueta">Tricode</span>
+                        <input id="ed-tri-0" data-eq="0" data-campo="tricode" type="text" maxlength="4" />
+                      </label>
+                      <label class="campo">
+                        <span class="etiqueta">Logo (URL)</span>
+                        <input id="ed-logo-0" data-eq="0" data-campo="url" type="url" placeholder="https://" />
+                      </label>
+                    </div>
+                  </div>
                 </div>
+                <div class="prep__slots" id="prep-atk"></div>
+                <div class="prep__cab prep__cab--coach">Attackers coach</div>
+                <div class="prep__slots prep__slots--coach" id="prep-atk-coach"></div>
+              </div>
+
+              <!-- Columna central: solo en vivo. Marcador, ronda, controles y el
+                   rótulo plegable. En lobby se oculta (el grid la salta). -->
+              <div class="prep__col prep__col--centro">
+                <div class="marcador-caja">
+                  <div class="marcador">
+                    <span class="marcador__n" id="score-0">0</span>
+                    <span class="marcador__sep">—</span>
+                    <span class="marcador__n" id="score-1">0</span>
+                  </div>
+                  <div class="marcador__meta">
+                    <span id="d-ronda">Round —</span> · <span id="reloj-god">--:--</span>
+                  </div>
+                </div>
+
+                <div class="rejilla" id="mandos" role="group" aria-label="On-air controls"></div>
+
+                <details class="panel lt" style="margin-top: 2px">
+                  <summary class="panel__cabeza lt__cab">
+                    <h2 class="display" style="font-size: 17px">Lower third</h2>
+                    <span class="etiqueta">Over the broadcast</span>
+                    <svg class="lt__chevron" width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6l4 4 4-4" /></svg>
+                  </summary>
+                  <div class="panel__cuerpo">
+                    <label class="campo">
+                      <span class="etiqueta">Title</span>
+                      <input id="rot-titulo" type="text" maxlength="48" placeholder="Organization break" />
+                    </label>
+                    <label class="campo" style="margin-top: 8px">
+                      <span class="etiqueta">Message</span>
+                      <input id="rot-mensaje" type="text" maxlength="120" placeholder="Back in a few minutes" />
+                    </label>
+                    <div class="rejilla" style="margin-top: 8px">
+                      <label class="campo">
+                        <span class="etiqueta">On behalf of</span>
+                        <select id="rot-equipo">
+                          <option value="">Production</option>
+                          <option value="0">Left</option>
+                          <option value="1">Right</option>
+                        </select>
+                      </label>
+                      <label class="campo">
+                        <span class="etiqueta">Seconds (0 = fixed)</span>
+                        <input id="rot-duracion" type="number" min="0" max="600" step="5" value="0" />
+                      </label>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px">
+                      <button class="boton" type="button" id="rot-pon">Show</button>
+                      <button class="boton boton--secundario" type="button" id="rot-quita">Hide</button>
+                    </div>
+                  </div>
+                </details>
+              </div>
+
+              <div class="prep__col prep__col--def">
+                <div class="prep__jefe prep__jefe--der" id="pl-1" data-bando="def">
+                  <button class="god__lapiz" type="button" data-editar aria-label="Edit the right team">
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M11.5 2.5l2 2L6 12l-3 1 1-3z" /></svg>
+                  </button>
+                  <div class="prep__jefe-cab">
+                    <div class="god__logo" id="prep-logo-1"></div>
+                    <div class="god__id">
+                      <span class="god__nombre" id="prep-nombre-1">Defenders</span>
+                      <span class="god__meta" id="prep-meta-1">Defense</span>
+                    </div>
+                    <span class="prep__serie" id="prep-serie-1" hidden>0</span>
+                  </div>
+                  <div class="edita">
+                    <label class="campo">
+                      <span class="etiqueta">Team name</span>
+                      <input id="ed-nombre-1" data-eq="1" data-campo="name" type="text" maxlength="32" />
+                    </label>
+                    <div class="rejilla" style="grid-template-columns: 1fr 1fr">
+                      <label class="campo">
+                        <span class="etiqueta">Tricode</span>
+                        <input id="ed-tri-1" data-eq="1" data-campo="tricode" type="text" maxlength="4" />
+                      </label>
+                      <label class="campo">
+                        <span class="etiqueta">Logo (URL)</span>
+                        <input id="ed-logo-1" data-eq="1" data-campo="url" type="url" placeholder="https://" />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+                <div class="prep__slots" id="prep-def"></div>
+                <div class="prep__cab prep__cab--coach">Defenders coach</div>
+                <div class="prep__slots prep__slots--coach" id="prep-def-coach"></div>
+              </div>
+              <div class="prep__col prep__col--obs">
+                <div class="prep__cab">Observers</div>
+                <div class="prep__slots" id="prep-obs"></div>
               </div>
             </div>
-
-            <!-- Centro: marcador y herramientas -->
-            <div class="god__centro">
-              <div class="marcador">
-                <span class="marcador__n" id="score-0">0</span>
-                <span class="marcador__sep">—</span>
-                <span class="marcador__n" id="score-1">0</span>
-              </div>
-              <div class="marcador__meta">
-                <span id="d-ronda">Ronda —</span> · <span id="reloj-god">--:--</span>
-              </div>
-
-              <div class="rejilla" id="mandos" role="group" aria-label="Mandos en antena"></div>
-
-              <div class="panel" style="margin-top: 2px">
-                <div class="panel__cabeza">
-                  <h2 class="display" style="font-size: 17px">Rótulo</h2>
-                  <span class="etiqueta">Sobre la emisión</span>
-                </div>
-                <div class="panel__cuerpo">
-                  <label class="campo">
-                    <span class="etiqueta">Título</span>
-                    <input id="rot-titulo" type="text" maxlength="48" placeholder="Pausa de la organización" />
-                  </label>
-                  <label class="campo" style="margin-top: 8px">
-                    <span class="etiqueta">Mensaje</span>
-                    <input id="rot-mensaje" type="text" maxlength="120" placeholder="Volvemos en unos minutos" />
-                  </label>
-                  <div class="rejilla" style="margin-top: 8px">
-                    <label class="campo">
-                      <span class="etiqueta">A nombre de</span>
-                      <select id="rot-equipo">
-                        <option value="">Producción</option>
-                        <option value="0">Izquierda</option>
-                        <option value="1">Derecha</option>
-                      </select>
-                    </label>
-                    <label class="campo">
-                      <span class="etiqueta">Segundos (0 = fijo)</span>
-                      <input id="rot-duracion" type="number" min="0" max="600" step="5" value="0" />
-                    </label>
-                  </div>
-                  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px">
-                    <button class="boton" type="button" id="rot-pon">Poner</button>
-                    <button class="boton boton--secundario" type="button" id="rot-quita">Quitar</button>
-                  </div>
-                </div>
-              </div>
-
-              <p class="apunte">
-                Los mandos van también en las teclas del observador; si el panel se queda sin red,
-                las teclas siguen.
-              </p>
-            </div>
-
-            <!-- Equipo derecha -->
-            <div class="god__equipo god__equipo--der" id="lado-1" style="--equipo: var(--linea-alta)">
-              <div class="god__cab">
-                <div class="god__logo" id="logo-1"></div>
-                <div>
-                  <span class="god__nombre" id="nombre-1">—</span>
-                  <span class="god__meta" id="meta-1">—</span>
-                </div>
-              </div>
-              <div class="roster" id="roster-1"></div>
-              <div class="edita">
-                <label class="campo">
-                  <span class="etiqueta">Nombre del equipo</span>
-                  <input id="ed-nombre-1" data-eq="1" data-campo="name" type="text" maxlength="32" />
-                </label>
-                <div class="rejilla" style="grid-template-columns: 1fr 1fr">
-                  <label class="campo">
-                    <span class="etiqueta">Tricode</span>
-                    <input id="ed-tri-1" data-eq="1" data-campo="tricode" type="text" maxlength="4" />
-                  </label>
-                  <label class="campo">
-                    <span class="etiqueta">Logo (URL)</span>
-                    <input id="ed-logo-1" data-eq="1" data-campo="url" type="url" placeholder="https://" />
-                  </label>
-                </div>
               </div>
             </div>
           </div>
         </section>
 
+
         <!-- ══ 03 · TORNEO ════════════════════════════════════════════════ -->
         <section class="vista" id="vista-torneo" hidden>
           <div class="panel">
             <div class="panel__cabeza">
-              <h2 class="display">Torneo</h2>
-              <span class="etiqueta">Se guarda en el servidor</span>
+              <h2 class="display">Tournament</h2>
+              <span class="etiqueta">Saved on the server</span>
             </div>
             <div class="panel__cuerpo" data-espejo="torneo"></div>
           </div>
@@ -498,8 +559,8 @@
         <section class="vista" id="vista-equipos" hidden>
           <div class="panel">
             <div class="panel__cabeza">
-              <h2 class="display">Equipos</h2>
-              <span class="etiqueta">Izquierda y derecha, como salen en antena</span>
+              <h2 class="display">Teams</h2>
+              <span class="etiqueta">Left and right, as they go on air</span>
             </div>
             <div class="panel__cuerpo">
               <!-- Los campos de corrección son los MISMOS nodos que usa el
@@ -508,11 +569,11 @@
               <div data-espejo="equipos"></div>
               <div class="rejilla" id="equipos" style="margin-top: 16px"></div>
               <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px">
-                <button class="boton boton--secundario" type="button" data-orden="intercambiaLados">
-                  Intercambiar izquierda y derecha
+                <button class="boton boton--secundario" type="button" data-orden="intercambiaEquipos">
+                  Swap left and right
                 </button>
                 <button class="boton boton--secundario" type="button" data-orden="intercambiaBandos">
-                  Intercambiar atacante y defensor
+                  Swap attacker and defender
                 </button>
               </div>
             </div>
@@ -523,8 +584,8 @@
         <section class="vista" id="vista-serie" hidden>
           <div class="panel">
             <div class="panel__cabeza">
-              <h2 class="display">Serie</h2>
-              <span class="etiqueta">El marcador que sobrevive al mapa</span>
+              <h2 class="display">Series</h2>
+              <span class="etiqueta">The score that survives the map</span>
             </div>
             <div class="panel__cuerpo" data-espejo="serie"></div>
           </div>
@@ -534,31 +595,105 @@
         <section class="vista" id="vista-patrocinio" hidden>
           <div class="panel">
             <div class="panel__cabeza">
-              <h2 class="display">Patrocinadores</h2>
-              <span class="etiqueta">Se relevan solos mientras haya más de uno</span>
+              <h2 class="display">Sponsors</h2>
+              <span class="etiqueta">They rotate on their own when there's more than one</span>
             </div>
             <div class="panel__cuerpo" data-espejo="patrocinio"></div>
           </div>
         </section>
 
-        <!-- ══ 06 · AJUSTES ═══════════════════════════════════════════════ -->
+        <!-- ══ SETTINGS (⚙, fuera del nav) ════════════════════════════════
+             La config que se toca poco: torneo, fuente de OBS, tiempos muertos,
+             sesión. Se abre con el engranaje de la barra, no compite con
+             Lobby/Broadcast. -->
         <section class="vista" id="vista-ajustes" hidden>
+          <!-- Torneo: nombre y logo. Salen en la cabecera. A futuro lo trae
+               Easy League y esto se auto-rellena. -->
           <div class="panel">
             <div class="panel__cabeza">
-              <h2 class="display">Fuente de OBS</h2>
+              <h2 class="display">Tournament</h2>
+              <span class="etiqueta">Shown in the header</span>
+            </div>
+            <div class="panel__cuerpo">
+              <div class="rejilla">
+                <label class="campo">
+                  <span class="etiqueta">Name</span>
+                  <input id="set-t-nombre" data-clave="tournamentInfo.name" type="text" maxlength="64" />
+                </label>
+                <label class="campo">
+                  <span class="etiqueta">Logo (URL)</span>
+                  <input id="set-t-logo" data-clave="tournamentInfo.logoUrl" type="url" placeholder="https://" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Serie: por ahora manual aquí; el plan es hacerla automática (el
+               marcador de mapas se lleva solo). -->
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Series</h2>
+              <span class="etiqueta">The score that survives the map</span>
+            </div>
+            <div class="panel__cuerpo">
+              <div class="rejilla">
+                <label class="campo">
+                  <span class="etiqueta">Format</span>
+                  <select id="set-s-formato" data-clave="seriesInfo.needed">
+                    <option value="1">BO1 · win 1</option>
+                    <option value="2">BO3 · win 2</option>
+                    <option value="3">BO5 · win 3</option>
+                  </select>
+                </label>
+                <label class="campo">
+                  <span class="etiqueta">Maps won · left</span>
+                  <input id="set-s-izq" data-clave="seriesInfo.wonLeft" type="number" min="0" max="3" step="1" value="0" />
+                </label>
+                <label class="campo">
+                  <span class="etiqueta">Maps won · right</span>
+                  <input id="set-s-der" data-clave="seriesInfo.wonRight" type="number" min="0" max="3" step="1" value="0" />
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overlay del operador: el HUD encima del juego en la pantalla del
+               operador (con las teclas 1–0), excluido de la captura de OBS. -->
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Operator overlay</h2>
+              <span class="etiqueta">On your screen only — not captured by OBS</span>
             </div>
             <div class="panel__cuerpo">
               <p class="apunte" style="margin-top: 2px">
-                En OBS, añade una <strong>Fuente de navegador</strong> con esta dirección, a
-                1920×1080. La sirve este programa desde tu propia PC, así que no lleva
-                credenciales dentro y es la misma en todas las máquinas.
+                Shows the broadcast HUD over the game on your screen, with the observer keys
+                (1–0) on each player card, so you know which number watches whom. It's excluded
+                from capture, so it never appears on stream. You can also toggle it with
+                <strong>Ctrl+Alt+O</strong>.
+              </p>
+              <label class="campo" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 14px">
+                <input id="set-operador" type="checkbox" />
+                <span class="etiqueta">Show operator overlay over the game</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">OBS source</h2>
+            </div>
+            <div class="panel__cuerpo">
+              <p class="apunte" style="margin-top: 2px">
+                In OBS, add a <strong>Browser source</strong> with this address, at 1920×1080.
+                This program serves it from your own PC, so it carries no credentials inside and
+                is the same on every machine.
               </p>
               <label class="campo" style="margin-top: 14px">
-                <span class="etiqueta">Dirección</span>
+                <span class="etiqueta">Address</span>
                 <span style="display: flex; gap: 10px; flex-wrap: wrap">
                   <input id="a-obs" type="text" readonly value="···" style="flex: 1 1 260px" />
                   <button class="boton boton--terciario" type="button" id="a-obs-copiar">
-                    Copiar
+                    Copy
                   </button>
                 </span>
               </label>
@@ -567,16 +702,16 @@
 
           <div class="panel">
             <div class="panel__cabeza">
-              <h2 class="display">Tiempos muertos</h2>
+              <h2 class="display">Timeouts</h2>
             </div>
             <div class="panel__cuerpo">
               <div class="rejilla">
                 <label class="campo">
-                  <span class="etiqueta">Duración (s)</span>
+                  <span class="etiqueta">Duration (s)</span>
                   <input id="a-duracion" data-clave="timeoutDuration" type="number" min="15" max="300" step="5" />
                 </label>
                 <label class="campo">
-                  <span class="etiqueta">Cupo por equipo</span>
+                  <span class="etiqueta">Quota per team</span>
                   <input id="a-cupo" data-clave="timeoutCounter.max" type="number" min="0" max="4" step="1" />
                 </label>
               </div>
@@ -585,13 +720,13 @@
 
           <div class="panel">
             <div class="panel__cabeza">
-              <h2 class="display">Sesión</h2>
+              <h2 class="display">Session</h2>
             </div>
             <div class="panel__cuerpo">
               <p class="apunte" id="a-sesion" style="margin-top: 2px">—</p>
               <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px">
                 <button class="boton boton--terciario" type="button" id="a-salir">
-                  Cerrar sesión
+                  Log out
                 </button>
               </div>
             </div>
@@ -613,30 +748,30 @@
           <span class="acceso__palabra" translate="no">HUD</span>
           <span class="acceso__marcha" id="ac-marcha" data-vivo="no">
             <i class="acceso__punto" aria-hidden="true"></i>
-            <span data-texto>Observador</span>
+            <span data-texto>Observer</span>
           </span>
         </div>
 
         <form class="acceso__cuerpo" id="ac-form">
-          <h1 class="display">Entra con tu cuenta</h1>
+          <h1 class="display">Sign in with your account</h1>
           <p class="apunte">
-            La misma con la que contrataste. El observador no arranca sin ella.
+            The same one you signed up with. The observer won't start without it.
           </p>
 
           <label class="campo">
-            <span class="etiqueta">Correo</span>
+            <span class="etiqueta">Email</span>
             <input
               id="ac-correo"
               name="correo"
               type="email"
               autocomplete="username"
               spellcheck="false"
-              placeholder="tu@correo.com"
+              placeholder="you@email.com"
             />
           </label>
 
           <label class="campo">
-            <span class="etiqueta">Contraseña</span>
+            <span class="etiqueta">Password</span>
             <input
               id="ac-contrasena"
               name="contrasena"
@@ -648,46 +783,315 @@
 
           <p class="acceso__fallo" id="ac-fallo" role="alert" hidden></p>
 
-          <button class="boton" type="submit" id="ac-entrar">Entrar</button>
+          <button class="boton" type="submit" id="ac-entrar">Sign in</button>
 
           <button class="acceso__enlace" type="button" id="ac-web">
-            ¿No tienes cuenta? Créala en easyhud.net
+            No account? Create one at easyhud.net
           </button>
         </form>
 
         <!-- Lo que se guarda y lo que no, dicho en la propia pantalla. Quien
              teclea una contraseña en un PC prestado —que es lo normal en un
              torneo— tiene derecho a saberlo sin buscar en ningún sitio. -->
-        <div class="acceso__pie">Se guarda la sesión, nunca la contraseña</div>
+        <div class="acceso__pie">The session is saved, never the password</div>
       </div>
     </div>
 
-    <!-- LOS ATAJOS. Teclas globales del programa, no del panel: siguen
-         funcionando aunque el panel pierda la conexión con el servidor. -->
-    <div class="dialogo" id="atajos" hidden>
-      <div class="dialogo__fondo" aria-hidden="true"></div>
-      <div class="dialogo__caja">
-        <div class="dialogo__cabeza">
-          <h2 class="display">Atajos de teclado</h2>
+    <!-- ══ DASHBOARD — gestión de matches / torneos / equipos ═══════════════
+         Ocupa toda la ventana bajo la barra de título. Sidebar con las tres
+         secciones + contenido con listas y CRUD. La lógica está en js/db.js. -->
+    <div class="menu" id="menu-inicio" hidden>
+      <aside class="sb">
+        <div class="sb__top">
+          <span class="sb__logo">
+            <img src="assets/wordmark-easy.svg" alt="Easy" width="42" height="16" />
+            <b translate="no">HUD</b>
+          </span>
+          <button class="sb__hide" id="sb-collapse" type="button" title="Hide sidebar" aria-label="Hide sidebar">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/></svg>
+          </button>
         </div>
-        <div class="dialogo__cuerpo">
-          <p class="apunte">
-            Teclas globales para llevar la emisión desde este PC. Vienen apagadas
-            a propósito: un atajo global se come la tecla para todo el sistema,
-            incluido el juego.
+        <div class="sb__body">
+          <div class="sb__group">
+            <div class="sb__label">Manage</div>
+            <button class="menu__item is-activo" type="button" data-panel="matches" title="Matches">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3Z"/><circle cx="12" cy="13" r="3"/></svg>
+              <span>Matches</span>
+            </button>
+            <button class="menu__item" type="button" data-panel="tournaments" title="Tournaments">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+              <span>Tournaments</span>
+            </button>
+            <button class="menu__item" type="button" data-panel="teams" title="Teams">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              <span>Teams</span>
+            </button>
+          </div>
+
+          <div class="sb__group">
+            <div class="sb__label">Broadcast</div>
+            <button class="menu__item" type="button" data-panel="template" title="Template">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
+              <span>Template</span>
+            </button>
+            <button class="menu__item" type="button" id="sb-settings" title="Settings">
+              <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+              <span>Settings</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Footer de cuenta (SidebarFooter estilo shadcn) — abre Account. -->
+        <div class="sb__foot">
+          <button class="sb__acc" id="sb-acc" type="button">
+            <div class="sb__acc-av" id="acc-av">EA</div>
+            <div class="sb__acc-txt">
+              <b id="acc-nombre">—</b>
+              <span id="acc-plan">—</span>
+            </div>
+          </button>
+        </div>
+      </aside>
+
+      <main class="menu__cont">
+        <!-- MATCHES -->
+        <section class="menu__panel is-activo" data-panel="matches">
+          <!-- Hero (diseño): el match en vivo (o el próximo) con el splash del
+               mapa a sangre por la derecha, ON AIR, barras de color por equipo,
+               marcador grande y RESUME. Lo rellena pintaHero(); se oculta si no
+               hay ninguno. -->
+          <div class="hero" id="m-hero" hidden>
+            <div class="hero__img img-fondo" id="hero-img" aria-hidden="true"></div>
+            <div class="hero__scrim" aria-hidden="true"></div>
+            <div class="hero__cont">
+              <div class="hero__top">
+                <span class="hero__kick" id="hero-kick">On air</span>
+                <span class="hero__foot" id="hero-foot"></span>
+              </div>
+              <div class="hero__vs">
+                <div class="hero__eq">
+                  <span class="hero__bar" id="hero-bar-a"></span>
+                  <span class="hero__nom" id="hero-nom-a">TBD</span>
+                </div>
+                <b class="hero__sc" id="hero-sc">0–0</b>
+                <div class="hero__eq hero__eq--b">
+                  <span class="hero__nom" id="hero-nom-b">TBD</span>
+                  <span class="hero__bar" id="hero-bar-b"></span>
+                </div>
+                <button class="boton" type="button" id="hero-go">Resume broadcast</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Barra de filtros (diseño). Pills de estado con contadores (a la vez
+               filtro), Quick/New a la derecha; segunda fila con dropdown de torneo,
+               chips de ronda/formato y orden. Los chips/pills se pintan en
+               pintaFiltros() dentro de #m-pills y #m-filtros y se gobiernan por
+               eventos delegados; Quick/New quedan ESTÁTICOS para conservar sus
+               listeners por id. -->
+          <div class="fbar">
+            <div class="fbar__pills" id="m-pills"></div>
+            <span class="fbar__sp"></span>
+            <button class="boton boton--secundario boton--mini" type="button" id="m-quick">Quick match</button>
+            <button class="boton boton--mini" type="button" id="m-nuevo">New match</button>
+          </div>
+          <div class="fbar fbar--filtros" id="m-filtros"></div>
+
+          <div class="dash__grid" id="m-lista"></div>
+        </section>
+
+        <!-- TOURNAMENTS -->
+        <section class="menu__panel" data-panel="tournaments">
+          <div class="dash__head">
+            <h1 class="display">Tournaments</h1>
+            <button class="boton" type="button" id="to-nuevo">New tournament</button>
+          </div>
+          <div class="dash__lista" id="to-lista"></div>
+        </section>
+
+        <!-- TEAMS -->
+        <section class="menu__panel" data-panel="teams">
+          <div class="dash__head">
+            <h1 class="display">Teams</h1>
+            <button class="boton" type="button" id="eq-nuevo">New team</button>
+          </div>
+          <div class="dash__lista dash__lista--grid" id="eq-lista"></div>
+        </section>
+
+        <!-- TEMPLATE -->
+        <section class="menu__panel" data-panel="template">
+          <div class="dash__head"><h1 class="display">Template</h1></div>
+          <p class="apunte" style="margin-bottom: 20px">
+            The overlay design used on the broadcast. More templates coming soon.
           </p>
-          <div class="atajos" id="at-lista"></div>
-          <p class="acceso__fallo" id="at-aviso" hidden></p>
-        </div>
-        <div class="dialogo__pie">
-          <button class="boton boton--terciario" type="button" id="at-cerrar">Cancelar</button>
-          <button class="boton" type="button" id="at-guardar">Guardar y aplicar</button>
-        </div>
-      </div>
+          <div class="tpl__grid">
+            <button class="tpl__card tpl__card--activa" type="button">
+              <div class="tpl__prev"><span>EASY HUD</span></div>
+              <div class="tpl__meta"><b>Easy HUD</b><span class="tag tag--to">Active</span></div>
+            </button>
+          </div>
+        </section>
+
+        <!-- ACCOUNT -->
+        <section class="menu__panel" data-panel="account">
+          <div class="dash__head"><h1 class="display">Account</h1></div>
+          <div class="acc">
+            <div class="acc__foto">
+              <div class="acc__av" id="acc-foto">HE</div>
+              <div class="acc__foto-txt">
+                <div class="acc__foto-btns">
+                  <button class="boton boton--terciario" id="acc-subir" type="button">Upload photo</button>
+                  <button class="boton boton--terciario" id="acc-quitar" type="button" hidden>Remove</button>
+                </div>
+                <input type="file" id="acc-file" accept="image/png,image/jpeg,image/webp" hidden />
+                <p class="apunte">PNG/JPG, square works best. Shown next to your name in the sidebar.</p>
+              </div>
+            </div>
+
+            <!-- Filas editables inline (nombre/org) + solo lectura. Las editables
+                 van al VPS; el nombre vive en el token, así que al guardar el
+                 servidor re-emite el permiso y el sidebar se actualiza. -->
+            <div class="acc__lista">
+              <div class="acc__fila" data-campo="nombre">
+                <div class="acc__meta"><span class="etiqueta">Display name</span><div class="acc__val" id="acc-val-nombre">—</div></div>
+                <div class="acc__edita" hidden>
+                  <input class="acc__input" id="acc-in-nombre" type="text" maxlength="48" autocomplete="off" />
+                  <button class="boton boton--mini" data-acc-save="nombre" type="button">Save</button>
+                  <button class="boton boton--terciario boton--mini" data-acc-cancel="nombre" type="button">Cancel</button>
+                </div>
+                <button class="ic-btn acc__lapiz" data-acc-edit="nombre" title="Edit">✎</button>
+              </div>
+
+              <div class="acc__fila" data-campo="org">
+                <div class="acc__meta"><span class="etiqueta">Organization</span><div class="acc__val" id="acc-val-org">—</div></div>
+                <div class="acc__edita" hidden>
+                  <input class="acc__input" id="acc-in-org" type="text" maxlength="64" autocomplete="off" placeholder="e.g. Easy Esports" />
+                  <button class="boton boton--mini" data-acc-save="org" type="button">Save</button>
+                  <button class="boton boton--terciario boton--mini" data-acc-cancel="org" type="button">Cancel</button>
+                </div>
+                <button class="ic-btn acc__lapiz" data-acc-edit="org" title="Edit">✎</button>
+              </div>
+
+              <div class="acc__fila acc__fila--ro">
+                <div class="acc__meta"><span class="etiqueta">Email</span><div class="acc__val" id="acc-val-email">—</div></div>
+                <a class="acc__link" id="acc-cambia-email" href="#" title="Change on the web">Change at easyhud.net</a>
+              </div>
+              <div class="acc__fila acc__fila--ro">
+                <div class="acc__meta"><span class="etiqueta">Plan</span><div class="acc__val" id="acc-plan2">—</div></div>
+              </div>
+              <div class="acc__fila acc__fila--ro">
+                <div class="acc__meta"><span class="etiqueta">Group code</span><div class="acc__val" id="acc-val-grupo">—</div></div>
+              </div>
+              <div class="acc__fila">
+                <div class="acc__meta"><span class="etiqueta">Password</span><div class="acc__val">••••••••</div></div>
+                <button class="boton boton--terciario boton--mini" id="acc-cambia-pass" type="button">Change…</button>
+              </div>
+            </div>
+
+            <div class="acc__pie">
+              <span class="acc__flash" id="acc-flash" aria-live="polite"></span>
+              <button class="boton boton--terciario" id="acc-salir" type="button">Log out</button>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
 
-    <!-- `shell.js` es la entrada: envuelve al panel con la barra, la puerta y
-         los atajos, e importa `panel.js`. socket.io se reutiliza del overlay:
+    <!-- ══ Diálogos de formulario (crear/editar) ══ -->
+    <dialog class="dlg" id="dlg-team">
+      <form method="dialog" class="dlg__form" id="form-team">
+        <h2 class="display" id="dlg-team-tit">New team</h2>
+        <input type="hidden" id="team-id" />
+        <label class="campo"><span class="etiqueta">Name</span>
+          <input id="team-name" type="text" maxlength="32" required /></label>
+        <label class="campo"><span class="etiqueta">Tricode</span>
+          <input id="team-tri" type="text" maxlength="4" /></label>
+        <label class="campo"><span class="etiqueta">Logo (URL)</span>
+          <input id="team-logo" type="url" placeholder="https://" /></label>
+        <!-- Color del equipo (opcional): identifica al equipo en el marcador/hero.
+             Vacío = se deriva uno estable del equipo (ver colorEquipo en db.js). -->
+        <label class="campo"><span class="etiqueta">Team color (optional)</span>
+          <input id="team-color" type="text" maxlength="7" spellcheck="false" placeholder="#RRGGBB — auto if empty" /></label>
+        <div class="dlg__pie">
+          <button class="boton boton--terciario" type="button" data-cerrar>Cancel</button>
+          <button class="boton" type="submit">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="dlg" id="dlg-tournament">
+      <form method="dialog" class="dlg__form" id="form-tournament">
+        <h2 class="display" id="dlg-to-tit">New tournament</h2>
+        <input type="hidden" id="to-id" />
+        <label class="campo"><span class="etiqueta">Name</span>
+          <input id="to-name" type="text" maxlength="64" required /></label>
+        <label class="campo"><span class="etiqueta">Logo (URL)</span>
+          <input id="to-logo" type="url" placeholder="https://" /></label>
+        <label class="campo"><span class="etiqueta">Backdrop (URL)</span>
+          <input id="to-backdrop" type="url" placeholder="https://" /></label>
+        <div class="dlg__pie">
+          <button class="boton boton--terciario" type="button" data-cerrar>Cancel</button>
+          <button class="boton" type="submit">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog class="dlg" id="dlg-match">
+      <form method="dialog" class="dlg__form" id="form-match">
+        <h2 class="display" id="dlg-match-tit">New match</h2>
+        <input type="hidden" id="match-id" />
+        <label class="campo"><span class="etiqueta">Name (optional)</span>
+          <input id="match-name" type="text" maxlength="64" placeholder="e.g. Semifinal 1" /></label>
+        <div class="rejilla">
+          <label class="campo"><span class="etiqueta">Format</span>
+            <select id="match-formato">
+              <option value="BO1">BO1</option>
+              <option value="BO2">BO2</option>
+              <option value="BO3" selected>BO3</option>
+              <option value="BO5">BO5</option>
+            </select></label>
+          <label class="campo"><span class="etiqueta">Tournament</span>
+            <select id="match-torneo"><option value="">— None —</option></select></label>
+        </div>
+        <div class="rejilla">
+          <label class="campo"><span class="etiqueta">Team A (left)</span>
+            <select id="match-eqA"></select></label>
+          <label class="campo"><span class="etiqueta">Team B (right)</span>
+            <select id="match-eqB"></select></label>
+        </div>
+        <div class="dlg__pie">
+          <button class="boton boton--terciario" type="button" data-cerrar>Cancel</button>
+          <button class="boton" type="submit">Save</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- Cambio de contraseña: acción sensible, va directa al VPS por HTTPS y
+         ninguno de los tres valores se guarda (misma disciplina que el login). -->
+    <dialog class="dlg" id="dlg-pass">
+      <form method="dialog" class="dlg__form" id="form-pass">
+        <h2 class="display">Change password</h2>
+        <label class="campo"><span class="etiqueta">Current password</span>
+          <input id="pass-actual" type="password" autocomplete="current-password" required /></label>
+        <label class="campo"><span class="etiqueta">New password</span>
+          <input id="pass-nueva" type="password" autocomplete="new-password" minlength="8" required /></label>
+        <label class="campo"><span class="etiqueta">Confirm new password</span>
+          <input id="pass-confirma" type="password" autocomplete="new-password" minlength="8" required /></label>
+        <p class="acc__error" id="pass-error" hidden></p>
+        <div class="dlg__pie">
+          <button class="boton boton--terciario" type="button" data-cerrar>Cancel</button>
+          <button class="boton" type="submit">Change password</button>
+        </div>
+      </form>
+    </dialog>
+
+    <!-- El diálogo de atajos se retiró: los controles y su tecla ya viven en el
+         panel de Broadcast (cada mando enseña su tecla y se rebindea ahí mismo),
+         así que un diálogo aparte era duplicar. Las teclas globales se siguen
+         registrando en caliente desde el shell al entrar. -->
+
+    <!-- `shell.js` es la entrada: envuelve al panel con la barra y la puerta,
+         e importa `panel.js`. socket.io se reutiliza del overlay:
          mismo fichero, misma versión, y así el panel tampoco pide nada por red
          a un tercero. -->
     <script type="module" src="js/shell.js"></script>

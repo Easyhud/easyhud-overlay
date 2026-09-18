@@ -36,7 +36,7 @@ export function traduceJugador(p) {
   const ab = p.abilities ?? { grenade: 0, ability1: 0, ability2: 0 };
 
   return {
-    identity: { name: p.name ?? '' },
+    identity: { name: p.name ?? '', tag: p.tagline ?? '' },
     /* ValoSpectra manda el nombre en clave de Overwolf (Wushu, Aggrobot…),
        que es exactamente lo que el catálogo del diseño sabe traducir. */
     agentInternal: p.agentInternal ?? '',
@@ -60,6 +60,9 @@ export function traduceJugador(p) {
     stats: { kills: p.kills ?? 0, deaths: p.deaths ?? 0, assists: p.assists ?? 0 },
     hasSpike: p.hasSpike === true,
     isObserved: p.isObserved === true,
+    /* Rango competitivo (tier 0..27). Lo resuelve el cliente del observador por
+       puuid; 0 = sin rango, no se pinta icono. */
+    rank: typeof p.rank === 'number' ? p.rank : 0,
     /* La selección de agentes lo usa para saber quién ya confirmó. */
     locked: p.locked === true,
     /* Sin daño en el estado: el diseño lo lee como desconocido y no pinta ADR. */
@@ -109,7 +112,20 @@ export function mapasSerie(mapInfo) {
   const salida = [];
   for (const m of mapInfo) {
     if (m.type === 'past') {
-      salida.push({ name: m.map ?? '', state: 'past', score: [m.left?.score ?? 0, m.right?.score ?? 0] });
+      const izq = m.left?.score ?? 0;
+      const der = m.right?.score ?? 0;
+      const ganoIzq = izq >= der;
+      salida.push({
+        name: m.map ?? '',
+        state: 'past',
+        score: [izq, der],
+        /* Lado del ganador + los logos de AMBOS equipos: el historial pinta el
+           ganador brillante y el perdedor en gris. */
+        winner: ganoIzq ? 0 : 1,
+        winnerLogo: (ganoIzq ? m.left?.logo : m.right?.logo) ?? '',
+        leftLogo: m.left?.logo ?? '',
+        rightLogo: m.right?.logo ?? '',
+      });
     } else if (m.type === 'present') {
       salida.push({ name: '', state: 'live' });
     } else if (m.type === 'future') {
@@ -309,6 +325,7 @@ export function traduceEstado(m, decidido) {
   const patro = m.tools?.sponsorInfo ?? { enabled: false, duration: 8, sponsors: [] };
   const agua = m.tools?.watermarkInfo ?? { customTextEnabled: false, customText: '' };
   const torneo = m.tools?.tournamentInfo ?? { name: '' };
+  const camaras = m.tools?.playercamsInfo ?? { enable: false, identifier: '', enabledPlayers: [] };
   const aviso = m.toastInfo ?? { active: false, title: '', message: '', selectedTeam: 'none' };
 
   const equipos = (m.teams ?? []).map((team, i) => ({
@@ -346,6 +363,7 @@ export function traduceEstado(m, decidido) {
       watermark: agua.customTextEnabled ? (agua.customText ?? '') : '',
       minimal: false,
       tournamentName: torneo.name ?? '',
+      tournamentLogo: torneo.logoUrl ?? '',
       sponsors: {
         enabled: patro.enabled === true,
         urls: Array.isArray(patro.sponsors) ? patro.sponsors : [],
@@ -357,6 +375,14 @@ export function traduceEstado(m, decidido) {
         message: aviso.message ?? '',
         teamIndex: aviso.selectedTeam === 'left' ? 0 : aviso.selectedTeam === 'right' ? 1 : null,
       },
+    },
+    /* Cámaras de jugador (VDO.Ninja). `room` es la sala; cada cámara se arma
+       determinísticamente del Nombre#TAG del jugador. `enabledPlayers` son los
+       fullName ("Nombre#TAG") que están publicando. */
+    playercams: {
+      enabled: camaras.enable === true,
+      room: camaras.identifier ?? '',
+      enabledPlayers: Array.isArray(camaras.enabledPlayers) ? camaras.enabledPlayers : [],
     },
   };
 }

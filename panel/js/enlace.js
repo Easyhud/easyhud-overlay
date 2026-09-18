@@ -84,7 +84,14 @@ export function conecta({ endpoint, grupo, token, alEstado, alEntrar, alFallar, 
 
   mando.on('operador_listo', () => alEntrar({ ok: true }));
   mando.on('operador_denegado', (crudo) => alEntrar({ ok: false, motivo: motivoDe(crudo) }));
-  mando.on('operador_error', (crudo) => alFallar(motivoDe(crudo)));
+  mando.on('operador_error', (crudo) => {
+    const m = motivoDe(crudo);
+    /* «sin partido para configurar» es benigno: pasa al patchear (p. ej. la
+       serie) cuando el mapa ya terminó y el match se borró. La serie se persiste
+       igual en el server, así que no se molesta al operador con esto. */
+    if (m === 'sin partido para configurar') return;
+    alFallar(m);
+  });
   mando.on('disconnect', () => alEntrar({ ok: false, motivo: 'conexión perdida' }));
 
   /* El canal de operador todavía no existe en el servidor. Mientras no exista,

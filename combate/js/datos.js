@@ -28,6 +28,55 @@ import { AGENTE_POR_INTERNO, ARMA_POR_NOMBRE, PAPEL_DE_AGENTE } from './catalogo
 import { esMinimo, etiquetaRonda, serieDeMapas } from '../../comun/partida.js';
 import { abreFuente } from '../../comun/fuente.js';
 
+/* Escudos de ejemplo (solo para la demo de la tira de mapas sin servidor):
+   un círculo verde «A» y uno rojo «B» para ver el logo del ganador. Se codifica
+   con encodeURIComponent: si no, los espacios y comillas del SVG rompen el
+   atributo `src` al inyectarlo con innerHTML. */
+const svgDemo = (color, letra) =>
+  'data:image/svg+xml,' +
+  encodeURIComponent(
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="${color}"/><text x="12" y="16.5" font-size="13" text-anchor="middle" fill="#05070a" font-family="Arial" font-weight="bold">${letra}</text></svg>`,
+  );
+const LOGO_DEMO_A = svgDemo('#43cfa4', 'A');
+const LOGO_DEMO_B = svgDemo('#e05561', 'B');
+
+/* Jugador de ejemplo (solo demo sin partido): valores plausibles para ver las
+   tarjetas y, en la vista del operador, las teclas 1–0. */
+const demoJug = (agente, nick, extra = {}) => ({
+  nick, tag: '', agente, vivo: true, vida: 100, vidaConocida: true, escudo: 'heavy',
+  arma: 'vandal', habilidades: [{ tiene: 1, max: 1 }, { tiene: 1, max: 1 }, { tiene: 1, max: 1 }],
+  ult: 3, ultMax: 7, credito: 3900, gasto: 0, kda: '0/0/0',
+  adr: null, dano: null, danoRonda: null, cabezasPct: null, danoConocido: false,
+  spike: false, observado: false, rango: 0, papel: '', recomendado: false, ...extra,
+});
+const DEMO_JUGADORES = [
+  [
+    demoJug('jett', 'Nicho', { observado: true }),
+    demoJug('sova', 'Peru es clave'),
+    demoJug('killjoy', 'gatitas al dm', { recomendado: true }),
+    demoJug('omen', 'MiCL PabloH0ney'),
+    demoJug('raze', 'Niø'),
+  ],
+  [
+    demoJug('chamber', 'Lurcky'),
+    demoJug('cypher', 'Yule'),
+    demoJug('neon', 'Lizmiau'),
+    demoJug('reyna', 'CausitaRex'),
+    demoJug('sage', 'vG MoToMoTo'),
+  ],
+];
+
+/* Banner de torneo de ejemplo (solo demo sin servidor): una imagen apaisada
+   como la que iría en el rectángulo de la esquina superior derecha. El real
+   sale de `tournamentInfo.logoUrl`. */
+const BANNER_DEMO = 'data:image/svg+xml,' + encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 250 80">' +
+  '<rect width="250" height="80" fill="#0b0e13"/>' +
+  '<path d="M109 22 L123 40 L109 58 L117 40 Z" fill="#43cfa4"/>' +
+  '<path d="M141 22 L127 40 L141 58 L133 40 Z" fill="#ffffff"/>' +
+  '<text x="125" y="72" font-family="Arial" font-weight="bold" font-size="14" fill="#ffffff" letter-spacing="3" text-anchor="middle">EASY OPEN</text>' +
+  '</svg>');
+
 /* ── El estado que leen las pantallas ────────────────────────────────────── */
 
 export const estado = {
@@ -38,18 +87,31 @@ export const estado = {
   mapasParaGanar: 2,
   /** Marcadores de serie por equipo, ya resueltos. Ver `comun/partida.js`. */
   serie: { cuantos: 0, estados: [[], []], titulos: [] },
+  /** Los mapas de la serie en orden: { name, state:'past'|'live'|'future',
+      score:[a,b] }. Para la tira de mapas de arriba. En el estado de ejemplo van
+      un par jugados y uno en vivo, para ver el diseño sin servidor. */
+  mapasSerie: [
+    { name: 'Ascent', state: 'past', score: [13, 11], winner: 0, winnerLogo: LOGO_DEMO_A, leftLogo: LOGO_DEMO_A, rightLogo: LOGO_DEMO_B },
+    { name: 'Sunset', state: 'past', score: [11, 13], winner: 1, winnerLogo: LOGO_DEMO_B, leftLogo: LOGO_DEMO_A, rightLogo: LOGO_DEMO_B },
+    { name: 'Bind', state: 'live' },
+  ],
+  /** Torneo: para el rectángulo de la esquina superior derecha. Si hay banner
+      (imagen) se pinta; si no, la marca «EASY HUD». En demo va un banner de
+      ejemplo para ver el diseño sin servidor. */
+  torneoNombre: 'EASY OPEN',
+  torneoLogo: BANNER_DEMO,
   /** Modo mínimo: sin barra de arriba, para cuando el realizador pone la suya. */
   minimo: false,
   fase: 'buy',
   equipos: [
-    { tricode: '', nombre: '', logo: '', tantos: 0, mapas: 0, bando: 'attack', tiemposUsados: 0, tiemposTotal: 2 },
-    { tricode: '', nombre: '', logo: '', tantos: 0, mapas: 0, bando: 'defense', tiemposUsados: 0, tiemposTotal: 2 },
+    { tricode: 'INF', nombre: 'Infinite', logo: LOGO_DEMO_A, tantos: 8, mapas: 1, bando: 'attack', tiemposUsados: 0, tiemposTotal: 2 },
+    { tricode: 'PRX', nombre: 'Paradox', logo: LOGO_DEMO_B, tantos: 9, mapas: 1, bando: 'defense', tiemposUsados: 0, tiemposTotal: 2 },
   ],
   spike: { plantadaEn: null, sitio: '' },
   /** Cuánto tarda la spike en explotar. Del formato, no a fuego. */
   spikeSegundos: 45,
   historial: [],
-  jugadores: [[], []],
+  jugadores: DEMO_JUGADORES,
   bloqueados: [0, 0],
   aviso: { visible: false, tipo: 'info', equipo: 0, titulo: '', texto: '' },
   pausa: { visible: false, tactica: true, equipo: 0, reloj: '0:00', avance: 0 },
@@ -57,6 +119,8 @@ export const estado = {
   victoria: { visible: false, gana: 0, palabra: 'VICTORIA', contexto: '' },
   patrocinadores: [],
   marca: '',
+  /** Cámaras de jugador (VDO.Ninja): sala + fullNames que publican. */
+  camaras: { activas: false, sala: '', publicando: [] },
 };
 
 const oyentes = new Set();
@@ -113,6 +177,7 @@ function jugador(player) {
 
   return {
     nick: player.identity?.name ?? '',
+    tag: player.identity?.tag ?? '',
     agente: agente.toLowerCase(),
     vivo: player.alive,
     vida: vidaReal ? player.health : null,
@@ -162,6 +227,8 @@ function jugador(player) {
     danoConocido: danoReal,
     spike: player.hasSpike === true,
     observado: player.isObserved === true,
+    /* Rango competitivo (tier 0..27; 0 = sin rango → sin icono). */
+    rango: typeof player.rank === 'number' ? player.rank : 0,
     /*
      * El papel del agente —duelista, controlador, iniciador, centinela—, que
      * estaba a cadena vacía desde el primer día.
@@ -201,6 +268,18 @@ function aplicaEstado(match) {
   estado.mapa = match.map;
   estado.mapasParaGanar = match.series?.mapsToWin ?? 2;
   estado.serie = serieDeMapas(match);
+  /* DEMO: si el partido trae mapas de serie, se usan; si no, se conserva el
+     ejemplo de arriba para poder VER la tira sin un BO real en curso. Quitar el
+     `.length ? ... :` cuando ya no haga falta la demo. */
+  estado.mapasSerie =
+    Array.isArray(match.series?.maps) && match.series.maps.length > 0
+      ? match.series.maps
+      : estado.mapasSerie;
+  /* El mapa en vivo no trae nombre en `mapInfo` (present solo da logo): se toma
+     el mapa actual del partido. */
+  for (const mp of estado.mapasSerie) {
+    if (mp.state === 'live' && !mp.name) mp.name = match.map || '';
+  }
   estado.minimo = esMinimo(match);
   estado.fase = FASES[match.phase] ?? 'combat';
 
@@ -231,7 +310,11 @@ function aplicaEstado(match) {
     tiemposTotal: match.rules?.timeoutsPerTeam ?? 0,
   }));
 
-  estado.jugadores = match.teams.map((team) => team.players.map(jugador));
+  /* DEMO: si el partido trae roster, se usa; si no (feed sin jugadores), se
+     conserva el roster de ejemplo para poder VER las tarjetas y las teclas. */
+  const roster = match.teams.map((team) => team.players.map(jugador));
+  const hayRoster = roster.some((equipo) => equipo.length > 0);
+  estado.jugadores = hayRoster ? roster : estado.jugadores;
 
   /* Historial: el contrato lo guarda por equipo, y el diseño lo quiere como
      una sola lista en orden de ronda. Se toma la fila del ganador, que es la
@@ -275,7 +358,21 @@ function aplicaEstado(match) {
 
   const marca = match.broadcast ?? {};
   estado.marca = marca.watermark ?? '';
+  /* Torneo (esquina superior derecha). El banner real sale del panel; si el
+     partido no trae logo, se conserva el ejemplo de la demo. */
+  estado.torneoNombre = marca.tournamentName || estado.torneoNombre;
+  estado.torneoLogo =
+    typeof marca.tournamentLogo === 'string' && marca.tournamentLogo
+      ? marca.tournamentLogo
+      : estado.torneoLogo;
   estado.patrocinadores = marca.sponsors ?? [];
+
+  const cam = match.playercams ?? {};
+  estado.camaras = {
+    activas: cam.enabled === true,
+    sala: cam.room ?? '',
+    publicando: Array.isArray(cam.enabledPlayers) ? cam.enabledPlayers : [],
+  };
 
   publica();
 }

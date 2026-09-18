@@ -40,102 +40,252 @@ a:hover { color: var(--atk-light); }
   background: center / cover no-repeat;
 }
 
-/* ══ Marcador superior ═════════════════════════════════════════════════════
-   Permanente: no entra ni sale con el resto. Deja libre el hueco central,
-   que es la zona segura del contador nativo del juego. */
-.marcador {
+/* ══ Marcador superior (diseño Easy, marcador-estatico) ════════════════════
+   Fila superior completa: historial de la serie (izquierda), paneles de equipo
+   con el hueco del reloj nativo, pips de serie, aletas y la caja del torneo
+   (derecha). Diseño estático de Antonio, cableado a datos en vivo. */
+.marcador-todo {
   position: absolute;
-  top: 0;
-  left: 50%;
-  translate: -50% 0;
-  display: flex;
-  align-items: stretch;
-  height: 60px;
+  top: 0; left: 0;
+  width: 1920px; height: 90px;
+  z-index: 5;
   font-family: 'Oswald', sans-serif;
 }
-.marcador__hueco { width: var(--safe-gap); margin: 0 -28px; }
 
-.equipo {
+/* ── historial de la serie (izquierda) ──
+   bo1 no se muestra; bo3 enseña los dos jugados + el actual. Va con menos
+   z-index que los paneles, así el panel de equipo lo tapa donde se solapan. */
+.historial {
+  position: absolute;
+  top: 0; left: 0; right: calc(50% + 70px);
+  height: 30px;
+  z-index: 0;
+  display: flex; align-items: stretch;
+  overflow: hidden;
+  background: #14161b;
+}
+.historial__tramo {
   position: relative;
-  display: flex;
-  align-items: center;
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px;
+  height: 100%;
+  padding: 0 44px;
+  box-sizing: border-box;
+}
+.historial__tramo:not(:last-child) { border-right: 1px solid rgb(255 255 255 / 10%); }
+.historial__mapa {
+  font-size: 16px; font-weight: 600; letter-spacing: .03em;
+  text-transform: uppercase;
+  color: #e6e7ea;
+  white-space: nowrap;
+}
+.historial__tramo--actual .historial__mapa { color: #ffffff; }
+.historial__marcador {
+  font-size: 15px; font-weight: 600;
+  color: #c9cad0;
+  font-variant-numeric: tabular-nums;
+}
+.historial__logo {
+  width: 15px; height: 15px; flex: 0 0 auto;
+  background: center / contain no-repeat;
+}
+/* El equipo que no ganó ese mapa se apaga a gris, sin desaparecer. */
+.historial__logo--perdio { filter: grayscale(1) brightness(.5); opacity: .5; }
+
+/* ── caja del torneo (derecha): relleno + marca de agua + caja 250×80 ── */
+.torneo-relleno {
+  position: absolute;
+  top: 0; left: calc(50% + 70px); right: 250px;
+  height: 30px;
+  z-index: 0;
+  background: #14161b;
+}
+.torneo-marca-agua {
+  position: absolute;
+  top: 0; left: calc(50% + 290px); right: 250px;
+  height: 30px;
+  z-index: 1;
+  display: flex; align-items: center; justify-content: center;
+}
+.torneo-marca-agua span {
+  font-size: 15px; font-weight: 600; letter-spacing: .1em;
+  text-transform: uppercase;
+  color: #e6e7ea;
+  white-space: nowrap;
+}
+/* Caja 250×80, arriba a la derecha del todo. Lleva la IMAGEN del torneo, o la
+   marca EASY HUD por defecto. La imagen debe subirse a 250×80 (o 500×160 @2×). */
+.torneo-caja {
+  position: absolute;
+  top: 0; right: 0;
+  width: 250px; height: 80px;
+  z-index: 3;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px;
+  box-sizing: border-box;
+  overflow: hidden;
+  background: linear-gradient(160deg, rgb(38 41 49 / 96%), rgb(15 17 21 / 96%));
+}
+.torneo-caja__img {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+}
+/* Marca propia por defecto: bowtie por polígono autointersecante + texto. */
+.torneo-caja__marca {
+  width: 30px; height: 19px;
+  background: linear-gradient(100deg, var(--atk), #ffffff);
+  clip-path: polygon(0 0, 100% 100%, 100% 0, 0 100%);
+}
+.torneo-caja__texto {
+  font-size: 15px; font-weight: 600; letter-spacing: .14em;
+  color: #ffffff;
+  white-space: nowrap;
+}
+
+/* ── barra superior: los dos paneles de equipo + hueco del reloj ── */
+.barra-top {
+  position: absolute;
+  top: 0; left: 50%;
+  translate: -50% 0;
+  display: flex; align-items: stretch;
+  height: 60px;
+}
+/* Panel de equipo: sólido, perfil recortado por trazado con la punta hacia
+   fuera; el historial/relleno pasa por detrás y el panel lo tapa. */
+.panel-equipo {
+  position: relative;
+  z-index: 2;
+  display: flex; align-items: center;
   gap: 11px;
+  box-sizing: border-box;
   flex: 0 0 220px;
   height: 100%;
   padding: 0 40px 4px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 10%), 0 6px 18px rgb(0 0 0 / 45%);
+}
+.panel-equipo--izq {
   background:
-    linear-gradient(90deg, rgb(0 0 0 / 0%) 45%, color-mix(in srgb, var(--c) 26%, transparent) 100%),
+    linear-gradient(90deg, #1b1e25 45%, color-mix(in srgb, var(--atk) 26%, #1b1e25) 100%),
     linear-gradient(180deg, rgb(255 255 255 / 7%) 0%, rgb(255 255 255 / 0%) 42%),
-    var(--panel);
-  box-shadow: var(--panel-edge);
-  /* Cuña: la punta apunta hacia FUERA en cada lado. */
+    linear-gradient(160deg, #26292f, #14161a);
   clip-path: path('M 5,0 L 215,0 Q 220,0 220,5 L 220,55 Q 220,60 215,60 L 35,60 Q 30,60 27.76,55.53 L 2.24,4.47 Q 0,0 5,0 Z');
 }
-.equipo--der {
-  flex-direction: row-reverse;
+.panel-equipo--der {
+  background:
+    linear-gradient(270deg, #1b1e25 45%, color-mix(in srgb, var(--def) 26%, #1b1e25) 100%),
+    linear-gradient(180deg, rgb(255 255 255 / 7%) 0%, rgb(255 255 255 / 0%) 42%),
+    linear-gradient(160deg, #26292f, #14161a);
   clip-path: path('M 5,0 L 215,0 Q 220,0 217.76,4.47 L 192.24,55.53 Q 190,60 185,60 L 5,60 Q 0,60 0,55 L 0,5 Q 0,0 5,0 Z');
 }
-.equipo__filete {
-  position: absolute;
-  bottom: 0;
-  left: 32px;
-  width: 184px;
-  height: 3px;
-  border-radius: 2px;
-  background: var(--c);
+.panel-equipo__filo {
+  position: absolute; bottom: 0; height: 3px; border-radius: 2px;
 }
-.equipo--der .equipo__filete { left: 4px; }
-.equipo__logo { position: relative; z-index: 2; width: 38px; height: 38px; flex: 0 0 auto; object-fit: contain; }
-.equipo__tri {
-  position: relative; z-index: 2;
+.panel-equipo--izq .panel-equipo__filo { left: 32px; width: 184px; background: var(--atk); }
+.panel-equipo--der .panel-equipo__filo { left: 4px; width: 184px; background: var(--def); }
+.panel-equipo__logo-caja {
+  position: relative;
+  display: grid; place-items: center;
+  width: 38px; height: 38px;
+  flex: 0 0 auto;
+}
+/* El logo va de fondo; si falta, asoma la inicial de reserva de debajo. */
+.panel-equipo__logo {
+  position: absolute; inset: 0; z-index: 2;
+  background: center / contain no-repeat;
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 55%));
+}
+.panel-equipo__logo-inicial {
+  position: absolute; inset: 0; z-index: 1;
+  display: grid; place-items: center;
+  border-radius: 4px;
+  font-size: 16px; font-weight: 700;
+  color: rgb(255 255 255 / 85%);
+}
+.panel-equipo__tricodigo {
   font-size: 21px; font-weight: 600; letter-spacing: .08em; line-height: 1;
-  text-shadow: 0 1px 3px rgb(0 0 0 / 45%);
 }
-.equipo__sep { flex: 1; }
-.equipo__tanto {
-  position: relative; z-index: 2;
+.panel-equipo__tanto {
   font-size: 29px; font-weight: 700; line-height: 1;
-  padding-right: 14px;
-  text-shadow: 0 2px 6px rgb(0 0 0 / 45%);
+  font-variant-numeric: tabular-nums;
+  color: #ffffff;
 }
-.equipo--der .equipo__tanto { padding-right: 0; padding-left: 14px; }
+.panel-equipo--izq .panel-equipo__tanto { padding-right: 14px; }
+.panel-equipo--der .panel-equipo__tanto { padding-left: 14px; }
+/* Hueco central: el reloj lo pone el propio juego. */
+.reloj-nativo { position: relative; z-index: 1; width: 196px; margin: 0 -28px; }
 
-/* Aletas del contador: triángulos rectángulos apuntando hacia fuera. */
-.aleta {
+/* ── rótulo de ronda: ARRIBA del hueco del reloj ── */
+.rotulo-ronda {
   position: absolute;
-  top: 0;
-  width: 42px;
-  height: 72px;
+  top: 6px; left: 50%;
+  translate: -50% 0;
+  z-index: 4;
+  display: flex; align-items: center; justify-content: center;
+  width: 200px; height: 14px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px; font-weight: 600; letter-spacing: .16em;
+  text-transform: uppercase;
+  color: #e6e7ea;
+  white-space: nowrap;
+}
+
+/* ── pips de serie: se encienden desde dentro hacia fuera ── */
+.pips { position: absolute; top: 66px; display: flex; gap: 5px; z-index: 3; }
+.pips--izq { right: calc(50% + 120px); flex-direction: row-reverse; }
+.pips--der { left: calc(50% + 120px); flex-direction: row; }
+.pips i { width: 20px; height: 9px; display: block; border-radius: 3px; background: rgb(255 255 255 / 26%); }
+.pips i.on--atk { background: var(--atk-light); }
+.pips i.on--def { background: var(--def-light); }
+
+/* ── aletas del contador: triángulos rectángulos apuntando hacia fuera ── */
+.aleta {
+  position: absolute; top: 0;
+  width: 42px; height: 72px;
   z-index: 4;
   background: #0f1923;
 }
 .aleta--izq {
   right: calc(50% + 68px);
-  clip-path: path('M 5,0 L 37,0 Q 42,0 42,5 L 42,68 Q 42,72 39.98,68.54 L 2.52,4.32 Q 0,0 5,0 Z');
+  clip-path: path('M 0,0 L 42,0 L 42,72 Z');
 }
 .aleta--der {
   left: calc(50% + 68px);
-  clip-path: path('M 5,0 L 37,0 Q 42,0 39.98,3.46 L 2.02,68.54 Q 0,72 0,68 L 0,5 Q 0,0 5,0 Z');
+  clip-path: path('M 0,0 L 42,0 L 0,72 Z');
 }
-.ronda-chip {
+
+/* ══ Badge de tecla del observador (solo vista del operador) ════════════════
+   Va en la esquina superior externa de cada tarjeta, al lado del retrato. Se
+   crea siempre pero solo se muestra con `?operador=1` (nunca en emisión). */
+.tarjeta__tecla {
   position: absolute;
-  top: 6px; left: 50%;
-  translate: -50% 0;
-  z-index: 4;
-  width: 200px;
-  text-align: center;
-  font-size: 10px; font-weight: 600; letter-spacing: .16em;
-  text-transform: uppercase;
-  color: #e6e7ea;
-  white-space: nowrap;
-  text-shadow: 0 1px 3px rgb(0 0 0 / 80%);
+  top: -8px;
+  z-index: 6;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 4px;
+  border-radius: 5px;
+  background: rgb(5 7 10 / 92%);
+  border: 1px solid rgb(255 255 255 / 30%);
+  font-family: 'Oswald', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 45%);
 }
-/* Marcadores de serie: se encienden de dentro hacia fuera. */
-.serie { position: absolute; top: 66px; display: flex; gap: 5px; z-index: 3; }
-.serie--izq { right: calc(50% + 120px); flex-direction: row-reverse; }
-.serie--der { left: calc(50% + 120px); }
-.serie i { width: 20px; height: 9px; border-radius: 3px; background: rgb(255 255 255 / 26%); }
-.serie i.on { background: var(--cl); }
+.tarjeta__tecla--on { display: flex; }
+.columna--izq .tarjeta__tecla { left: -8px; }
+.columna--der .tarjeta__tecla { right: -8px; }
+/* Dorado solo cuando el auto-director recomienda a ese jugador. */
+.tarjeta__tecla--rec {
+  background: var(--observed);
+  border-color: var(--observed);
+  color: #05070a;
+}
 
 /* ══ Animaciones ═══════════════════════════════════════════════════════════
    REGLA DEL SISTEMA: el fotograma 0% es el estado FINAL VISIBLE y el salto al

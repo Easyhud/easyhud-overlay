@@ -1,0 +1,54 @@
+/* BINDS DEL OBSERVADOR — barra compacta para ir encima del juego.
+   Solo el icono del agente + su tecla (chiquita). El amarillo aparece SOLO
+   cuando el auto-director recomienda observar a ese jugador. */
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; background: transparent; }
+body {
+  color: #fff;
+  font-family: 'Oswald', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  display: flex;
+  align-items: flex-end;      /* abajo, para no pelear con el marcador de arriba */
+  justify-content: center;
+  padding: 0 0 18px;
+}
+
+.binds {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgb(8 10 14 / 82%);
+  border: 1px solid rgb(255 255 255 / 10%);
+  border-radius: 8px;
+  padding: 6px 10px;
+  backdrop-filter: blur(2px);
+}
+.binds__sep { width: 1px; height: 30px; margin: 0 6px; background: rgb(255 255 255 / 14%); }
+.binds__lado { display: flex; gap: 5px; }
+
+/* Una casilla = el icono del agente con su tecla pegada en la esquina. */
+.bind { position: relative; width: 34px; height: 34px; flex: 0 0 auto; }
+.bind__ag {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  border-radius: 5px;
+  display: block;
+}
+.bind__ag--vacio { background: rgb(255 255 255 / 8%); }
+.bind__tecla {
+  position: absolute; left: -3px; bottom: -3px;
+  min-width: 15px; height: 15px;
+  padding: 0 2px;
+  display: grid; place-items: center;
+  border-radius: 4px;
+  background: #05070a;
+  border: 1px solid rgb(255 255 255 / 25%);
+  font-size: 10px; font-weight: 700; line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.binds__lado--izq .bind__tecla { border-color: color-mix(in srgb, var(--atk) 70%, #05070a); }
+.binds__lado--der .bind__tecla { border-color: color-mix(in srgb, var(--def) 70%, #05070a); }
+
+/* RECOMENDADO por el auto-director: el único amarillo. */
+.bind--rec .bind__ag { outline: 2px solid var(--observed); outline-offset: 1px; }
+.bind--rec .bind__tecla { background: var(--observed); color: #05070a; border-color: var(--observed); }

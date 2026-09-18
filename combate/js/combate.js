@@ -30,10 +30,19 @@
 */
 
 import { suscribe } from './datos.js';
-import { iconoAgente, iconoArma, iconoHabilidad, iconoUltimate, CREDITOS, OJO, SPIKE } from './cdn.js';
+import { iconoAgente, iconoArma, iconoHabilidad, iconoUltimate, iconoRango, CREDITOS, OJO, SPIKE } from './cdn.js';
 import { recorte, tramos } from './poligono.js';
 
 const ESCUDOS = { heavy: 50, light: 25, regen: 25, none: 0 };
+
+/* Modo OPERADOR: cuando el overlay se carga con `?operador=1` (la vista del
+   operador, NUNCA la de OBS), cada tarjeta muestra la tecla de observador
+   (1–5 izquierda, 6–0 derecha). Es una ayuda privada; en emisión no aparece. */
+const ESOPERADOR = new URLSearchParams(location.search).get('operador') === '1';
+const TECLA = [
+  ['1', '2', '3', '4', '5'],
+  ['6', '7', '8', '9', '0'],
+];
 
 const MS_DANO = 360;
 const MS_BAJA = 520;
@@ -58,94 +67,60 @@ const fuente = (img, url) => {
   ver(img, url !== '');
 };
 
-/* ── Marcador ────────────────────────────────────────────────────────────── */
+/* ── Marcador ──────────────────────────────────────────────────────────────
+   El marcado ya está en el HTML (diseño `marcador-estatico`); aquí solo se
+   rellenan los huecos por id. */
 
-const marcadorNodos = [];
-
-function creaMarcador() {
-  const marcador = $('marcador');
-  marcador.textContent = '';
-
-  [0, 1].forEach((i) => {
-    const caja = el('div', 'equipo' + (i === 1 ? ' equipo--der' : ''));
-    caja.style.setProperty('--c', i === 0 ? 'var(--atk)' : 'var(--def)');
-    const logo = el('img', 'equipo__logo');
-    logo.alt = '';
-    const tri = el('span', 'equipo__tri');
-    const tanto = el('span', 'equipo__tanto');
-    caja.append(el('div', 'equipo__filete'), logo, tri, el('span', 'equipo__sep'), tanto);
-
-    if (i === 1) marcador.append(el('div', 'marcador__hueco'));
-    marcador.append(caja);
-    marcadorNodos.push({ logo, tri, tanto });
-  });
+/** Pone un logo como imagen de fondo, solo si cambió (data-URIs incluidos). */
+function fondo(nodo, url) {
+  const v = url || '';
+  if (nodo.dataset.url === v) return;
+  nodo.dataset.url = v;
+  nodo.style.backgroundImage = v ? `url("${v}")` : '';
 }
 
 function pintaMarcador(e) {
-  if (marcadorNodos.length === 0) creaMarcador();
-
-  e.equipos.forEach((equipo, i) => {
-    const n = marcadorNodos[i];
-    fuente(n.logo, equipo.logo);
-    texto(n.tri, equipo.tricode);
-    texto(n.tanto, equipo.tantos);
+  const lados = ['izq', 'der'];
+  lados.forEach((suf, i) => {
+    const equipo = e.equipos[i] ?? {};
+    fondo($('logo-' + suf), equipo.logo);
+    texto($('ini-' + suf), (equipo.tricode || '?').slice(0, 1));
+    texto($('tri-' + suf), equipo.tricode ?? '');
+    texto($('tanto-' + suf), equipo.tantos ?? 0);
   });
 
   /*
-   * El chip: la ronda, o la cuenta atrás de la spike cuando está plantada.
-   *
-   * Hasta ahora el overlay **no decía nada de la spike**: el aviso con su
-   * visor 3D está diseñado y aparcado, así que entre el plantado y la
-   * explosión no había en pantalla ni un dato de los cuarenta y cinco
-   * segundos más tensos de la ronda.
-   *
-   * Se reusa el chip que ya existe en vez de añadir una pieza nueva, que es
-   * también lo que hace el producto de referencia: ellos sustituyen el reloj
-   * por un icono de spike que parpadea más rápido según se acerca la
-   * explosión. Aquí se pone el número, que dice lo mismo y además cuánto
-   * queda. Si no gusta, se quita borrando este bloque.
-   *
-   * El reloj lo lleva el navegador desde el instante del plantado, como el de
-   * ronda: el servidor manda el INSTANTE, no los segundos que quedan, así que
-   * la cuenta va suave aunque el estado llegue a saltos.
+   * El rótulo de ronda, o la cuenta atrás de la spike cuando está plantada. El
+   * reloj lo lleva el navegador desde el instante del plantado (el servidor
+   * manda el INSTANTE), así la cuenta va suave aunque el estado llegue a saltos.
    */
   const chip = $('ronda');
   const plantada = e.spike?.plantadaEn ?? null;
-
   if (plantada === null) {
-    chip.classList.remove('ronda-chip--spike');
     texto(chip, e.etiquetaRonda);
   } else {
     const resto = Math.max(0, e.spikeSegundos - (Date.now() - plantada) / 1000);
     const sitio = e.spike.sitio === '' ? '' : ` · ${e.spike.sitio}`;
-    chip.classList.add('ronda-chip--spike');
     texto(chip, `spike ${resto.toFixed(1)}${sitio}`);
   }
 
   /*
-   * Marcadores de serie. A un solo mapa no se pintan: una serie de un mapa no
-   * tiene marcador de serie, y dos casillas vacías ahí solo confunden.
-   *
-   * El estado de cada casilla ya viene resuelto del adaptador, que lo saca de
-   * los mapas de verdad de la serie. Aquí solo se pinta: `on` el ganado y
-   * `en-curso` el que se está jugando.
+   * Pips de serie: uno por cada mapa que hace falta GANAR (bo3 = 2, bo5 = 3),
+   * encendidos según los mapas ganados por cada equipo. A un solo mapa (bo1) no
+   * se pintan, porque no hay serie que marcar.
    */
-  [0, 1].forEach((i) => {
-    const banda = $(i === 0 ? 'serie-izq' : 'serie-der');
-    const estados = e.serie?.estados?.[i] ?? [];
-    const cuantos = e.mapasParaGanar <= 1 ? 0 : estados.length;
-
-    if (banda.children.length !== cuantos) {
-      banda.textContent = '';
-      banda.style.setProperty('--cl', i === 0 ? 'var(--atk-light)' : 'var(--def-light)');
-      for (let k = 0; k < cuantos; k += 1) banda.append(el('i'));
+  const total = (e.mapasParaGanar ?? 0) <= 1 ? 0 : e.mapasParaGanar;
+  lados.forEach((suf, i) => {
+    const pips = $('pips-' + suf);
+    const ganados = e.equipos[i]?.mapas ?? 0;
+    const clase = i === 0 ? 'on--atk' : 'on--def';
+    if (pips.children.length !== total) {
+      pips.textContent = '';
+      for (let k = 0; k < total; k += 1) pips.append(el('i'));
     }
-    [...banda.children].forEach((marca, k) => {
-      marca.classList.toggle('on', estados[k] === 'gana');
-      marca.classList.toggle('en-curso', estados[k] === 'en-curso');
-      /* El nombre del mapa no se pinta —no hay sitio— pero se deja a mano. */
-      const titulo = e.serie?.titulos?.[i]?.[k] ?? '';
-      if (marca.getAttribute('title') !== titulo) marca.setAttribute('title', titulo);
+    [...pips.children].forEach((pip, k) => {
+      const on = k < ganados ? clase : '';
+      if (pip.className !== on) pip.className = on;
     });
   });
 }
@@ -165,13 +140,8 @@ function pintaMarcador(e) {
  * con el marcador de hace diez minutos.
  */
 function pintaMinimo(minimo) {
-  /** @type {NodeListOf<HTMLElement>} */
-  const aletas = document.querySelectorAll('.aleta');
-  const piezas = [$('marcador'), $('ronda'), $('serie-izq'), $('serie-der'), ...aletas];
-  for (const pieza of piezas) {
-    if (pieza === null) continue;
-    pieza.style.visibility = minimo ? 'hidden' : '';
-  }
+  const todo = $('marcador-todo');
+  if (todo !== null) todo.style.visibility = minimo ? 'hidden' : '';
 }
 
 /* ── La tarjeta: se crea una vez ─────────────────────────────────────────── */
@@ -207,6 +177,8 @@ function creaTarjeta(lado) {
   const ojo = el('img', 'cab__ojo');
   ojo.alt = '';
   ojo.src = OJO;
+  const rango = el('img', 'cab__rango');
+  rango.alt = '';
   const nick = el('span', 'cab__nick');
   const spike = el('span', 'cab__spike');
   const spikeImg = el('img');
@@ -215,7 +187,10 @@ function creaTarjeta(lado) {
   spike.append(spikeImg);
   const kda = el('span', 'kda');
   const fila = el('div', 'cab__fila');
-  fila.append(ojo, nick, spike, el('span', 'elastico'), kda);
+  /* El icono de rango va pegado al nombre. La fila del equipo derecho se pinta
+     en `row-reverse` (CSS), así que el mismo orden deja el rango a la IZQUIERDA
+     del nombre en el equipo izquierdo y a la DERECHA en el derecho: simétrico. */
+  fila.append(ojo, rango, nick, spike, el('span', 'elastico'), kda);
 
   /* Fila de vida. */
   const escudo = el('span', 'vida__escudo');
@@ -290,11 +265,16 @@ function creaTarjeta(lado) {
   panel.append(cab, pie, golpe, foco);
   tarjeta.append(ulti, panel);
 
+  /* Badge de tecla del observador: solo en la vista del operador. Se crea
+     siempre pero queda oculto (CSS) salvo `?operador=1`. */
+  const tecla = el('div', 'tarjeta__tecla');
+  tarjeta.append(tecla);
+
   return {
     tarjeta, ulti, halo, trazo, dentro, iconoUlt, tramos: [],
-    retrato, ojo, nick, spike, kda,
+    retrato, ojo, rango, nick, spike, kda,
     escudo, escudoNum, vidaNum, barra, relleno, sinDato,
-    habs, credNum, arma, foco,
+    habs, credNum, arma, foco, tecla,
     lados: 0,
   };
 }
@@ -342,6 +322,7 @@ function actualizaCabecera(n, p) {
   if (n.retrato.style.backgroundImage !== fondo) n.retrato.style.backgroundImage = fondo;
 
   ver(n.ojo, p.observado);
+  fuente(n.rango, iconoRango(p.rango));
   texto(n.nick, p.nick);
   ver(n.spike, p.spike);
   texto(n.kda, p.kda);
@@ -483,6 +464,13 @@ function pintaColumna(lado, jugadores) {
     actualizaCabecera(n, p);
     actualizaVida(n, p);
     actualizaPie(n, p);
+    /* Tecla del observador (solo vista del operador). Dorada si el auto-director
+       recomienda a este jugador (`p.recomendado`). */
+    if (ESOPERADOR) {
+      texto(n.tecla, TECLA[lado]?.[k] ?? '');
+      n.tecla.classList.add('tarjeta__tecla--on');
+      n.tecla.classList.toggle('tarjeta__tecla--rec', p.recomendado === true);
+    }
     /*
      * El golpe seco va en la tarjeta del que cae, y solo en esa.
      *
@@ -593,6 +581,7 @@ suscribe((e) => {
    */
   const ahora = JSON.stringify([
     e.equipos, e.jugadores, e.etiquetaRonda, e.mapasParaGanar, e.serie, e.minimo, e.fase,
+    e.camaras, e.mapasSerie, e.torneoLogo, e.torneoNombre,
   ]);
   /*
    * Con la spike plantada se repinta SIEMPRE, aunque nada haya cambiado: la
@@ -605,8 +594,111 @@ suscribe((e) => {
   firma = ahora;
 
   pintaMarcador(e);
+  pintaHistorial(e);
+  pintaTorneo(e);
   pintaMinimo(e.minimo === true);
   pintaColumna(0, e.jugadores[0]);
   pintaColumna(1, e.jugadores[1]);
   pintaDuelo(e);
+  pintaCamara(e);
 });
+
+/* Historial de la serie (izquierda): los mapas JUGADOS con el marcador y los
+   logos de ambos equipos (el perdedor en gris), más el mapa actual como
+   «Current: X». bo1 (mapasParaGanar<=1) o sin mapas no se muestra. Los futuros
+   no se pintan. */
+function pintaHistorial(e) {
+  const cont = $('historial');
+  if (!cont) return;
+  const mapas = Array.isArray(e.mapasSerie) ? e.mapasSerie : [];
+  const visibles = mapas.filter((m) => m.state === 'past' || m.state === 'live');
+  if (e.minimo === true || (e.mapasParaGanar ?? 0) <= 1 || visibles.length === 0) {
+    cont.hidden = true;
+    cont.innerHTML = '';
+    return;
+  }
+  cont.hidden = false;
+  cont.innerHTML = visibles
+    .map((m) => {
+      const nombre = String(m.name || '—');
+      if (m.state === 'live') {
+        return `<div class="historial__tramo historial__tramo--actual"><span class="historial__mapa">Current: ${nombre}</span></div>`;
+      }
+      const sc = Array.isArray(m.score) ? m.score : [0, 0];
+      const izqPerdio = sc[0] < sc[1] ? ' historial__logo--perdio' : '';
+      const derPerdio = sc[1] < sc[0] ? ' historial__logo--perdio' : '';
+      const li = m.leftLogo || m.winnerLogo || '';
+      const ri = m.rightLogo || '';
+      return (
+        `<div class="historial__tramo">` +
+        `<span class="historial__mapa">${nombre}</span>` +
+        `<div class="historial__logo${izqPerdio}" style="background-image:url('${li}')"></div>` +
+        `<span class="historial__marcador">${sc[0]}–${sc[1]}</span>` +
+        `<div class="historial__logo${derPerdio}" style="background-image:url('${ri}')"></div>` +
+        `</div>`
+      );
+    })
+    .join('');
+}
+
+/* Caja del torneo (250×80, arriba-derecha): la imagen del torneo si la hay; si
+   no, la marca EASY HUD por defecto para que la caja nunca quede vacía. */
+function pintaTorneo(e) {
+  const caja = $('torneo-caja');
+  if (!caja) return;
+  const logo = typeof e.torneoLogo === 'string' ? e.torneoLogo : '';
+  if (logo) {
+    if (caja.dataset.modo !== 'img' || caja.dataset.url !== logo) {
+      caja.dataset.modo = 'img';
+      caja.dataset.url = logo;
+      caja.innerHTML = `<img class="torneo-caja__img" src="${logo}" alt="">`;
+    }
+  } else if (caja.dataset.modo !== 'marca') {
+    caja.dataset.modo = 'marca';
+    caja.dataset.url = '';
+    caja.innerHTML =
+      '<div class="torneo-caja__marca"></div><span class="torneo-caja__texto">EASY HUD</span>';
+  }
+}
+
+/* ── Cámara del jugador observado (VDO.Ninja) ────────────────────────────────
+   El ID de stream es determinístico: `Nombre_H_TAG` (espacios → «_»), el mismo
+   que el exe del jugador usa para publicar. Solo se cambia la fuente del iframe
+   cuando cambia la URL —recargarlo cortaría el WebRTC—. */
+function urlCamara(sala, nick, tag) {
+  const idVista = `${String(nick).replaceAll(' ', '_')}_H_${tag}`;
+  const params =
+    `room=${encodeURIComponent(sala)}&view=${encodeURIComponent(idVista)}` +
+    '&scene=0&cleanoutput&transparent&vb=5000&waitmessage=&disablehotkeys' +
+    '&codec=h265,av1,h264,vp8';
+  return `https://vdo.ninja/?${params}`;
+}
+
+let camaraUrlActual = '';
+function pintaCamara(e) {
+  const caja = $('camara');
+  const video = $('camara-video');
+  if (caja === null || video === null) return;
+
+  const cam = e.camaras ?? { activas: false, sala: '', publicando: [] };
+  const obs = [...(e.jugadores[0] ?? []), ...(e.jugadores[1] ?? [])].find((p) => p.observado);
+  const fullName = obs ? `${obs.nick}#${obs.tag}` : '';
+  const publicando = obs && cam.publicando.includes(fullName);
+  const mostrar = cam.activas && cam.sala && obs && publicando && e.fase === 'combat';
+
+  if (!mostrar) {
+    if (caja.hasAttribute('hidden')) return;
+    caja.setAttribute('hidden', '');
+    /* Se corta la fuente al ocultar: un iframe oculto seguiría trayendo vídeo. */
+    video.removeAttribute('src');
+    camaraUrlActual = '';
+    return;
+  }
+
+  const url = urlCamara(cam.sala, obs.nick, obs.tag);
+  if (url !== camaraUrlActual) {
+    video.setAttribute('src', url);
+    camaraUrlActual = url;
+  }
+  caja.removeAttribute('hidden');
+}

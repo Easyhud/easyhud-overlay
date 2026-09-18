@@ -27,13 +27,53 @@
 
 <div class="escenario">
 
-  <!-- ══ Marcador (permanente) ══ -->
-  <div class="marcador" id="marcador"></div>
-  <div class="ronda-chip" id="ronda"></div>
-  <div class="aleta aleta--izq"></div>
-  <div class="aleta aleta--der"></div>
-  <div class="serie serie--izq" id="serie-izq"></div>
-  <div class="serie serie--der" id="serie-der"></div>
+  <!-- ══ Marcador superior completo (diseño Easy · marcador-estatico) ══ -->
+  <div class="marcador-todo" id="marcador-todo">
+
+    <!-- historial de la serie (izquierda) -->
+    <div class="historial" id="historial" hidden></div>
+
+    <!-- torneo (derecha): relleno + marca de agua + caja 250×80 -->
+    <div class="torneo-relleno"></div>
+    <div class="torneo-marca-agua"><span>Easy Open · easyhud.net</span></div>
+    <div class="torneo-caja" id="torneo-caja">
+      <div class="torneo-caja__marca"></div>
+      <span class="torneo-caja__texto">EASY HUD</span>
+    </div>
+
+    <!-- paneles de equipo + hueco del reloj nativo -->
+    <div class="barra-top">
+      <div class="panel-equipo panel-equipo--izq">
+        <div class="panel-equipo__logo-caja">
+          <span class="panel-equipo__logo-inicial" id="ini-izq"></span>
+          <div class="panel-equipo__logo" id="logo-izq"></div>
+        </div>
+        <span class="panel-equipo__tricodigo" id="tri-izq"></span>
+        <span style="flex:1"></span>
+        <span class="panel-equipo__tanto" id="tanto-izq">0</span>
+        <div class="panel-equipo__filo"></div>
+      </div>
+
+      <div class="reloj-nativo"></div>
+
+      <div class="panel-equipo panel-equipo--der">
+        <div class="panel-equipo__filo"></div>
+        <span class="panel-equipo__tanto" id="tanto-der">0</span>
+        <span style="flex:1"></span>
+        <span class="panel-equipo__tricodigo" id="tri-der"></span>
+        <div class="panel-equipo__logo-caja">
+          <span class="panel-equipo__logo-inicial" id="ini-der"></span>
+          <div class="panel-equipo__logo" id="logo-der"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rotulo-ronda" id="ronda"></div>
+    <div class="pips pips--izq" id="pips-izq"></div>
+    <div class="pips pips--der" id="pips-der"></div>
+    <div class="aleta aleta--izq"></div>
+    <div class="aleta aleta--der"></div>
+  </div>
 
 
   <!-- ══ Columna izquierda (ataque) ══ -->
@@ -42,7 +82,21 @@
   <!-- ══ Columna derecha (defensa) ══ -->
   <div class="columna columna--der" id="col-der"></div>
 
-  <div class="marca">EASY OPEN · easyhud.net</div>
+  <!-- ══ Cámara del jugador observado (VDO.Ninja) ══
+       Un solo visor: se le cambia la fuente al jugador que el observador tenga
+       delante. Oculto salvo que las cámaras estén activas, ese jugador esté
+       publicando y estemos en combate. -->
+  <div class="camara" id="camara" hidden>
+    <iframe
+      class="camara__video"
+      id="camara-video"
+      title="Cámara del jugador"
+      allow="camera; microphone; autoplay; fullscreen"
+      frameborder="0"
+      scrolling="no"
+    ></iframe>
+  </div>
+
 </div>
 
 <script src="./js/escenario.js?v=2"></script>

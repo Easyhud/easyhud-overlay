@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Easy HUD · vista del operador</title>
+<style>
+  /* Vista del OPERADOR: el MISMO HUD de emisión, pero con `?operador=1`, así
+     cada tarjeta muestra su tecla de observador (1–0). Va ENCIMA de VALORANT en
+     la máquina del operador (ventana Overwolf/Electron, transparente,
+     click-through, excluida de la captura de OBS). OBS NO usa esta página —usa
+     `index.html` sin el flag—, así las teclas nunca salen en la emisión. */
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: transparent; overflow: hidden; }
+  .capa-hud {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    border: 0;
+    background: transparent;
+    pointer-events: none;   /* click-through: no roba el input del juego */
+  }
+</style>
+</head>
+<body>
+  <!-- El HUD de emisión completo con el flag de operador (teclas en las tarjetas). -->
+  <iframe class="capa-hud" src="../index.html?operador=1" allowtransparency="true"></iframe>
+</body>
+</html>

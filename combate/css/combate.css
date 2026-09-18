@@ -72,6 +72,9 @@
 .cab__fila { display: flex; align-items: center; gap: 6px; height: 21px; width: 100%; }
 .tarjeta--der .cab__fila { flex-direction: row-reverse; }
 .cab__ojo { width: 16px; height: 16px; flex: 0 0 auto; }
+/* Icono de rango, pegado al nombre. Sale del CDN de Valorant; si no hay rango,
+   `fuente()` lo esconde. La simetría izq/der la da `.cab__fila` (row-reverse). */
+.cab__rango { width: 20px; height: 20px; flex: 0 0 auto; object-fit: contain; }
 .cab__nick {
   font-family: 'Oswald', sans-serif;
   font-size: 17px; font-weight: 500; line-height: 1.35;
@@ -446,4 +449,26 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.12em;
   color: #ffd9dd;
+}
+
+/* ── Cámara del jugador observado (VDO.Ninja) ──────────────────────────────
+   Un visor 16:9 posicionado sobre el lienzo de 1920×1080. La posición es un
+   punto de partida: muévelo a donde encaje con tu escena de OBS. */
+.camara {
+  position: absolute;
+  left: 800px;
+  top: 118px;
+  width: 320px;
+  height: 180px;
+  z-index: 40;
+  overflow: hidden;
+  background: #000;
+  border: 2px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+}
+.camara__video {
+  width: 100%;
+  height: 100%;
+  display: block;
+  border: 0;
 }

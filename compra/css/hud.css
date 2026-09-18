@@ -66,7 +66,9 @@ a:hover { color: var(--atk-light); }
   background:
     linear-gradient(90deg, rgb(0 0 0 / 0%) 45%, color-mix(in srgb, var(--c) 26%, transparent) 100%),
     linear-gradient(180deg, rgb(255 255 255 / 7%) 0%, rgb(255 255 255 / 0%) 42%),
-    var(--panel);
+    /* Base OPACA, igual que en combate: el score no cambia de opacidad entre
+       compra y combate. */
+    linear-gradient(160deg, rgb(38 41 49) 0%, rgb(18 20 25) 100%);
   box-shadow: var(--panel-edge);
   /* Cuña: la punta apunta hacia FUERA en cada lado. */
   clip-path: path('M 5,0 L 215,0 Q 220,0 220,5 L 220,55 Q 220,60 215,60 L 35,60 Q 30,60 27.76,55.53 L 2.24,4.47 Q 0,0 5,0 Z');

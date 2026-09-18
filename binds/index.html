@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Easy HUD · binds del observador</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../combate/css/tokens.css">
+<link rel="stylesheet" href="./css/binds.css">
+</head>
+<body>
+<!--
+  BINDS DEL OBSERVADOR — ventana que va ENCIMA de VALORANT (overlay Overwolf).
+
+  Muestra los diez agentes con la tecla que los observa: izquierda 1–5,
+  derecha 6–0, en el mismo orden que la barra de arriba del juego (que sale de
+  `ui_team_order_allies` / `ui_team_order_enemies` de GEP). Es una AYUDA para el
+  observador: no afecta la captura del juego (la ventana se excluye de captura
+  con content-protection) y no roba el input (click-through).
+-->
+<div class="binds" id="binds">
+  <div class="binds__lado binds__lado--izq" id="lado-izq"></div>
+  <div class="binds__sep"></div>
+  <div class="binds__lado binds__lado--der" id="lado-der"></div>
+</div>
+<script type="module" src="./js/binds.js"></script>
+</body>
+</html>

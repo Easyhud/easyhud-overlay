@@ -21,6 +21,7 @@
 
 import { arranca, apaga } from './panel.js';
 import { montaAcceso, muestraAcceso } from './acceso.js';
+import { montaDashboard, muestraDashboard } from './db.js';
 import { montaAtajos, muestraAtajos, cargaAtajos, guardaAtajos, atajos } from './atajos.js';
 import {
   alCambiar,
@@ -63,6 +64,9 @@ function montaBarra() {
   $('bt-maximizar')?.addEventListener('click', () => api()?.ventanaMaximizar?.());
   $('bt-cerrar')?.addEventListener('click', () => api()?.ventanaCerrar?.());
 
+  /* Dashboard y Settings ya no viven en la barra: son navegación del sidebar
+     (ver db.js). La barra solo lleva estado + controles de ventana. */
+
   $('bt-atajos')?.addEventListener('click', () => muestraAtajos(true));
   $('at-cerrar')?.addEventListener('click', () => muestraAtajos(false));
   $('at-guardar')?.addEventListener('click', () => {
@@ -73,10 +77,77 @@ function montaBarra() {
     muestraAtajos(false);
   });
 
+  /* El rebind inline desde los cuadros de mando (panel.js) pide aplicar la
+     tecla sin abrir el diálogo. El panel es web puro y no toca el proceso
+     principal; el registro lo hace el shell, que sí. */
+  window.addEventListener('aplicar-atajos', () => api()?.aplicaAtajos?.(cargaAtajos()));
+
+  /* Mientras el panel captura una tecla nueva, suelta los atajos globales para
+     que la tecla llegue al `keydown` del panel en vez de dispararse el mando. */
+  window.addEventListener('suspende-atajos', () => api()?.suspendeAtajos?.());
+
+  /* La ventana OPERADOR (overlay encima del juego): el panel la prende/apaga y
+     el shell le presta el puente. Solo main puede crear la ventana. */
+  window.addEventListener('operador-overlay', (e) =>
+    api()?.operadorOverlay?.(e.detail === true),
+  );
+
+  /* Crear la sala de torneo la hace el proceso principal (escribe en el cliente
+     de Riot). El panel es web puro, así que el shell le presta el puente: una
+     función que devuelve el código, o null si no hay puente (fuera del exe). */
+  window.__easyCreaSala = () => api()?.creaSalaTorneo?.() ?? null;
+
+  /* La base local (equipos/matches/torneos): el panel es web puro y no toca el
+     puente `electronAPI`; el shell le presta `window.__easyDB` con el CRUD. Cada
+     método devuelve la promesa del `invoke` (o un fallo suave fuera del exe). */
+  const sinPuente = () => Promise.resolve({ ok: false, error: 'db no disponible' });
+  const puenteDb = (pre) => ({
+    list: () => api()?.[`db${pre}List`]?.() ?? sinPuente(),
+    create: (d) => api()?.[`db${pre}Create`]?.(d) ?? sinPuente(),
+    update: (id, p) => api()?.[`db${pre}Update`]?.(id, p) ?? sinPuente(),
+    remove: (id) => api()?.[`db${pre}Delete`]?.(id) ?? sinPuente(),
+  });
+  window.__easyDB = {
+    teams: puenteDb('Teams'),
+    matches: puenteDb('Matches'),
+    tournaments: puenteDb('Tournaments'),
+  };
+
+  /* La sala leída localmente llega por IPC y se reparte al panel como evento.
+     Así el Pre-partida se actualiza aunque la conexión al servidor esté caída. */
+  /* La escena del juego (Agent Select / Main Menu…): el panel la usa para saber
+     la fase real (menú/lobby vs partida) sin depender del partido viejo. */
+  api()?.onEscena?.((escena) => {
+    window.dispatchEvent(new CustomEvent('escena', { detail: escena }));
+  });
+
+  /* Fin de mapa (detección local del observador): el panel lleva la serie. */
+  api()?.onSerieFin?.((datos) => {
+    window.dispatchEvent(new CustomEvent('serie-fin', { detail: datos }));
+  });
+
+  api()?.onSalaLocal?.((sala) => {
+    window.dispatchEvent(new CustomEvent('sala-local', { detail: sala }));
+  });
+
   /* Cerrar sesión ya tiene sentido aquí: el shell es quien tiene la sesión.
      Antes este botón navegaba a `/salir` y, dentro del exe, dejaba el panel en
      blanco sin vuelta atrás. */
   $('a-salir')?.addEventListener('click', () => sal());
+
+  /* Toggle del overlay del operador (Settings). Recuerda el estado y, al abrir
+     el panel, sincroniza la ventana con lo guardado. */
+  const chkOp = $('set-operador');
+  if (chkOp !== null) {
+    const CLAVE = 'easy.operadorOverlay';
+    chkOp.checked = localStorage.getItem(CLAVE) === '1';
+    const aplica = () => {
+      localStorage.setItem(CLAVE, chkOp.checked ? '1' : '0');
+      window.dispatchEvent(new CustomEvent('operador-overlay', { detail: chkOp.checked }));
+    };
+    if (chkOp.checked) aplica();
+    chkOp.addEventListener('change', aplica);
+  }
 }
 
 /** El rótulo de la barra: para quién es la sesión y cuánto le queda. */
@@ -89,7 +160,7 @@ function pintaSesion() {
     return;
   }
   const horas = Math.max(0, Math.round((c.caduca.getTime() - Date.now()) / 3600000));
-  el.textContent = `${c.cliente} · el permiso de emisión caduca en ${horas} h`;
+  el.textContent = `${c.cliente} · broadcast permit expires in ${horas} h`;
 }
 
 /* ── La puerta ───────────────────────────────────────────────────────────── */
@@ -129,6 +200,9 @@ function sigueSesion() {
       token: tokenEmision(),
       obs: urlObs(),
     });
+    /* Al entrar se aterriza en el dashboard (matches/torneos/equipos). Se cierra
+       al arrancar un match; se puede volver con el botón Home de la barra. */
+    muestraDashboard(true);
     return;
   }
 
@@ -137,6 +211,8 @@ function sigueSesion() {
     apaga();
     api()?.paraLectorSala?.();
     api()?.paraOverlayLocal?.();
+    api()?.operadorOverlay?.(false); // al cerrar sesión, se oculta el overlay operador
+    muestraDashboard(false);
     muestraAtajos(false);
   }
 }
@@ -170,6 +246,7 @@ function inicia() {
 
   montaBarra();
   montaAcceso();
+  montaDashboard(() => muestraDashboard(false));
   montaAtajos();
 
   alCambiar(sigueSesion);

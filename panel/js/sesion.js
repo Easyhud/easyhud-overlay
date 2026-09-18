@@ -37,7 +37,11 @@ const LLAVE_GRUPO = 'easy.grupo';
  * contraseña no puede viajar por ahí. Esto tiene que apuntar a `https://` en
  * producción, y este módulo se niega a mandar nada si no es así.
  */
-const AUTENTICADOR = globalThis.EASY_AUTH_URL ?? 'https://easyhud.net/api/acceso';
+export const AUTENTICADOR = globalThis.EASY_AUTH_URL ?? 'https://easyhud.net/api/acceso';
+
+/** La base de la API de cuentas (…/api/), derivada del autenticador. Sobre ella
+    cuelgan mi-perfil, perfil, contrasena y foto. */
+export const API_CUENTAS = AUTENTICADOR.replace(/\/acceso\/?$/, '/');
 
 /** El servidor de datos. Lo mismo que usaba el shell de Angular. */
 export const ENDPOINT_DATOS = globalThis.EASY_ENDPOINT ?? 'https://easyhud.net';
@@ -173,8 +177,28 @@ export function limpiaSiCaducada() {
   if (token !== '' && caducada()) sal();
 }
 
-/** TLS, o la propia máquina. Nada más. */
-function seguro(url) {
+/**
+ * Reemplaza el token de EMISIÓN por uno recién firmado por el servidor.
+ *
+ * Se usa cuando el perfil cambia algo que vive DENTRO del token (el nombre, que
+ * es el claim `c`): el servidor lo re-emite con el dato nuevo y aquí se aplica,
+ * así el rótulo del sidebar y la cabecera en vivo se actualizan sin re-login y
+ * sin que el cliente se invente el nombre. No toca el token de sesión.
+ */
+export function ponEmision(nuevaEmision) {
+  if (typeof nuevaEmision !== 'string' || nuevaEmision === '') return;
+  emision = nuevaEmision;
+  try {
+    localStorage.setItem(LLAVE_EMISION, nuevaEmision);
+  } catch {
+    /* sin almacenamiento, dura lo que la ventana */
+  }
+  avisaCambio();
+}
+
+/** TLS, o la propia máquina. Nada más. Lo comparte la edición de perfil, que se
+    niega a mandar nombre/contraseña por un canal sin cifrar igual que el login. */
+export function seguro(url) {
   try {
     const u = new URL(url);
     if (u.protocol === 'https:') return true;

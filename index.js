@@ -70,6 +70,9 @@ function monta(nombre, pantalla) {
   if (token !== null && token !== '') extra.set('token', token);
   if (!pantalla.barra) extra.set('barra', '0');
   if (dev) extra.set('dev', '1');
+  /* Vista del operador: propaga el flag para que las pantallas muestren las
+     teclas de observador. Solo lo trae `operador/`, nunca la URL de OBS. */
+  if (params.get('operador') === '1') extra.set('operador', '1');
   // La palabra de la victoria se hereda, si se puso en esta dirección.
   const palabra = params.get('palabra');
   if (palabra !== null && nombre === 'victoria') extra.set('palabra', palabra);

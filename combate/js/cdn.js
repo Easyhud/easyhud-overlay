@@ -36,6 +36,37 @@ export const iconoHabilidad = (a, i) =>
   ruta(AGENTES, a, `/agents/%s/abilities/${HUECOS[i]}/displayicon.png`);
 export const iconoUltimate = (a) => ruta(AGENTES, a, '/agents/%s/abilities/ultimate/displayicon.png');
 
+/* ── RANGO ────────────────────────────────────────────────────────────────
+   El icono de rango sale del mismo CDN, pero el identificador del set de tiers
+   cambia cada episodio; fijarlo a mano se pudriría. En vez de eso se pide una
+   sola vez el catálogo de `competitivetiers` y se arma el mapa tier→icono. El
+   número de tier (0..27) llega en el estado, resuelto por el cliente del
+   observador. Hasta que el catálogo carga, `iconoRango` devuelve '' (sin icono);
+   el overlay repinta a 5 fps, así que el icono aparece solo en cuanto llega. */
+const iconosRango = new Map(); // tier (1..27) → URL del icono pequeño
+let rangoPedido = false;
+async function cargaRangos() {
+  if (rangoPedido) return;
+  rangoPedido = true;
+  try {
+    const r = await fetch('https://valorant-api.com/v1/competitivetiers');
+    const data = (await r.json())?.data ?? [];
+    const set = data[data.length - 1]; // el episodio actual es el último
+    for (const t of set?.tiers ?? []) {
+      if (t.smallIcon) iconosRango.set(t.tier, t.smallIcon);
+    }
+  } catch {
+    rangoPedido = false; // sin red aún; se reintenta al próximo pintado
+  }
+}
+cargaRangos();
+
+export const iconoRango = (tier) => {
+  if (!tier || tier <= 0) return '';
+  if (iconosRango.size === 0) cargaRangos();
+  return iconosRango.get(tier) ?? '';
+};
+
 /* Lo local, que sí va en el repositorio. */
 export const CREDITOS = './assets/credits-icon.webp';
 export const SPIKE = './assets/spike-ink.png';
