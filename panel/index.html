@@ -741,7 +741,7 @@
          ENCIMA del panel, no en su sitio: así el panel de debajo no se
          desmonta y no pierde lo que el operador tuviera escrito. -->
     <div class="acceso" id="acceso" hidden>
-      <div class="acceso__fondo" aria-hidden="true"></div>
+      <div class="acceso__fondo" aria-hidden="true"><canvas id="acceso-canvas"></canvas></div>
       <div class="acceso__caja">
         <div class="acceso__cabeza">
           <img src="assets/wordmark-easy.svg" alt="Easy" width="60" height="23" />
@@ -860,12 +860,12 @@
                mapa a sangre por la derecha, ON AIR, barras de color por equipo,
                marcador grande y RESUME. Lo rellena pintaHero(); se oculta si no
                hay ninguno. -->
-          <div class="hero" id="m-hero" hidden>
+          <div class="hero spot" id="m-hero" hidden>
             <div class="hero__img img-fondo" id="hero-img" aria-hidden="true"></div>
             <div class="hero__scrim" aria-hidden="true"></div>
             <div class="hero__cont">
               <div class="hero__top">
-                <span class="hero__kick" id="hero-kick">On air</span>
+                <span class="hero__kick" id="hero-kick"><span class="brillo-texto" id="hero-kick-txt">On air</span></span>
                 <span class="hero__foot" id="hero-foot"></span>
               </div>
               <div class="hero__vs">
@@ -873,7 +873,7 @@
                   <span class="hero__bar" id="hero-bar-a"></span>
                   <span class="hero__nom" id="hero-nom-a">TBD</span>
                 </div>
-                <b class="hero__sc" id="hero-sc">0–0</b>
+                <b class="hero__sc"><span id="hero-sc-a">0</span>–<span id="hero-sc-b">0</span></b>
                 <div class="hero__eq hero__eq--b">
                   <span class="hero__nom" id="hero-nom-b">TBD</span>
                   <span class="hero__bar" id="hero-bar-b"></span>
@@ -1064,6 +1064,18 @@
           <button class="boton" type="submit">Save</button>
         </div>
       </form>
+    </dialog>
+
+    <!-- Detalle de un match DONE: ganador por mapa + roster/KDA (lo llena
+         pintaDetalleMatch()). Sin ADR: GEP no lo reporta. -->
+    <dialog class="dlg dlg--ancho" id="dlg-match-detalle">
+      <div class="dlg__form">
+        <h2 class="display" id="dmd-tit">Match</h2>
+        <div id="dmd-mapas"></div>
+        <div class="dlg__pie">
+          <button class="boton boton--terciario" type="button" data-cerrar>Close</button>
+        </div>
+      </div>
     </dialog>
 
     <!-- Cambio de contraseña: acción sensible, va directa al VPS por HTTPS y

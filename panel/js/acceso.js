@@ -13,6 +13,7 @@
    pasar por Discord.                                                        */
 
 import { entra } from './sesion.js';
+import { montaNieblaCristal, activaNieblaCristal } from './nieblacristal.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -72,6 +73,7 @@ async function intenta(ev) {
 
 /** Monta los manejadores. Se llama una vez, al cargar. */
 export function montaAcceso() {
+  montaNieblaCristal();
   $('ac-form')?.addEventListener('submit', intenta);
   $('ac-web')?.addEventListener('click', (ev) => {
     ev.preventDefault();
@@ -86,6 +88,7 @@ export function muestraAcceso(visible) {
   const caja = $('acceso');
   if (caja === null) return;
   caja.hidden = !visible;
+  activaNieblaCristal(visible);
   if (visible) {
     falla('');
     marcha(false);

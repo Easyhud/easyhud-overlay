@@ -30,6 +30,7 @@
 
 import { conecta } from './enlace.js';
 import { atajos, guardaAtajos } from './atajos.js';
+import { calculaFinMapa } from './finmapa.js';
 
 /* Cada mando de directo lleva la MISMA tecla global que su atajo. Se enseña en
    la esquina inferior izquierda del cuadro y se puede recambiar ahí mismo. */
@@ -97,18 +98,12 @@ window.addEventListener('serie-fin', (e) => {
   ultimaSerieClave = clave;
 
   const base = serieActual();
-  const entrada = {
-    type: 'past',
-    map: d.map || M?.map || '',
-    left: { logo: M?.teams?.[0]?.teamUrl ?? '', score: d.izq ?? 0 },
-    right: { logo: M?.teams?.[1]?.teamUrl ?? '', score: d.der ?? 0 },
-  };
-  serieLocal = {
-    needed: base.needed ?? 1,
-    wonLeft: (base.wonLeft ?? 0) + (d.ganador === 0 ? 1 : 0),
-    wonRight: (base.wonRight ?? 0) + (d.ganador === 1 ? 1 : 0),
-    mapInfo: [...(Array.isArray(base.mapInfo) ? base.mapInfo : []), entrada],
-  };
+  const { score, mapInfo } = calculaFinMapa(
+    { ...base, mapInfo: base.mapInfo ?? [] },
+    { ...d, map: d.map || M?.map || '' },
+    { izq: M?.teams?.[0]?.teamUrl ?? '', der: M?.teams?.[1]?.teamUrl ?? '' },
+  );
+  serieLocal = { needed: base.needed ?? 1, ...score, mapInfo };
   pinta();
   enlace?.parchea({ seriesInfo: serieLocal });
 });

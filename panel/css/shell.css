@@ -139,9 +139,43 @@
 .acceso__fondo {
   position: absolute;
   inset: 0;
+  overflow: hidden;
   background: var(--void);
-  /* Un halo rojo muy bajo, para que la puerta no sea un rectángulo negro. */
-  background-image: radial-gradient(60% 50% at 50% 0%, var(--rec-sombra), transparent 70%);
+}
+#acceso-canvas { position: absolute; inset: 0; display: block; }
+/* Niebla que respira detrás de la puerta (nunca se ve en vivo: esto solo sale
+   antes de entrar, cuando nada compite por GPU). Dos manchas desenfocadas que
+   derivan despacio — el halo rojo ya existente + una segunda en blanco muy
+   tenue, sin salirse de la paleta. */
+.acceso__fondo::before,
+.acceso__fondo::after {
+  content: '';
+  position: absolute;
+  width: 70vmax;
+  height: 70vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  will-change: transform;
+}
+.acceso__fondo::before {
+  top: -30%;
+  left: 50%;
+  background: radial-gradient(circle, var(--rec-sombra), transparent 70%);
+  animation: niebla-deriva-a 26s ease-in-out infinite;
+}
+.acceso__fondo::after {
+  bottom: -35%;
+  left: 10%;
+  background: radial-gradient(circle, rgb(255 255 255 / 6%), transparent 70%);
+  animation: niebla-deriva-b 32s ease-in-out infinite;
+}
+@keyframes niebla-deriva-a {
+  0%, 100% { transform: translateX(-50%) translateY(0) scale(1); }
+  50% { transform: translateX(-42%) translateY(4%) scale(1.15); }
+}
+@keyframes niebla-deriva-b {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(8%, -6%) scale(1.1); }
 }
 
 .acceso__caja {

@@ -13,6 +13,10 @@
 import { iniciaConfig } from './panel.js';
 import { cuenta, tokenSesion, API_CUENTAS, seguro, ponEmision, sal } from './sesion.js';
 import { calientaAssets, mapaSplash } from './valassets.js';
+import { animaConteo } from './contador.js';
+import { activaSpotlight, activaRailProximidad, indicaPill } from './efectos.js';
+import { calculaFinMapa } from './finmapa.js';
+import { abreDetalleMatch } from './historial.js';
 
 const $ = (id) => document.getElementById(id);
 const DB = () => window.__easyDB;
@@ -155,6 +159,32 @@ function matchesFiltrados() {
   return lista;
 }
 
+/* Fin de mapa: persiste el resultado en el match que está EN VIVO (solo puede
+   haber uno). panel.js escucha el mismo evento para empujarlo al overlay; esto
+   es aparte, para que el dashboard/historial no se quede con el score viejo.
+   El cómputo (score/mapInfo) es compartido vía calculaFinMapa — el dedupe
+   sigue siendo propio de cada listener (son consumidores distintos). */
+let ultimaSerieGuardada = '';
+window.addEventListener('serie-fin', async (e) => {
+  const d = e.detail || {};
+  const clave = d.matchId || `${d.map}-${d.izq}-${d.der}`;
+  if (!clave || clave === ultimaSerieGuardada) return;
+  ultimaSerieGuardada = clave;
+
+  const m = matches.find((x) => x.estado === 'live');
+  if (!m) return;
+  const a = equipoPorId(m.teamAId) || m.teamASnap || {};
+  const b = equipoPorId(m.teamBId) || m.teamBSnap || {};
+  const { score, mapInfo } = calculaFinMapa(m, d, { izq: a.logoUrl ?? '', der: b.logoUrl ?? '' });
+  /* Mutacion local optimista ANTES del await: si el siguiente mapa termina
+     mientras esta escritura sigue en vuelo, ese segundo evento debe leer este
+     resultado (no el viejo) o se pierde un mapa del historial. */
+  m.score = score;
+  m.mapInfo = mapInfo;
+  await DB().matches.update(m.id, { score, mapInfo });
+  await recarga();
+});
+
 /* ── carga ── */
 async function recarga() {
   const [t, m, to] = await Promise.all([
@@ -244,8 +274,15 @@ function pintaFiltros() {
     for (const m of matches) cont[estadoReal(m)] = (cont[estadoReal(m)] || 0) + 1;
     const pill = (k, cls) =>
       `<button class="pill${cls}${filtro.estado === k ? ' is-on' : ''}" type="button" data-m-estado="${k}">` +
-      `<b>${cont[k] || 0}</b> ${k}</button>`;
+      `<b id="pill-cnt-${k}">0</b> ${k}</button>`;
     pills.innerHTML = pill('live', ' pill--live') + pill('draft', '') + pill('done', '');
+    /* El "desde" vive en el dataset del propio contenedor #m-pills, no en un
+       objeto aparte: el contenedor sobrevive a su innerHTML, sus hijos no. */
+    for (const k of ['live', 'draft', 'done']) {
+      animaConteo($(`pill-cnt-${k}`), cont[k] || 0, { duracion: 0.45, desde: Number(pills.dataset[`c${k}`] ?? 0) });
+      pills.dataset[`c${k}`] = cont[k] || 0;
+    }
+    indicaPill(pills);
   }
   const barra = $('m-filtros');
   if (!barra) return;
@@ -309,12 +346,14 @@ function pintaMatches() {
       const sub =
         [m.name, torneo?.name].filter(Boolean).map(esc).join(' · ') ||
         (vivo ? 'Live now' : estado === 'done' ? 'Finished' : 'Draft');
-      const done =
-        estado === 'done'
-          ? `<button class="mc__ic" data-m-reopen="${m.id}" title="Reopen">↺</button>`
-          : `<button class="mc__ic" data-m-end="${m.id}" title="Mark done">✓</button>`;
+      /* Done es automatico (lo cierra el servidor cuando la API confirma el fin
+         de la serie): aqui solo queda REOPEN, para corregir si hizo falta. */
+      const done = estado === 'done' ? `<button class="mc__ic" data-m-reopen="${m.id}" title="Reopen">↺</button>` : '';
+      /* Terminado no se "arranca": si de verdad hay que retocarlo, es REOPEN
+         primero (vuelve a draft), no jugar sobre un resultado ya cerrado. */
+      const play = estado === 'done' ? '' : `<button class="mc__ic" data-m-start="${m.id}" title="${vivo ? 'Resume' : 'Start'}">▶</button>`;
       return (
-        `<div class="mc" data-estado="${estado}" data-m-open="${m.id}"${imgAttr}>` +
+        `<div class="mc spot" data-estado="${estado}" data-m-open="${m.id}"${imgAttr}>` +
         `<div class="mc__scrim" aria-hidden="true"></div>` +
         `<div class="mc__cont">` +
         `<div class="mc__top">` +
@@ -329,7 +368,7 @@ function pintaMatches() {
         `<div class="mc__pie">` +
         `<span class="mc__sub">${sub}</span>` +
         `<div class="mc__acc">` +
-        `<button class="mc__ic" data-m-start="${m.id}" title="${vivo ? 'Resume' : 'Start'}">▶</button>` +
+        play +
         done +
         `<button class="mc__ic" data-m-edit="${m.id}" title="Edit">✎</button>` +
         `<button class="mc__ic mc__ic--del" data-m-del="${m.id}" title="Delete">✕</button>` +
@@ -363,7 +402,7 @@ function pintaHero() {
   const torneo = torneoPorId(next.tournamentId);
   const mapaNombre = mapaDeMatch(next);
   const img = mapaSplash(mapaNombre) || mapaLocal(mapaNombre);
-  $('hero-kick').textContent = live ? 'On air' : 'Last match';
+  $('hero-kick-txt').textContent = live ? 'On air' : 'Last match';
   $('hero-img').style.backgroundImage = img ? `url('${img}')` : '';
   el.dataset.img = img ? 'si' : 'no';
   $('hero-nom-a').textContent = a.name || a.tricode || 'TBD';
@@ -382,7 +421,8 @@ function pintaHero() {
   };
   ponBarra('hero-bar-a', a);
   ponBarra('hero-bar-b', b);
-  $('hero-sc').textContent = `${next.score?.wonLeft ?? 0}–${next.score?.wonRight ?? 0}`;
+  animaConteo($('hero-sc-a'), next.score?.wonLeft ?? 0);
+  animaConteo($('hero-sc-b'), next.score?.wonRight ?? 0);
   /* Pie tipo "ASCENT · BO3 · EASY MASTERS 2026" (mapa · formato · torneo). */
   $('hero-foot').textContent = [mapaNombre ? mapaNombre.toUpperCase() : '', next.formato || 'BO3', torneo?.name || '']
     .filter(Boolean)
@@ -557,6 +597,7 @@ async function quickMatch() {
     mapInfo: [],
     estado: 'draft',
   });
+  await recarga();
   if (r?.item) await arrancaMatch(r.item.id);
 }
 
@@ -599,6 +640,12 @@ export function montaDashboard(cb) {
   for (const it of document.querySelectorAll('#menu-inicio .menu__item[data-panel]')) {
     it.addEventListener('click', () => activa(it.dataset.panel));
   }
+
+  /* Efectos: spotlight en cards/hero, proximidad en el raíl. Un solo listener
+     por contenedor, no por card, así que sobreviven a cada repintado. */
+  activaSpotlight($('m-lista'));
+  activaSpotlight($('m-hero'));
+  activaRailProximidad(document.querySelector('.sb__body'));
 
   /* Settings + Account: ítems de navegación normales. */
   $('sb-settings')?.addEventListener('click', () => activa('settings'));
@@ -683,17 +730,27 @@ export function montaDashboard(cb) {
 
   /* Acciones delegadas de las listas. */
   document.addEventListener('click', async (e) => {
-    const t = e.target.closest('[data-nuevo],[data-eq-edit],[data-eq-del],[data-to-edit],[data-to-del],[data-m-edit],[data-m-del],[data-m-start],[data-m-end],[data-m-reopen],[data-m-open],[data-acc-edit],[data-acc-save],[data-acc-cancel]');
+    const t = e.target.closest('[data-nuevo],[data-eq-edit],[data-eq-del],[data-to-edit],[data-to-del],[data-m-edit],[data-m-del],[data-m-start],[data-m-reopen],[data-m-open],[data-acc-edit],[data-acc-save],[data-acc-cancel]');
     if (t === null) return;
     const d = t.dataset;
     /* Clic en el CUERPO de la card (no en un botón): abre el match para editar.
        Los botones ▶/✎/✕ ganan por `closest` (están más cerca del clic). */
-    if (d.mOpen) return abreMatch(matches.find((x) => x.id === d.mOpen));
+    if (d.mOpen) {
+      const match = matches.find((x) => x.id === d.mOpen);
+      if (match && estadoReal(match) === 'done') return abreDetalleMatch(match);
+      return abreMatch(match);
+    }
     if (d.accEdit) return editaCampo(d.accEdit, true);
     if (d.accCancel) return editaCampo(d.accCancel, false);
     if (d.accSave) return guardaCampo(d.accSave);
-    if (d.mEnd) { await DB().matches.update(d.mEnd, { estado: 'done' }); await recarga(); return; }
-    if (d.mReopen) { await DB().matches.update(d.mReopen, { estado: 'draft' }); await recarga(); return; }
+    /* Reopen tiene que borrar el marcador/mapInfo, no solo el estado: estadoReal
+       deriva 'done' del marcador (finalizada()) sin importar m.estado, asi que
+       si solo se tocara estado, la card seguiria mostrandose done para siempre. */
+    if (d.mReopen) {
+      await DB().matches.update(d.mReopen, { estado: 'draft', score: { wonLeft: 0, wonRight: 0 }, mapInfo: [] });
+      await recarga();
+      return;
+    }
     if (d.nuevo === 'team') return abreTeam(null);
     if (d.nuevo === 'tournament') return abreTournament(null);
     if (d.nuevo === 'match') return abreMatch(null);

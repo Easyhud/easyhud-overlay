@@ -2581,6 +2581,16 @@ body { font-size: 14px; }
 .mc__estado .punto { width: 7px; height: 7px; background: #e8e8ea; }
 .mc[data-estado='live'] .mc__estado { color: var(--rec-claro); }
 .mc[data-estado='live'] .mc__estado .punto { background: var(--rec); animation: late 1.6s ease-in-out infinite; }
+/* ── "Border Glow": el borde respira en rojo SOLO en vivo — el unico sitio
+   donde este brillo esta permitido (antena). ── */
+.mc[data-estado='live'],
+.hero[data-vivo='si'] {
+  animation: borde-en-vivo 2.4s ease-in-out infinite;
+}
+@keyframes borde-en-vivo {
+  0%, 100% { box-shadow: 0 0 0 1px rgb(245 37 59 / 35%), 0 0 18px rgb(245 37 59 / 0%); }
+  50% { box-shadow: 0 0 0 1px rgb(245 37 59 / 65%), 0 0 22px rgb(245 37 59 / 22%); }
+}
 .mc[data-estado='done'] { opacity: .9; }
 .mc__fmt {
   font-family: 'Oswald', sans-serif; font-size: 10px; font-weight: 600; letter-spacing: .08em; color: #e8e8ea;
@@ -3085,3 +3095,77 @@ body { font-size: 14px; }
    (sin color-scheme:dark el popup sale claro con el highlight azul del SO). */
 .fdrop, select { color-scheme: dark; }
 .fdrop option, select option { background: #0d0e12; color: #f2f2f3; }
+
+/* ── Brillo de texto ("Shiny Text" de React Bits, portado a CSS puro) ──
+   Usa currentColor: el barrido sale del mismo color que ya tenga el texto,
+   nunca fuerza un color nuevo (asi no se cuela nada fuera de la paleta). */
+.brillo-texto {
+  display: inline-block;
+  background-image: linear-gradient(120deg, currentColor 0%, currentColor 35%, #fff 50%, currentColor 65%, currentColor 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: brillo-barrido 2.6s linear infinite;
+}
+@keyframes brillo-barrido {
+  0% { background-position: 150% center; }
+  100% { background-position: -50% center; }
+}
+
+/* ── Spotlight ("Spotlight Card" de React Bits): brillo que sigue al cursor.
+   El propio contenedor (.mc/.hero) ya es position:relative; solo se agrega
+   una capa mas encima. Blanco muy tenue, nada de color nuevo. ── */
+.spot { position: relative; }
+.spot::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(220px circle at var(--mx, 50%) var(--my, 50%), rgb(255 255 255 / 12%), transparent 60%);
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.spot:hover::after { opacity: 1; }
+
+/* ── Proximidad del raíl ("Line Sidebar"): el item se acerca/ilumina segun
+   que tan cerca este el cursor, via --cerca (0..1) puesto en JS. ── */
+.menu__item {
+  transform: scale(calc(1 + var(--cerca, 0) * 0.035));
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+/* ── Indicador deslizante de las pills ("Pill Nav"): una barra que se mueve
+   bajo la pill activa, puesta en el ::after del contenedor (no en las pills,
+   asi que no se pierde cuando #m-pills se repinta). ── */
+/* ── Detalle de match (historial): un bloque por mapa + tabla de roster. ── */
+.dlg--ancho { width: min(560px, 92vw); }
+.dmd-mapa { margin-top: 14px; border: 1px solid rgb(255 255 255 / 10%); }
+.dmd-mapa:first-of-type { margin-top: 4px; }
+.dmd-mapa__cab {
+  display: flex; align-items: baseline; justify-content: space-between; gap: 10px;
+  padding: 10px 14px; background: rgb(255 255 255 / 5%); border-bottom: 1px solid rgb(255 255 255 / 10%);
+  font-family: 'Oswald', sans-serif; text-transform: uppercase; letter-spacing: .04em;
+}
+.dmd-mapa__cab span { font-family: 'Poppins', system-ui, sans-serif; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--gris); }
+.dmd-tabla { width: 100%; border-collapse: collapse; font-family: 'Poppins', system-ui, sans-serif; font-size: 13px; }
+.dmd-tabla th { text-align: left; padding: 8px 14px; color: var(--mute); font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+.dmd-tabla td { padding: 6px 14px; border-top: 1px solid rgb(255 255 255 / 6%); }
+.dmd-fila[data-equipo='a'] { box-shadow: inset 2px 0 0 var(--blanco); }
+.dmd-fila[data-equipo='b'] { box-shadow: inset 2px 0 0 var(--linea-alta); }
+.dmd-num { font-family: 'Oswald', sans-serif; letter-spacing: .04em; }
+.dmd-tag { color: var(--mute); font-size: 11px; margin-left: 3px; }
+.dmd-vacio { padding: 14px; color: var(--gris); font-size: 13px; }
+
+.fbar__pills { position: relative; }
+.fbar__pills::after {
+  content: '';
+  position: absolute;
+  left: var(--ind-x, 0px);
+  width: var(--ind-w, 0px);
+  bottom: -6px;
+  height: 2px;
+  background: rgb(255 255 255 / 55%);
+  transition: left var(--dur) var(--ease-out), width var(--dur) var(--ease-out);
+}
