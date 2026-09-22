@@ -60,15 +60,3 @@ export const mapaSplash = (nombre) => {
   const id = MAPAS[norm(nombre)];
   return id ? `${MEDIA}/maps/${id}/splash.png` : '';
 };
-export const mapaIcono = (nombre) => {
-  const id = MAPAS[norm(nombre)];
-  return id ? `${MEDIA}/maps/${id}/listViewIcon.png` : '';
-};
-export const agenteRetrato = (nombre) => {
-  const id = AGENTES[norm(nombre)];
-  return id ? `${MEDIA}/agents/${id}/fullPortrait.png` : '';
-};
-export const agenteIcono = (nombre) => {
-  const id = AGENTES[norm(nombre)];
-  return id ? `${MEDIA}/agents/${id}/displayIcon.png` : '';
-};
