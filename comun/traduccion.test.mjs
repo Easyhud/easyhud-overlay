@@ -38,7 +38,7 @@ const match = {
     timeoutCounter: { max: 2, left: 1, right: 2 },
     timeoutDuration: 60,
     sponsorInfo: { enabled: true, duration: 8, sponsors: ['http://x/s1.png', 'http://x/s2.png'] },
-    watermarkInfo: { spectraWatermark: true, customTextEnabled: true, customText: 'EASY' },
+    watermarkInfo: { brandWatermark: true, customTextEnabled: true, customText: 'EASY' },
     tournamentInfo: { name: 'Easy Cup', logoUrl: '', backdropUrl: '' },
   },
 };
