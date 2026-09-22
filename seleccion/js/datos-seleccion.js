@@ -149,7 +149,7 @@ function anotaBloqueos(datos) {
 /* ── Conexión ────────────────────────────────────────────────────────────── */
 
 /*
- * La fuente es ValoSpectra (ver `comun/fuente.js`), que entrega el mismo
+ * La fuente es el servidor (ver `comun/fuente.js`), que entrega el mismo
  * contrato `match` de siempre. Esta pantalla solo sale en la fase de selección
  * de agentes; en cualquier otra se retira. La reconexión la lleva socket.io.
  */

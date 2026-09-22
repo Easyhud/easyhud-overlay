@@ -1,15 +1,15 @@
-/* LA FUENTE — el único sitio atado al servidor de ValoSpectra.
+/* LA FUENTE — el único sitio atado al servidor.
    ===========================================================
 
    El diseño de Easy dejó una costura: cada `datos*.js` traduce un contrato
    `match` a la forma que pinta cada pantalla, y se conectaba con un WebSocket
    plano a un servidor propio. Aquí se cambia SOLO esa capa: el overlay ahora
-   lee de un servidor de ValoSpectra (socket.io, `logon` + `match_data`) y este
+   lee del servidor por socket.io (`logon` + `match_data`) y este
    módulo convierte su estado `IMatchData` en el mismo contrato `match` que las
    pantallas ya esperaban. Por eso NINGÚN pintor ha tenido que tocarse.
 
    Este fichero se queda con el transporte y con lo que hay que RECORDAR entre
-   mensajes para deducir lo que ValoSpectra no manda como dato (el instante del
+   mensajes para deducir lo que el servidor no manda como dato (el instante del
    plantado, el arranque del tiempo muerto, las transiciones de ronda y de fin
    de mapa). El mapeo puro vive aparte, en `traduccion.js`, para poder probarse
    solo.
@@ -35,7 +35,7 @@ import {
 
 const params = new URLSearchParams(location.search);
 
-/** El servidor de ValoSpectra. Se puede sobreescribir con `?endpoint=`. */
+/** La dirección del servidor. Se puede sobreescribir con `?endpoint=`. */
 /* Cuando el overlay lo sirve el PROPIO programa en la máquina (modo local, el
    que esconde el token), se conecta a ese mismo origen —el servidor local del
    exe, que releva al de verdad con el token en memoria— en vez de al servidor
@@ -46,7 +46,7 @@ export const ENDPOINT =
   params.get('endpoint') ?? (enLocal ? location.origin : 'http://2.24.200.205:5200');
 
 /**
- * El código de grupo de ValoSpectra. Se acepta `?groupCode=` y también
+ * El código de grupo del servidor. Se acepta `?groupCode=` y también
  * `?room=`, que es como el overlay de Easy nombraba la sala: así una dirección
  * de OBS vieja sigue valiendo cambiando solo el servidor.
  */
@@ -74,7 +74,7 @@ let socket = null;
 let ultimoMatch = null;
 let ultimosEventos = [];
 
-/* Estado que hay que recordar entre mensajes para deducir lo que ValoSpectra
+/* Estado que hay que recordar entre mensajes para deducir lo que el servidor
    no manda como dato. Vive por contexto (una pantalla), que es justo lo que
    hace falta: cada pantalla detecta sus propias transiciones sobre el mismo
    flujo. */
@@ -106,7 +106,7 @@ function alMatchData(raw) {
   const match = traduceEstado(raw, decidido);
   if (match.roomCode === '') match.roomCode = GRUPO;
 
-  /* La spike: ValoSpectra manda booleanos, el diseño quiere el instante del
+  /* La spike: el servidor manda booleanos, el diseño quiere el instante del
      plantado para contar con su propio reloj. */
   const sp = raw.spikeState ?? { planted: false, defused: false, detonated: false };
   const plantada = sp.planted === true && sp.defused !== true && sp.detonated !== true;
@@ -115,7 +115,7 @@ function alMatchData(raw) {
   memoria.spikeActiva = plantada;
   match.spike = { status: plantada ? 'planted' : 'idle', plantedAt: memoria.spikePlantadaEn, site: '' };
 
-  /* El tiempo muerto: activo mientras ValoSpectra lo diga; el instante de
+  /* El tiempo muerto: activo mientras el servidor lo diga; el instante de
      arranque se marca una vez para que la cuenta atrás la lleve el navegador. */
   const to = raw.timeoutState ?? { techPause: false, leftTeam: false, rightTeam: false, timeRemaining: 0 };
   const tiempoActivo = to.techPause === true || to.leftTeam === true || to.rightTeam === true;
@@ -136,7 +136,7 @@ function alMatchData(raw) {
   }
   memoria.tiempoActivo = tiempoActivo;
 
-  /* Los sucesos: instantes que ValoSpectra no manda como tales y que aquí se
+  /* Los sucesos: instantes que el servidor no manda como tales y que aquí se
      deducen de las transiciones del estado. */
   const eventos = [];
 

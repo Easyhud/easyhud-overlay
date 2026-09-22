@@ -23,7 +23,7 @@ export const MS_MOVER = 700;
 /**
  * Conecta y llama a `alEstado` y `alSuceso` según llegue.
  *
- * La fuente es ValoSpectra (ver `comun/fuente.js`): entrega el mismo contrato
+ * La fuente es el servidor (ver `comun/fuente.js`): entrega el mismo contrato
  * `match` de siempre y deduce los sucesos (fin de ronda con su ceremonia). Las
  * dos llamadas son opcionales: la pausa y el aviso solo miran el estado, y la
  * ceremonia solo los sucesos. La reconexión la lleva socket.io.

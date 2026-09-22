@@ -11,18 +11,18 @@ Dentro van las siete pantallas y aparece la que toca.
 
 ## De dónde salen los datos
 
-El diseño y las animaciones son de Easy; los datos vienen del servidor de
-**ValoSpectra** que corre en el VPS (`2.24.200.205`, puerto 5200). El observador
+El diseño y las animaciones son de Easy; los datos vienen del servidor propio
+que corre en el VPS (`2.24.200.205`, puerto 5200). El observador
 —el cliente que instalaste— saca el estado del juego por Overwolf y lo manda a
 ese servidor; el overlay lo pide con el mismo `groupCode` que puso el operador.
 
 El único fichero atado a ese servidor es `comun/fuente.js`: abre la conexión
-(socket.io, `logon` + `match_data`) y traduce el estado de ValoSpectra al mismo
+(socket.io, `logon` + `match_data`) y traduce el estado del servidor al mismo
 contrato que las pantallas ya pintaban (la traducción pura está en
-`comun/traduccion.js`, con su test en `scratchpad`). Lo que ValoSpectra no manda
+`comun/traduccion.js`, con su test en `scratchpad`). Lo que el servidor no manda
 como dato se **deduce** ahí —quién ganó la ronda, la ceremonia, el clutch, el
 instante del plantado, el fin de mapa— y lo que ni se ve ni se deduce se queda
-**sin pintar**: el **ADR / daño** no lo reporta ValoSpectra, así que esa columna
+**sin pintar**: el **ADR / daño** no lo reporta el servidor, así que esa columna
 va vacía en vez de enseñar un cero falso.
 
 ## Qué se ve y cuándo

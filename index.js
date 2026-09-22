@@ -34,7 +34,7 @@
 import { abreFuente, GRUPO } from './comun/fuente.js';
 
 const params = new URLSearchParams(location.search);
-/* La sala es el código de grupo de ValoSpectra; se acepta `?room=` por
+/* La sala es el código de grupo del servidor; se acepta `?room=` por
    compatibilidad con direcciones de OBS viejas (lo resuelve `comun/fuente.js`). */
 const grupo = GRUPO;
 const endpoint = params.get('endpoint');
@@ -121,7 +121,7 @@ function avisa(texto) {
 /* ── Conexión ────────────────────────────────────────────────────────────── */
 
 /*
- * El director también lee de la fuente de ValoSpectra (ver `comun/fuente.js`),
+ * El director también lee de la fuente del servidor (ver `comun/fuente.js`),
  * pero solo para decidir qué pantalla toca: mira la fase y el tiempo muerto,
  * igual que antes. Los datos de cada pantalla los pide su propio iframe.
  */

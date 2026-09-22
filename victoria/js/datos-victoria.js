@@ -115,7 +115,7 @@ function delMarcador(match) {
 /* ── Conexión ────────────────────────────────────────────────────────────── */
 
 /*
- * La fuente es ValoSpectra (ver `comun/fuente.js`). El fin del mapa lo deduce
+ * La fuente es el servidor (ver `comun/fuente.js`). El fin del mapa lo deduce
  * el puente por marcador y lo manda como suceso `matchEnd`; además marca la
  * fase `gameOver` mientras el mapa esté decidido, que es lo que permite el
  * repesque cuando esta pantalla se abre tarde.

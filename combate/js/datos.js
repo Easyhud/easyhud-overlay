@@ -420,7 +420,7 @@ function aplicaSuceso(event) {
 /* ── Conexión ────────────────────────────────────────────────────────────── */
 
 /*
- * La fuente es ValoSpectra: `comun/fuente.js` abre el socket, traduce su
+ * La fuente es el servidor: `comun/fuente.js` abre el socket, traduce su
  * estado a este mismo contrato `match` y deduce los sucesos (fin de ronda con
  * su ceremonia). Aquí solo se enchufan las dos funciones de siempre, así que
  * esta pantalla no ha cambiado en nada más. La reconexión la lleva socket.io.

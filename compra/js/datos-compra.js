@@ -333,7 +333,7 @@ function animaCompras(datos) {
 /* ── Conexión ────────────────────────────────────────────────────────────── */
 
 /*
- * La fuente es ValoSpectra (ver `comun/fuente.js`): entrega el mismo contrato
+ * La fuente es el servidor (ver `comun/fuente.js`): entrega el mismo contrato
  * `match` que este tablero ya sabía leer, así que el pintor no cambia. Solo se
  * mantiene la firma para no repintar sin motivo y el manejo de entrada/salida
  * del tablero, que pinta por su cuenta.

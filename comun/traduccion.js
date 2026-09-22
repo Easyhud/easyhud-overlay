@@ -1,4 +1,4 @@
-/* LA TRADUCCIÓN — de `IMatchData` de ValoSpectra al contrato `match` del diseño.
+/* LA TRADUCCIÓN — de `IMatchData` del servidor al contrato `match` del diseño.
    =============================================================================
 
    Aquí vive SOLO la lógica de mapeo y deducción, sin nada del navegador ni del
@@ -6,10 +6,10 @@
    y `fuente.js` se queda con lo suyo —abrir la conexión y recordar lo que hay
    que recordar entre mensajes—.
 
-   Lo que ValoSpectra no manda como dato se deduce con la misma lógica que usa
+   Lo que el servidor no manda como dato se deduce con la misma lógica que usa
    su propio overlay (quién ganó, la ceremonia, el clutch, el fin de mapa), y lo
    que ni se ve ni se puede deducir se queda sin pintar, nunca inventado (el
-   daño / ADR no lo reporta ValoSpectra, así que sale `null`). */
+   daño / ADR no lo reporta el servidor, así que sale `null`). */
 
 /* ── Jugador ─────────────────────────────────────────────────────────────── */
 
@@ -23,12 +23,12 @@ export function escudoDe(armorName) {
 }
 
 /**
- * De un jugador de ValoSpectra al jugador del contrato del diseño.
+ * De un jugador del servidor al jugador del contrato del diseño.
  *
  * La vida y las habilidades solo cuentan como MEDIDA si el cliente auxiliar
  * del jugador las reporta (`auxiliaryAvailable`). Se traduce esa señal a
  * `provenance`, que es el campo con el que el diseño decide entre pintar el
- * dato o pintar un hueco. El daño no lo da ValoSpectra: `provenance.damage`
+ * dato o pintar un hueco. El daño no lo da el servidor: `provenance.damage`
  * queda en `server` siempre, y el diseño esconde la columna.
  */
 export function traduceJugador(p) {
@@ -37,7 +37,7 @@ export function traduceJugador(p) {
 
   return {
     identity: { name: p.name ?? '', tag: p.tagline ?? '' },
-    /* ValoSpectra manda el nombre en clave de Overwolf (Wushu, Aggrobot…),
+    /* el servidor manda el nombre en clave de Overwolf (Wushu, Aggrobot…),
        que es exactamente lo que el catálogo del diseño sabe traducir. */
     agentInternal: p.agentInternal ?? '',
     agentName: '',
@@ -45,7 +45,7 @@ export function traduceJugador(p) {
     health: typeof p.health === 'number' ? p.health : 0,
     armor: escudoDe(p.armorName),
     weapon: p.highestWeapon ?? '',
-    /* Las habilidades de ValoSpectra ya vienen como número de cargas. Se
+    /* Las habilidades del servidor ya vienen como número de cargas. Se
        ponen también en `charges` para que el diseño pinte un rombo por uso en
        vez de solo encendido/apagado. */
     abilities: {
@@ -77,7 +77,7 @@ export function traduceJugador(p) {
 
 /* ── Historial ───────────────────────────────────────────────────────────── */
 
-/** El tipo de ValoSpectra -> el motivo que el diseño mapea con MOTIVOS. */
+/** El tipo del servidor -> el motivo que el diseño mapea con MOTIVOS. */
 const MOTIVO_VS = {
   kills: 'elimination',
   detonated: 'detonate',
@@ -88,7 +88,7 @@ const MOTIVO_VS = {
 /**
  * El historial por equipo, en la forma del contrato del diseño.
  *
- * ValoSpectra lo guarda por equipo en `roundRecord`, con el tipo desde el
+ * el servidor lo guarda por equipo en `roundRecord`, con el tipo desde el
  * punto de vista de ese equipo: `lost` es que lo perdió, cualquier otro que lo
  * ganó por ese motivo, `upcoming` que aún no se ha jugado.
  */
@@ -106,7 +106,7 @@ export function historialDe(team) {
 
 /* ── Serie ───────────────────────────────────────────────────────────────── */
 
-/** `mapInfo` de ValoSpectra -> `series.maps` del diseño. */
+/** `mapInfo` del servidor -> `series.maps` del diseño. */
 export function mapasSerie(mapInfo) {
   if (!Array.isArray(mapInfo)) return [];
   const salida = [];
@@ -138,7 +138,7 @@ export function mapasSerie(mapInfo) {
 
 /* ── Fase y fin de mapa ──────────────────────────────────────────────────── */
 
-/** `roundPhase` de ValoSpectra -> la fase del contrato del diseño. */
+/** `roundPhase` del servidor -> la fase del contrato del diseño. */
 export const FASE_VS = {
   LOBBY: 'agentSelect',
   shopping: 'shopping',
@@ -168,7 +168,7 @@ export function mapaDecidido(m) {
 
 /* ── Quién ganó y qué ceremonia ──────────────────────────────────────────── */
 
-/** El equipo que ganó, con la misma cuenta que hace ValoSpectra. */
+/** El equipo que ganó, con la misma cuenta que hace el servidor. */
 export function equipoGanador(m) {
   const atacaIzquierda = m.teams?.[0]?.isAttacking === true;
   if (m.attackersWon) return atacaIzquierda ? 0 : 1;
@@ -277,7 +277,7 @@ export function ceremoniaDe(m, ganador, clutch, eco) {
   /*
    * Ronda ahorrada: ganar con mucho menos equipamiento que el rival.
    *
-   * ValoSpectra la tiene declarada y nunca llegó a deducirla —en su banner de
+   * el servidor la tiene declarada y nunca llegó a deducirla —en su banner de
    * fin de ronda es literalmente `const thrifty = false`—, así que esta sale de
    * la tabla de precios de arriba y no de ellos.
    */
@@ -298,7 +298,7 @@ export function ceremoniaDe(m, ganador, clutch, eco) {
   return 'roundWin';
 }
 
-/** Sigue la situación de clutch, ronda a ronda, como ValoSpectra. */
+/** Sigue la situación de clutch, ronda a ronda, como el servidor. */
 export function actualizaClutch(m, clutch) {
   const vivos = (i) => (m.teams?.[i]?.players ?? []).filter((p) => p.isAlive).length;
   const v0 = vivos(0);
@@ -312,7 +312,7 @@ export function actualizaClutch(m, clutch) {
 /* ── El estado completo ──────────────────────────────────────────────────── */
 
 /**
- * Traduce un `IMatchData` de ValoSpectra al contrato `match` del diseño.
+ * Traduce un `IMatchData` del servidor al contrato `match` del diseño.
  *
  * `decidido` (si el mapa ya está ganado) lo calcula quien llama, porque la
  * fase `gameOver` depende de ello y ese cálculo se reusa para el suceso de fin
