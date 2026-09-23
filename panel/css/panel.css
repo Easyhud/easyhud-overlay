@@ -1992,10 +1992,10 @@ h3.display {
 .tag--draft { opacity: .8; }
 
 .eqc { display: flex; align-items: center; gap: 10px; padding: 12px; border-radius: 10px; background: var(--alzado); border: 1px solid var(--linea); }
-.eqc__logo { width: 38px; height: 38px; flex: 0 0 auto; border-radius: 6px; background: center / contain no-repeat; display: grid; place-items: center; font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 700; color: #fff; }
+.eqc__logo { width: 38px; height: 38px; flex: 0 0 auto; border-radius: 6px; object-fit: contain; background: center / contain no-repeat; display: grid; place-items: center; font-family: 'Oswald', sans-serif; font-size: 12px; font-weight: 700; color: #fff; }
 .eqc__logo--vacio { background: var(--marco); color: var(--gris); }
 .eqc__txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.eqc__txt b { font-family: 'Oswald', sans-serif; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eqc__txt b { font-family: 'Oswald', sans-serif; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-transform: uppercase; }
 .eqc__txt span { font-size: 12px; color: var(--gris); }
 .eqc__acc { display: flex; gap: 4px; }
 
@@ -2009,6 +2009,20 @@ h3.display {
 .dlg__form { display: flex; flex-direction: column; gap: 12px; padding: 22px 24px; }
 .dlg__form h2 { margin: 0 0 4px; }
 .dlg__pie { display: flex; justify-content: flex-end; gap: 10px; margin-top: 8px; }
+
+/* Buscador y lista de jugadores del equipo (dlg-team). */
+.team-jug-buscar { display: flex; gap: 8px; }
+.team-jug-buscar input { flex: 1; min-width: 0; }
+.team-jug-lista { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow-y: auto; }
+.team-jug-fila { display: flex; align-items: center; gap: 10px; padding: 6px 8px; border: 1px solid var(--linea, rgb(255 255 255 / 10%)); border-radius: 8px; }
+.team-jug-av { width: 26px; height: 26px; border-radius: 6px; object-fit: cover; flex: 0 0 auto; background: rgb(255 255 255 / 6%); }
+.team-jug-av--vacia { background: rgb(255 255 255 / 6%); }
+.team-jug-nom { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team-jug-tag { color: var(--gris); margin-left: 2px; }
+.team-jug-rango { flex: 0 0 auto; font-size: 11px; color: var(--gris); white-space: nowrap; }
+.team-jug-rango--vacio { opacity: .5; }
+.team-jug-quitar { flex: 0 0 auto; width: 22px; height: 22px; display: grid; place-items: center; border: 0; border-radius: 6px; background: transparent; color: var(--gris); cursor: pointer; font-size: 12px; }
+.team-jug-quitar:hover { background: var(--marco); color: var(--rec-claro); }
 
 /* Empty-state por tab: icono + título + subtítulo + CTA, centrado. */
 .vacio { grid-column: 1 / -1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 8px; min-height: 320px; padding: 40px 20px; }
@@ -2857,11 +2871,24 @@ body { font-size: 14px; }
    acentos genéricos.
    ══════════════════════════════════════════════════════════════════════════ */
 
-/* ── Carcasa: raíl fijo + contenido ── */
+/* ── Carcasa: raíl fijo + contenido ──
+   #vista-prepartida vive dentro de <main class="caja">, que además del padding
+   lateral (--canal) tiene max-width: var(--ancho) centrado — un margin negativo
+   solo cancela el padding, no el centrado, así que en ventanas más anchas que
+   --ancho quedaba con hueco muerto a los DOS lados. La única forma de que esta
+   vista sea borde a borde de verdad, sin importar el ancho de ventana, es sacarla
+   por completo del flujo de .caja: mismo truco que usa el dashboard (.menu),
+   position: fixed cubriendo el viewport entero bajo la barra de título. */
+#vista-prepartida:not([hidden]) {
+  position: fixed;
+  inset: var(--barra, 34px) 0 0 0;
+  z-index: 900;
+  overflow: auto;
+}
 .prep-shell {
   display: flex;
   align-items: stretch;
-  min-height: calc(100vh - var(--barra, 34px) - 24px);
+  min-height: 100%;
 }
 
 /* Raíl de iconos, réplica del sidebar del dashboard (que aquí no está visible).
@@ -2922,6 +2949,7 @@ body { font-size: 14px; }
   flex: 1 1 auto;
   min-width: 0;
   padding-left: 22px;
+  padding-right: 22px;
 }
 
 /* ── Fila superior: volver + indicador LOBBY + mapa + torneo ── */
@@ -3076,7 +3104,7 @@ body { font-size: 14px; }
   }
   .prep-rail__logo { width: auto; border-bottom: 0; border-right: 1px solid var(--d-borde); margin: 0 8px 0 0; padding: 0 14px; }
   .prep-rail__sp { flex: 1; }
-  .prep-main { padding-left: 0; }
+  .prep-main { padding-left: 0; padding-right: 0; }
 }
 
 /* ── Logos de equipo (reemplazan la barra de color cuando el equipo tiene logo) ── */

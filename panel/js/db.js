@@ -39,8 +39,10 @@ const finalizada = (m) => {
   return (m.score?.wonLeft ?? 0) >= n || (m.score?.wonRight ?? 0) >= n;
 };
 /* El estado REAL a mostrar: 'done' explícito, o derivado si la serie ya se
-   decidió por marcador (así un match cerrado no se queda en Live para siempre). */
-const estadoReal = (m) => (m.estado === 'done' || finalizada(m) ? 'done' : m.estado || 'draft');
+   decidió por marcador (así un match cerrado no se queda en Live para siempre).
+   No hay estado "draft": un match que no llegó a decidirse por marcador y deja
+   de estar en antena se borra (ver terminaBroadcast), nunca queda en limbo. */
+const estadoReal = (m) => (m.estado === 'done' || finalizada(m) ? 'done' : 'live');
 
 /* Empty-state reutilizable: icono + título + subtítulo + CTA (abre el form). */
 const ICOS = {
@@ -199,6 +201,41 @@ async function recarga() {
   pintaTournaments();
   pintaMatches();
   pintaHero();
+  /* Resuelve puuid/card/rango de todos los jugadores de todos los equipos en
+     segundo plano, sin que el operador tenga que abrir cada equipo a mano —
+     esto es la app arrancando, no una página web que carga bajo demanda.
+     recarga() corre al iniciar el cliente y después de cada cambio, así que
+     esta es también la vía natural para mantenerlo al día. */
+  precargaJugadores();
+}
+
+let precargaEnCurso = false;
+/* Recorre TODOS los jugadores de TODOS los equipos y resuelve los que falten
+   (cuenta/card/rango), un poquito a la vez. Lo que ya está en cache (ver
+   henrikCacheGet) se aplica al instante y sin red; solo lo que de verdad hay
+   que pedirle a HenrikDev se espacía 200ms entre pedido y pedido, para no
+   comerse el rate limit de golpe con equipos de varios jugadores. */
+async function precargaJugadores() {
+  if (precargaEnCurso) return;
+  precargaEnCurso = true;
+  try {
+    for (const t of teams) {
+      for (const j of t.players ?? []) {
+        const cache = henrikCacheGet(j.name, j.tag);
+        if (cache?.puuid && cache?.rango) {
+          j.puuid = cache.puuid;
+          j.cardUrl = cache.cardUrl || '';
+          j.rango = cache.rango;
+          j.rangoIconUrl = cache.rangoIconUrl || '';
+          continue; // del cache, no hace falta red ni esperar
+        }
+        await enriqueceJugador(j);
+        await new Promise((r) => setTimeout(r, 200));
+      }
+    }
+  } finally {
+    precargaEnCurso = false;
+  }
 }
 
 /* ══ Teams ══ */
@@ -211,8 +248,13 @@ function pintaTeams() {
   }
   c.innerHTML = teams
     .map((t) => {
+      /* <img> con referrerpolicy, no CSS background-image: varios CDNs de logos
+         de equipos (ej. el de VLR.gg) rechazan la carga si no llega Referer, y
+         un background-image no lo manda de forma confiable. onerror cae al
+         mismo bloque de iniciales que si nunca hubiera logoUrl. */
       const logo = t.logoUrl
-        ? `<div class="eqc__logo" style="background-image:url('${esc(t.logoUrl)}')"></div>`
+        ? `<img class="eqc__logo" src="${esc(t.logoUrl)}" alt="" referrerpolicy="unsafe-url" ` +
+          `onerror="this.outerHTML='<div class=&quot;eqc__logo eqc__logo--vacio&quot;>${esc((t.tricode || t.name || '?').slice(0, 3).toUpperCase())}</div>'" />`
         : `<div class="eqc__logo eqc__logo--vacio">${esc((t.tricode || t.name || '?').slice(0, 3).toUpperCase())}</div>`;
       /* El color del equipo (del diseño): filete lateral, el ÚNICO acento de
          color permitido, derivado estable con colorEquipo() si no hay hex. */
@@ -261,7 +303,10 @@ function pintaTournaments() {
 }
 
 /* ══ Matches ══ */
-const ESTADOS = { draft: 'Draft', live: 'Live', done: 'Done' };
+/* No existe un estado "programado"/draft: crear un match lo arranca en vivo al
+   instante (ver guardaMatch/quickMatch). Solo quedan dos estados visibles al
+   operador: live y done. */
+const ESTADOS = { live: 'Live', done: 'Done' };
 
 /* La barra de filtros del diseño: pills de estado con contador (a la vez filtro)
    en #m-pills, y dropdown de torneo + chips de ronda/formato + orden en
@@ -270,15 +315,15 @@ const ESTADOS = { draft: 'Draft', live: 'Live', done: 'Done' };
 function pintaFiltros() {
   const pills = $('m-pills');
   if (pills) {
-    const cont = { live: 0, draft: 0, done: 0 };
+    const cont = { live: 0, done: 0 };
     for (const m of matches) cont[estadoReal(m)] = (cont[estadoReal(m)] || 0) + 1;
     const pill = (k, cls) =>
       `<button class="pill${cls}${filtro.estado === k ? ' is-on' : ''}" type="button" data-m-estado="${k}">` +
       `<b id="pill-cnt-${k}">0</b> ${k}</button>`;
-    pills.innerHTML = pill('live', ' pill--live') + pill('draft', '') + pill('done', '');
+    pills.innerHTML = pill('live', ' pill--live') + pill('done', '');
     /* El "desde" vive en el dataset del propio contenedor #m-pills, no en un
        objeto aparte: el contenedor sobrevive a su innerHTML, sus hijos no. */
-    for (const k of ['live', 'draft', 'done']) {
+    for (const k of ['live', 'done']) {
       animaConteo($(`pill-cnt-${k}`), cont[k] || 0, { duracion: 0.45, desde: Number(pills.dataset[`c${k}`] ?? 0) });
       pills.dataset[`c${k}`] = cont[k] || 0;
     }
@@ -345,12 +390,12 @@ function pintaMatches() {
       const triB = esc(b.tricode || b.name || 'TBD');
       const sub =
         [m.name, torneo?.name].filter(Boolean).map(esc).join(' · ') ||
-        (vivo ? 'Live now' : estado === 'done' ? 'Finished' : 'Draft');
+        (vivo ? 'Live now' : 'Finished');
       /* Done es automatico (lo cierra el servidor cuando la API confirma el fin
          de la serie): aqui solo queda REOPEN, para corregir si hizo falta. */
       const done = estado === 'done' ? `<button class="mc__ic" data-m-reopen="${m.id}" title="Reopen">↺</button>` : '';
       /* Terminado no se "arranca": si de verdad hay que retocarlo, es REOPEN
-         primero (vuelve a draft), no jugar sobre un resultado ya cerrado. */
+         primero (vuelve a estar en vivo), no jugar sobre un resultado ya cerrado. */
       const play = estado === 'done' ? '' : `<button class="mc__ic" data-m-start="${m.id}" title="${vivo ? 'Resume' : 'Start'}">▶</button>`;
       return (
         `<div class="mc spot" data-estado="${estado}" data-m-open="${m.id}"${imgAttr}>` +
@@ -430,6 +475,13 @@ function pintaHero() {
   const go = $('hero-go');
   go.textContent = live ? 'Resume broadcast' : 'Start match';
   go.onclick = () => arrancaMatch(next.id);
+  const end = $('hero-end');
+  if (end) {
+    end.hidden = !live;
+    end.onclick = () => {
+      if (confirm('End this broadcast?')) terminaBroadcast(next.id);
+    };
+  }
 }
 
 /* ── opciones de los selects del form de match ── */
@@ -447,6 +499,11 @@ function abre(dlg) { $(dlg)?.showModal(); }
 function cierra(dlg) { $(dlg)?.close(); }
 
 /* Teams */
+/* Jugadores del equipo que está abierto en el diálogo: copia de trabajo en
+   memoria, se vuelca a team.players recién al guardar (igual que el resto del
+   form). */
+let jugadoresTeamActual = [];
+
 function abreTeam(t) {
   $('dlg-team-tit').textContent = t ? 'Edit team' : 'New team';
   $('team-id').value = t?.id ?? '';
@@ -454,7 +511,18 @@ function abreTeam(t) {
   $('team-tri').value = t?.tricode ?? '';
   $('team-logo').value = t?.logoUrl ?? '';
   $('team-color').value = t?.color ?? '';
+  jugadoresTeamActual = (t?.players ?? []).slice();
+  const msg = $('team-jug-msg');
+  if (msg) msg.hidden = true;
+  if ($('team-jug-input')) $('team-jug-input').value = '';
+  pintaJugadoresTeam();
   abre('dlg-team');
+  /* Jugadores sembrados solo con name/tag (sin puuid/card todavía, ej. datos de
+     prueba escritos a mano) se completan solos acá, sin que el operador tenga
+     que volver a buscarlos uno por uno. */
+  for (const j of jugadoresTeamActual) {
+    if (!j.puuid) enriqueceJugador(j);
+  }
 }
 async function guardaTeam(ev) {
   ev.preventDefault();
@@ -463,6 +531,7 @@ async function guardaTeam(ev) {
     tricode: $('team-tri').value.trim(),
     logoUrl: $('team-logo').value.trim(),
     color: $('team-color').value.trim(), // hex opcional; vacío = color derivado (colorEquipo)
+    players: jugadoresTeamActual,
   };
   if (!dato.name) return;
   const id = $('team-id').value;
@@ -470,6 +539,193 @@ async function guardaTeam(ev) {
   else await DB().teams.create(dato);
   cierra('dlg-team');
   await recarga();
+}
+
+function pintaJugadoresTeam() {
+  const ul = $('team-jug-lista');
+  if (!ul) return;
+  ul.innerHTML = jugadoresTeamActual
+    .map(
+      (j) =>
+        `<li class="team-jug-fila" data-puuid="${esc(j.puuid)}">` +
+        (j.rangoIconUrl
+          ? `<img class="team-jug-av" src="${esc(j.rangoIconUrl)}" alt="" />`
+          : j.cardUrl
+            ? `<img class="team-jug-av" src="${esc(j.cardUrl)}" alt="" />`
+            : `<span class="team-jug-av team-jug-av--vacia"></span>`) +
+        `<span class="team-jug-nom">${esc(j.name)}<span class="team-jug-tag">#${esc(j.tag)}</span></span>` +
+        (j.rango
+          ? `<span class="team-jug-rango">${esc(j.rango)}</span>`
+          : `<span class="team-jug-rango team-jug-rango--vacio">—</span>`) +
+        `<button class="team-jug-quitar" type="button" data-jug-quitar="${esc(j.puuid)}" title="Remove" aria-label="Remove">✕</button>` +
+        `</li>`,
+    )
+    .join('');
+}
+
+/* Rango competitivo actual (MMR de HenrikDev v2, por shard/región — ver
+   henrikRegion()). Se guarda en el jugador de la lista de trabajo y se
+   repinta; si el jugador no tiene partidas competitivas o la región no
+   coincide, HenrikDev devuelve 'Unrated' o falla — en ambos casos se deja sin
+   rango en vez de romper el agregado. */
+async function buscaRangoHenrik(jugador) {
+  const cache = henrikCacheGet(jugador.name, jugador.tag);
+  if (cache?.rango) {
+    jugador.rango = cache.rango;
+    jugador.rangoIconUrl = cache.rangoIconUrl || '';
+    pintaJugadoresTeam();
+    return;
+  }
+  const key = henrikKey();
+  if (!key) return;
+  try {
+    const r = await fetch(
+      `https://api.henrikdev.xyz/valorant/v2/mmr/${henrikRegion()}/${encodeURIComponent(jugador.name)}/${encodeURIComponent(jugador.tag)}`,
+      { headers: { Authorization: key } },
+    );
+    if (!r.ok) return;
+    const j = await r.json();
+    const cd = j?.data?.current_data;
+    if (!cd?.currenttierpatched) return;
+    jugador.rango = cd.currenttierpatched;
+    jugador.rangoIconUrl = cd.images?.small ?? '';
+    henrikCacheSet(jugador.name, jugador.tag, { rango: jugador.rango, rangoIconUrl: jugador.rangoIconUrl });
+    pintaJugadoresTeam();
+  } catch {
+    /* sin rango, no rompe nada — el jugador ya está agregado */
+  }
+}
+
+/* HenrikDev exige API key en TODA llamada (no solo para subir el rate limit,
+   sin key es 401 directo) — se guarda solo local, nunca va al servidor. */
+function henrikKey() {
+  try { return localStorage.getItem('easy.henrikKey') || ''; } catch { return ''; }
+}
+/* El MMR/rango es por shard: hay que preguntarle a la región donde el jugador
+   compite, no a una fija — se guarda junto a la key. */
+function henrikRegion() {
+  try { return localStorage.getItem('easy.henrikRegion') || 'latam'; } catch { return 'latam'; }
+}
+
+/* Cache local (localStorage) de lo que ya se resolvió de HenrikDev, por
+   Name#Tag. Sin esto, CADA vez que se abre el diálogo de un equipo se vuelve
+   a pedir cuenta + rango por red para todos sus jugadores — ahí está la
+   demora que se nota en pintar el ícono de rango. Con el cache, la segunda
+   vez que se abre el mismo equipo todo sale de disco, instantáneo, cero
+   espera. TTL de 24h: un rango de hace más de un día ya puede estar viejo. */
+const HENRIK_CACHE_TTL = 24 * 60 * 60 * 1000;
+const henrikCacheKey = (name, tag) => `easy.henrikCache.${(name || '').toLowerCase()}#${(tag || '').toLowerCase()}`;
+function henrikCacheGet(name, tag) {
+  try {
+    const c = JSON.parse(localStorage.getItem(henrikCacheKey(name, tag)) || 'null');
+    if (!c || Date.now() - c.ts > HENRIK_CACHE_TTL) return null;
+    return c;
+  } catch {
+    return null;
+  }
+}
+function henrikCacheSet(name, tag, patch) {
+  try {
+    const actual = henrikCacheGet(name, tag) || {};
+    localStorage.setItem(henrikCacheKey(name, tag), JSON.stringify({ ...actual, ...patch, ts: Date.now() }));
+  } catch {
+    /* sin storage */
+  }
+}
+
+/* Resuelve puuid/card para un jugador que ya tiene name+tag pero llegó sin
+   esos datos (sembrado a mano, o una edición vieja). Primero mira el cache
+   local; si hay algo fresco ahí ni siquiera pega a la red. Si no, usa el
+   mismo lookup de cuenta que buscaJugadorHenrik, silencioso: si falla, el
+   jugador se queda como está, no se saca del equipo. */
+async function enriqueceJugador(jugador) {
+  const cache = henrikCacheGet(jugador.name, jugador.tag);
+  if (cache?.puuid) {
+    jugador.puuid = cache.puuid;
+    jugador.cardUrl = cache.cardUrl || '';
+    jugador.rango = cache.rango || '';
+    jugador.rangoIconUrl = cache.rangoIconUrl || '';
+    pintaJugadoresTeam();
+    /* Puede que el cache tenga cuenta pero no rango todavía (quedó a medio
+       resolver la última vez) — buscaRangoHenrik también mira su propio
+       cache primero, así que esto no pega a la red de más. */
+    if (!cache.rango) buscaRangoHenrik(jugador);
+    return;
+  }
+  const key = henrikKey();
+  if (!key) return;
+  try {
+    const r = await fetch(`https://api.henrikdev.xyz/valorant/v2/account/${encodeURIComponent(jugador.name)}/${encodeURIComponent(jugador.tag)}`, {
+      headers: { Authorization: key },
+    });
+    if (!r.ok) return;
+    const d = (await r.json())?.data;
+    if (!d?.puuid) return;
+    jugador.puuid = d.puuid;
+    jugador.cardUrl = d.card?.small ?? '';
+    henrikCacheSet(jugador.name, jugador.tag, { puuid: jugador.puuid, cardUrl: jugador.cardUrl });
+    pintaJugadoresTeam();
+    buscaRangoHenrik(jugador);
+  } catch {
+    /* sin datos, se queda tal cual */
+  }
+}
+
+/* Busca un Riot ID exacto (Name#Tag) contra HenrikDev y lo agrega a la lista de
+   trabajo. HenrikDev no tiene búsqueda por nombre parcial — solo lookup exacto —
+   así que esto confirma/enriquece (card, puuid), no autocompleta mientras se
+   escribe. */
+async function buscaJugadorHenrik() {
+  const input = $('team-jug-input');
+  const msg = $('team-jug-msg');
+  const crudo = (input?.value ?? '').trim();
+  const partes = crudo.split('#');
+  if (partes.length !== 2 || !partes[0] || !partes[1]) {
+    if (msg) { msg.textContent = 'Use the exact format Name#Tag.'; msg.hidden = false; }
+    return;
+  }
+  const [nombre, tag] = partes;
+  if (jugadoresTeamActual.some((j) => j.name.toLowerCase() === nombre.toLowerCase() && j.tag.toLowerCase() === tag.toLowerCase())) {
+    if (msg) { msg.textContent = 'Already on this team.'; msg.hidden = false; }
+    return;
+  }
+  const key = henrikKey();
+  if (!key) {
+    if (msg) { msg.textContent = 'Add a HenrikDev API key in Settings → Player lookup first.'; msg.hidden = false; }
+    return;
+  }
+  if (msg) { msg.textContent = 'Looking up…'; msg.hidden = false; }
+  try {
+    const r = await fetch(`https://api.henrikdev.xyz/valorant/v2/account/${encodeURIComponent(nombre)}/${encodeURIComponent(tag)}`, {
+      headers: { Authorization: key },
+    });
+    if (r.status === 401) { if (msg) msg.textContent = 'That HenrikDev API key was rejected — check it in Settings.'; return; }
+    if (r.status === 404) { if (msg) msg.textContent = 'No player with that Riot ID.'; return; }
+    if (r.status === 429) { if (msg) msg.textContent = 'Rate limited by HenrikDev — wait a bit and try again.'; return; }
+    if (!r.ok) { if (msg) msg.textContent = `Lookup failed (${r.status}). Try again in a bit.`; return; }
+    const j = await r.json();
+    const d = j?.data;
+    if (!d?.puuid) { if (msg) msg.textContent = 'No player with that Riot ID.'; return; }
+    const jugador = {
+      puuid: d.puuid,
+      name: d.name ?? nombre,
+      tag: d.tag ?? tag,
+      cardUrl: d.card?.small ?? '',
+      rango: '',
+      rangoIconUrl: '',
+    };
+    henrikCacheSet(jugador.name, jugador.tag, { puuid: jugador.puuid, cardUrl: jugador.cardUrl });
+    jugadoresTeamActual.push(jugador);
+    if (input) input.value = '';
+    if (msg) msg.hidden = true;
+    pintaJugadoresTeam();
+    /* El rango se resuelve después, sin bloquear el agregado: si la región está
+       mal o el jugador no tiene partidas competitivas, el jugador igual queda
+       en el equipo, solo sin rango. */
+    buscaRangoHenrik(jugador);
+  } catch {
+    if (msg) msg.textContent = 'Could not reach the lookup service.';
+  }
 }
 
 /* Tournaments */
@@ -568,18 +824,39 @@ async function arrancaMatch(id) {
       { name: b.name || '', tricode: b.tricode || '', url: b.logoUrl || '' },
     ],
   });
-  /* Solo un match EN ANTENA a la vez: cualquier otro que estuviera 'live' vuelve
-     a 'draft' (deja de estar en vivo; si su serie ya estaba decidida, estadoReal
-     lo seguirá mostrando como 'done' por el marcador). */
-  for (const otro of matches) {
+  /* Solo un match EN ANTENA a la vez: cualquier otro que estuviera 'live' deja
+     de estarlo. Si ya se había decidido por marcador queda como 'done'; si no,
+     no existe un estado intermedio donde guardarlo — se borra (no se programan
+     partidas, así que una que no se completó nunca "existió"). */
+  for (const otro of matches.slice()) {
     if (otro.id !== id && otro.estado === 'live') {
-      await DB().matches.update(otro.id, { estado: 'draft' });
-      otro.estado = 'draft';
+      if (finalizada(otro)) {
+        await DB().matches.update(otro.id, { estado: 'done' });
+        otro.estado = 'done';
+      } else {
+        await DB().matches.remove(otro.id);
+        matches = matches.filter((x) => x.id !== otro.id);
+      }
     }
   }
   await DB().matches.update(id, { estado: 'live' });
   m.estado = 'live';
   alIniciar?.(); // cierra el dashboard → vista operativa
+}
+
+/* End broadcast: saca el match de antena sin pasar por otro match. Si la
+   serie ya se decidió por marcador, queda 'done'; si no, se borra (mismo
+   criterio que arrancaMatch al reemplazar el match en vivo). */
+async function terminaBroadcast(id) {
+  const m = matches.find((x) => x.id === id);
+  if (!m) return;
+  if (finalizada(m)) {
+    await DB().matches.update(id, { estado: 'done' });
+  } else {
+    await DB().matches.remove(id);
+    matches = matches.filter((x) => x.id !== id);
+  }
+  await recarga();
 }
 
 /* Quick match: BO1 sin torneo, arranca al toque (sin equipos definidos aún). */
@@ -609,6 +886,7 @@ function activa(panel) {
   for (const s of document.querySelectorAll('#menu-inicio .menu__panel')) {
     s.classList.toggle('is-activo', s.dataset.panel === panel);
   }
+  if (panel === 'teams') precargaJugadores();
 }
 
 /* ══ API para el shell ══ */
@@ -635,6 +913,23 @@ export function montaDashboard(cb) {
     aj.dataset.panel = 'settings';
     aj.hidden = false; // lo gobierna `is-activo`, no el atributo
     cont.appendChild(aj);
+  }
+
+  /* API key de HenrikDev: se carga de localStorage y se guarda apenas se edita
+     (mismo patrón que easy.foto/easy.sbColapsado — solo esta máquina). */
+  const inKey = $('set-henrik-key');
+  if (inKey) {
+    inKey.value = henrikKey();
+    inKey.addEventListener('change', () => {
+      try { localStorage.setItem('easy.henrikKey', inKey.value.trim()); } catch { /* sin storage */ }
+    });
+  }
+  const inRegion = $('set-henrik-region');
+  if (inRegion) {
+    inRegion.value = henrikRegion();
+    inRegion.addEventListener('change', () => {
+      try { localStorage.setItem('easy.henrikRegion', inRegion.value); } catch { /* sin storage */ }
+    });
   }
 
   for (const it of document.querySelectorAll('#menu-inicio .menu__item[data-panel]')) {
@@ -702,6 +997,12 @@ export function montaDashboard(cb) {
   $('m-nuevo')?.addEventListener('click', () => abreMatch(null));
   $('m-quick')?.addEventListener('click', quickMatch);
 
+  /* Buscar/agregar jugador en el diálogo de equipo: botón, Enter en el input. */
+  $('team-jug-add')?.addEventListener('click', buscaJugadorHenrik);
+  $('team-jug-input')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') { e.preventDefault(); buscaJugadorHenrik(); }
+  });
+
   /* Forms. */
   $('form-team')?.addEventListener('submit', guardaTeam);
   $('form-tournament')?.addEventListener('submit', guardaTournament);
@@ -730,9 +1031,14 @@ export function montaDashboard(cb) {
 
   /* Acciones delegadas de las listas. */
   document.addEventListener('click', async (e) => {
-    const t = e.target.closest('[data-nuevo],[data-eq-edit],[data-eq-del],[data-to-edit],[data-to-del],[data-m-edit],[data-m-del],[data-m-start],[data-m-reopen],[data-m-open],[data-acc-edit],[data-acc-save],[data-acc-cancel]');
+    const t = e.target.closest('[data-nuevo],[data-eq-edit],[data-eq-del],[data-to-edit],[data-to-del],[data-m-edit],[data-m-del],[data-m-start],[data-m-reopen],[data-m-open],[data-acc-edit],[data-acc-save],[data-acc-cancel],[data-jug-quitar]');
     if (t === null) return;
     const d = t.dataset;
+    if (d.jugQuitar) {
+      jugadoresTeamActual = jugadoresTeamActual.filter((j) => j.puuid !== d.jugQuitar);
+      pintaJugadoresTeam();
+      return;
+    }
     /* Clic en el CUERPO de la card (no en un botón): abre el match para editar.
        Los botones ▶/✎/✕ ganan por `closest` (están más cerca del clic). */
     if (d.mOpen) {
@@ -745,10 +1051,14 @@ export function montaDashboard(cb) {
     if (d.accSave) return guardaCampo(d.accSave);
     /* Reopen tiene que borrar el marcador/mapInfo, no solo el estado: estadoReal
        deriva 'done' del marcador (finalizada()) sin importar m.estado, asi que
-       si solo se tocara estado, la card seguiria mostrandose done para siempre. */
+       si solo se tocara estado, la card seguiria mostrandose done para siempre.
+       Después arranca de nuevo (vuelve a antena), igual que abrir cualquier match. */
     if (d.mReopen) {
-      await DB().matches.update(d.mReopen, { estado: 'draft', score: { wonLeft: 0, wonRight: 0 }, mapInfo: [] });
+      await DB().matches.update(d.mReopen, { estado: 'live', score: { wonLeft: 0, wonRight: 0 }, mapInfo: [] });
+      const m = matches.find((x) => x.id === d.mReopen);
+      if (m) { m.estado = 'live'; m.score = { wonLeft: 0, wonRight: 0 }; m.mapInfo = []; }
       await recarga();
+      await arrancaMatch(d.mReopen);
       return;
     }
     if (d.nuevo === 'team') return abreTeam(null);

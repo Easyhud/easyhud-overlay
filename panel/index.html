@@ -607,6 +607,42 @@
              sesión. Se abre con el engranaje de la barra, no compite con
              Lobby/Broadcast. -->
         <section class="vista" id="vista-ajustes" hidden>
+          <!-- Player lookup: la API key de HenrikDev para el buscador de jugadores
+               del diálogo de equipo (Teams → Players). Se guarda solo local
+               (localStorage), nunca va al servidor. HenrikDev exige key en TODA
+               llamada desde 2026, no solo para subir el rate limit. -->
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Player lookup</h2>
+              <span class="etiqueta">HenrikDev API key</span>
+            </div>
+            <div class="panel__cuerpo">
+              <div class="rejilla">
+                <label class="campo">
+                  <span class="etiqueta">API key</span>
+                  <input id="set-henrik-key" type="text" autocomplete="off" spellcheck="false" placeholder="HDEV-…" />
+                </label>
+                <label class="campo">
+                  <span class="etiqueta">Region</span>
+                  <select id="set-henrik-region">
+                    <option value="na">NA</option>
+                    <option value="eu">EU</option>
+                    <option value="latam">LATAM</option>
+                    <option value="br">BR</option>
+                    <option value="ap">AP</option>
+                    <option value="kr">KR</option>
+                  </select>
+                </label>
+              </div>
+              <p class="apunte" style="margin-top:8px">
+                Needed to search players by Riot ID when adding a team. Get a free key from the
+                HenrikDev Discord (#get-a-key) and paste it here — it's stored only on this machine.
+                Region is where the rank lookup queries — HenrikDev's MMR endpoint is per-shard,
+                so it has to match where the players actually rank up, not just where you play.
+              </p>
+            </div>
+          </div>
+
           <!-- Torneo: nombre y logo. Salen en la cabecera. A futuro lo trae
                Easy League y esto se auto-rellena. -->
           <div class="panel">
@@ -878,6 +914,7 @@
                   <span class="hero__nom" id="hero-nom-b">TBD</span>
                   <span class="hero__bar" id="hero-bar-b"></span>
                 </div>
+                <button class="boton boton--terciario" type="button" id="hero-end" hidden>End broadcast</button>
                 <button class="boton" type="button" id="hero-go">Resume broadcast</button>
               </div>
             </div>
@@ -1012,6 +1049,20 @@
              Vacío = se deriva uno estable del equipo (ver colorEquipo en db.js). -->
         <label class="campo"><span class="etiqueta">Team color (optional)</span>
           <input id="team-color" type="text" maxlength="7" spellcheck="false" placeholder="#RRGGBB — auto if empty" /></label>
+
+        <!-- Jugadores: se agregan de a uno buscando su Riot ID exacto (Name#Tag) contra
+             HenrikDev — esa API no tiene búsqueda por nombre parcial, solo lookup exacto,
+             así que esto es "buscar y confirmar", no un autocompletado. -->
+        <div class="campo">
+          <span class="etiqueta">Players</span>
+          <div class="team-jug-buscar">
+            <input id="team-jug-input" type="text" placeholder="Name#Tag" autocomplete="off" spellcheck="false" />
+            <button class="boton boton--terciario boton--mini" type="button" id="team-jug-add">Add</button>
+          </div>
+          <p class="apunte" id="team-jug-msg" hidden></p>
+          <ul class="team-jug-lista" id="team-jug-lista"></ul>
+        </div>
+
         <div class="dlg__pie">
           <button class="boton boton--terciario" type="button" data-cerrar>Cancel</button>
           <button class="boton" type="submit">Save</button>
