@@ -64,6 +64,19 @@ function cargas(player) {
 }
 
 /**
+ * Cuántos rombos lleva cada hueco: uno por carga que CABE (la capacidad que
+ * lleva el servidor), no por carga que queda. Si no, la carga gastada no se
+ * apaga: desaparece. Sin dato, lo que haya (y como mínimo uno).
+ */
+function capacidades(player, tiene) {
+  const hayDatos = player.provenance?.abilities === 'player';
+  const max = player.abilities?.max ?? {};
+  return ['grenade', 'ability1', 'ability2'].map((tecla, k) =>
+    Math.max(1, tiene[k], hayDatos ? (max[tecla] ?? 0) : 0),
+  );
+}
+
+/**
  * Las cinco filas, ordenadas por bajas descendentes.
  *
  * Es lo que hace el producto de referencia y tiene sentido en un tablero de
@@ -91,6 +104,7 @@ function jugador(player, agentes, posicion) {
   const danoReal = player.provenance?.damage === 'player';
   const { primaria, secundaria } = armas(player.weapon);
   const gasto = player.spentThisRound ?? 0;
+  const tiene = cargas(player);
 
   return {
     nick: player.identity?.name ?? '',
@@ -99,7 +113,9 @@ function jugador(player, agentes, posicion) {
     secundaria,
     primaria,
     ult: player.ultimate?.points ?? 0,
-    ultMax: player.ultimate?.max ?? 1,
+    /* 0 = coste aún desconocido: el pintor no la da por lista. */
+    ultMax: player.ultimate?.max ?? 0,
+    desconectado: player.disconnected === true,
     kda: `${stats.kills}/${stats.deaths}/${stats.assists}`,
     /*
      * EL DAÑO. Está en el estado y **no se pinta todavía**: el hueco en pantalla
@@ -128,7 +144,8 @@ function jugador(player, agentes, posicion) {
        que queda y lo gastado, así que se suma. */
     credito: (player.money ?? 0) + gasto,
     gasto,
-    cargas: cargas(player),
+    cargas: tiene,
+    cargasMax: capacidades(player, tiene),
   };
 }
 
@@ -169,16 +186,22 @@ function construye(match, agentes) {
   }
 
   /*
-   * Las filas del tablero van por BANDO: la mitad izquierda es el ataque.
-   * El contrato ordena los equipos como los puso el operador, así que hay que
-   * ponerlos en orden de bando o el tablero saldría cambiado de lado cada
-   * segunda mitad.
+   * Cada equipo en SU lado, el mismo que en el marcador del combate.
+   *
+   * Antes el tablero se reordenaba por bando (el atacante siempre a la
+   * izquierda) y era el «equipos al revés» del directo: en la segunda mitad
+   * el equipo de la izquierda del combate aparecía a la derecha en la compra
+   * —marcador incluido—, y el historial de abajo, que va por equipo, ya no
+   * casaba con los bancos de encima. Lo que sigue al bando es el COLOR
+   * (`lados`, ver `coloresDeBando`), no la posición.
    */
-  const orden = match.teams[0].side === 'attack' ? [0, 1] : [1, 0];
+  const orden = [0, 1];
   const mapas = serieDeMapas(match);
 
   return {
     ronda: match.round,
+    /* El bando de cada equipo (por índice), para el color. */
+    lados: orden.map((i) => match.teams[i].side),
     /* «compra 7», o «prórroga 2» si toca: lo mismo que dice el chip de
        combate, calculado en el mismo sitio para que no se contradigan. */
     etiquetaRonda: etiquetaRonda(match, 'compra'),

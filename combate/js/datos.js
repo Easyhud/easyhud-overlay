@@ -158,7 +158,17 @@ function habilidad(abilities, tecla, vivo, hayDatos) {
   if (!hayDatos) return { tiene: 1, max: 1 };
   const cargas = abilities.charges?.[tecla] ?? null;
   if (cargas === null) return { tiene: abilities[tecla] ? 1 : 0, max: 1 };
-  return { tiene: cargas, max: Math.max(cargas, 1) };
+  /*
+   * Un rombo por carga que CABE, no por carga que queda.
+   *
+   * Antes el máximo era lo que quedaba (`max(cargas, 1)`), así que una Jett
+   * con dos nubes que gastaba una pasaba de dos rombos a UNO encendido: el
+   * rombo gastado desaparecía en vez de apagarse, y los puntitos no decían
+   * nada. La capacidad la lleva el servidor (la carga más alta vista con ese
+   * agente); si no la manda, se queda como antes.
+   */
+  const cabe = abilities.max?.[tecla] ?? 0;
+  return { tiene: cargas, max: Math.max(cargas, cabe, 1) };
 }
 
 /**
@@ -202,7 +212,10 @@ function jugador(player) {
       habilidad(player.abilities ?? {}, t, player.alive, player.provenance?.abilities === 'player'),
     ),
     ult: player.ultimate?.points ?? 0,
-    ultMax: player.ultimate?.max ?? 1,
+    /* 0 = aún no se sabe cuánto cuesta: el pintor no la da por lista. */
+    ultMax: player.ultimate?.max ?? 0,
+    /* Abandonó o se cayó: la tarjeta se queda en su sitio, apagada y rotulada. */
+    desconectado: player.disconnected === true,
     credito: player.money ?? 0,
     gasto: player.spentThisRound ?? 0,
     kda: `${stats.kills}/${stats.deaths}/${stats.assists}`,

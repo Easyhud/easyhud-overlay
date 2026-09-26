@@ -22,18 +22,29 @@ window.pintaSeleccion = (D) => {
     return s;
   };
 
+  /* El color sigue al BANDO del equipo (ATK/DEF), no a su lado: si el
+     operador puso al equipo que empieza defendiendo a la izquierda, la
+     izquierda es roja. Sin bando, por lado, como antes. */
+  const atacaLado = (lado) => {
+    const b = D.equipos?.[lado]?.bando;
+    return b === 'ATK' ? true : b === 'DEF' ? false : lado === 0;
+  };
+  const tinta = (lado) => atacaLado(lado)
+    ? { c: '--atk', cl: '--atk-light' }
+    : { c: '--def', cl: '--def-light' };
+
   /* ── cabecera ── */
   const cab = document.getElementById('cabecera');
   if (cab) {
     const [izq, der] = D.equipos;
     cab.innerHTML =
-      '<div class="sel-cab__mitad sel-cab__mitad--izq" style="--cl: var(--atk-light);">'
+      '<div class="sel-cab__mitad sel-cab__mitad--izq" style="--cl: var(' + tinta(0).cl + ');">'
         + '<div class="sel-cab__fondo sel-cab__fondo--izq" style="--logo: url(\'' + izq.logo + '\');"><div>' + extruido() + '</div></div>'
         + '<span class="sel-cab__equipo">' + izq.nombre.toUpperCase() + '</span>'
         + '<span class="sel-cab__bando">' + izq.bando + '</span>'
       + '</div>'
       + '<div class="sel-cab__vs"><span>VS</span></div>'
-      + '<div class="sel-cab__mitad" style="--cl: var(--def-light);">'
+      + '<div class="sel-cab__mitad" style="--cl: var(' + tinta(1).cl + ');">'
         + '<span class="sel-cab__bando">' + der.bando + '</span>'
         + '<span class="sel-cab__equipo">' + der.nombre.toUpperCase() + '</span>'
         + '<div class="sel-cab__fondo sel-cab__fondo--der" style="--logo: url(\'' + der.logo + '\');"><div>' + extruido() + '</div></div>'
@@ -68,8 +79,8 @@ window.pintaSeleccion = (D) => {
     const orden = lado === 0 ? 4 - k : k;
 
     const clases = 'celda' + (elegido ? ' celda--elegido' : eligiendo ? ' celda--eligiendo' : '');
-    const vars = '--c: var(' + (lado ? '--def' : '--atk') + '); --cl: var('
-      + (lado ? '--def-light' : '--atk-light') + '); --orden: ' + orden + ';';
+    const vars = '--c: var(' + tinta(lado).c + '); --cl: var('
+      + tinta(lado).cl + '); --orden: ' + orden + ';';
 
     return '<div class="' + clases + '" style="' + vars + '" data-lado="' + lado + '" data-pos="' + k + '">'
       + (agente

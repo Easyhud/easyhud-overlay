@@ -28,33 +28,49 @@ window.pintaCompra = (D) => {
     time: TG + 'timewin1.png'
   };
 
+  /*
+   * El color de cada equipo sigue a su BANDO, no a su lado: el equipo se queda
+   * donde está toda la partida (como en el marcador del combate) y en la
+   * segunda mitad cambia de color. Sin `D.lados` (fotograma suelto), por lado.
+   */
+  const colorDe = (i) => {
+    const bando = D.lados?.[i];
+    const ataca = bando === 'attack' ? true : bando === 'defense' ? false : i === 0;
+    return ataca
+      ? { c: 'var(--atk)', cl: 'var(--atk-claro)', luzSerie: 'var(--atk-light)' }
+      : { c: 'var(--def)', cl: 'var(--def-light)', luzSerie: 'var(--def-light)' };
+  };
+
   /* ── Media fila ─────────────────────────────────────────────────────────── */
   function mitad(p, lado) {
     const der = lado === 1;
-    const m = el('div', 'mitad' + (der ? ' mitad--der' : ''));
-    m.style.setProperty('--c', der ? 'var(--def)' : 'var(--atk)');
-    m.style.setProperty('--cl', der ? 'var(--def-light)' : 'var(--atk-claro)');
+    const m = el('div', 'mitad' + (der ? ' mitad--der' : '') + (p?.desconectado ? ' mitad--desconectada' : ''));
+    const color = colorDe(lado);
+    m.style.setProperty('--c', color.c);
+    m.style.setProperty('--cl', color.cl);
 
     /* Sin jugador —roster incompleto: la fuente no trajo a los cinco— se
        devuelve media fila vacía en vez de reventar el tablero entero. */
     if (!p) return m;
 
-    const lista = p.ult >= p.ultMax;
+    /* Sin coste conocido (0) no está lista, y el polígono no baja de tres. */
+    const lados = Math.max(3, p.ultMax);
+    const lista = p.ultMax > 0 && p.ult >= p.ultMax;
     /* El claro del atacante en compra es el verde suave, no el celeste-verdoso
        que usa la barra de vida en combate. */
-    const luz = der ? 'var(--def-light)' : 'var(--atk-claro)';
-    const col = der ? 'var(--def)' : 'var(--atk)';
+    const luz = color.cl;
+    const col = color.c;
 
     /* Insignia de definitiva: polígono de tantos lados como puntos cuesta. */
     const ulti = el('div', 'ulti-c' + (lista ? ' ulti-c--lista' : ''));
     const trazo = el('div', 'ulti-c__trazo');
-    trazo.style.cssText = recortePoligono(p.ultMax);
+    trazo.style.cssText = recortePoligono(lados);
     if (lista) trazo.style.filter = 'drop-shadow(0 0 5px rgb(255 255 255 / 85%)) drop-shadow(0 0 12px rgb(255 255 255 / 55%))';
     ulti.append(trazo);
-    tramos(p.ultMax, p.ult, lista ? luz : col)
+    tramos(lados, p.ult, lista ? luz : col)
       .forEach(css => { const s = el('span'); s.style.cssText = css; ulti.append(s); });
     const dentro = el('div', 'ulti-c__dentro');
-    dentro.style.cssText = recortePoligono(p.ultMax);
+    dentro.style.cssText = recortePoligono(lados);
     dentro.innerHTML = '<i class="ulti-c__icono" style="' + fondo(iconoUltimate(p.agente)) + '"></i>';
     ulti.append(dentro);
 
@@ -62,9 +78,12 @@ window.pintaCompra = (D) => {
     const basicas = el('div', 'basicas');
     p.cargas.forEach((tiene, k) => {
       const w = el('div', 'hab-c');
-      const rombos = Array.from({ length: Math.max(1, tiene) },
+      /* Un rombo por carga que cabe; el icono, entero / a medias / apagado. */
+      const cabe = Math.max(1, tiene, p.cargasMax?.[k] ?? 0);
+      const rombos = Array.from({ length: cabe },
         (_, q) => '<i class="' + (q < tiene ? 'on' : '') + '"></i>').join('');
-      w.innerHTML = '<i class="hab-c__icono' + (tiene > 0 ? '' : ' hab-c__icono--vacio') + '" style="'
+      const estado = tiene === 0 ? ' hab-c__icono--vacio' : tiene < cabe ? ' hab-c__icono--gastada' : '';
+      w.innerHTML = '<i class="hab-c__icono' + estado + '" style="'
           + fondo(iconoHabilidad(p.agente, k)) + '"></i>'
         + '<div class="hab-c__cargas">' + rombos + '</div>';
       basicas.append(w);
@@ -98,7 +117,10 @@ window.pintaCompra = (D) => {
       + '</div>'
       + '<div class="ident">'
         + '<div class="ident__retrato" style="' + fondo(iconoAgente(p.agente)) + '"></div>'
-        + '<span class="ident__nick">' + p.nick + '</span>'
+        /* El rótulo del que abandonó va DEBAJO del nick: al lado le comía el
+           sitio y el nick se quedaba en una letra. */
+        + '<span class="ident__nick">' + p.nick
+          + (p.desconectado ? '<small class="ident__fuera">desconectado</small>' : '') + '</span>'
         + '<span class="ident__kda">' + p.kda + '</span>'
       + '</div>');
     return m;
@@ -126,7 +148,7 @@ window.pintaCompra = (D) => {
     const eq = D.equipos[i];
     const total = D.jugadores[i].reduce((a, p) => a + p.credito, 0);
     const b = el('div', 'banco' + (der ? ' banco--der' : ''));
-    b.style.setProperty('--c', der ? 'var(--def)' : 'var(--atk)');
+    b.style.setProperty('--c', colorDe(i).c);
     b.append(extruido(eq.logo));
     b.insertAdjacentHTML('beforeend',
       '<div class="banco__texto">'
@@ -143,7 +165,7 @@ window.pintaCompra = (D) => {
   function tiempos(i) {
     const eq = D.equipos[i];
     const t = el('div', 'tiempos');
-    t.style.setProperty('--cl', i === 0 ? 'var(--atk-claro)' : 'var(--def-light)');
+    t.style.setProperty('--cl', colorDe(i).cl);
     const pips = Array.from({ length: eq.tiemposTotal },
       (_, k) => '<i class="' + (k < eq.tiempos ? 'on' : '') + '"></i>').join('');
     t.innerHTML = '<span class="tiempos__etq">tiempos</span><div class="tiempos__pips">' + pips + '</div>';
@@ -237,6 +259,7 @@ window.pintaCompra = (D) => {
   D.equipos.forEach((equipo, i) => {
     const caja = document.querySelectorAll('.marcador .equipo')[i];
     if (caja === undefined) return;
+    caja.style.setProperty('--c', colorDe(i).c);
     const logo = caja.querySelector('.equipo__logo');
     if (equipo.logo) logo.src = equipo.logo;
     logo.style.display = equipo.logo ? '' : 'none';
@@ -255,6 +278,7 @@ window.pintaCompra = (D) => {
   [0, 1].forEach((i) => {
     const franja = document.querySelector(i === 0 ? '.serie--izq' : '.serie--der');
     if (franja === null) return;
+    franja.style.setProperty('--cl', colorDe(i).luzSerie);
     const estados = D.serieMapas?.[i] ?? null;
     franja.textContent = '';
     for (let k = 0; k < (D.mapasParaGanar ?? 0); k += 1) {

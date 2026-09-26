@@ -42,7 +42,7 @@ function pinta(match, toast) {
    * Con equipo, su color y su logo; sin equipo, gris y sin logo. Es la misma
    * regla que la pausa: lo que lo pide decide de qué color va.
    */
-  tinta(nodo, equipo === null || equipo === undefined ? null : toast.teamIndex);
+  tinta(nodo, equipo === null || equipo === undefined ? null : toast.teamIndex, equipo?.side);
   relieve(fondo, equipo?.logoUrl ?? '');
 
   if (titulo !== null) titulo.textContent = toast.title;

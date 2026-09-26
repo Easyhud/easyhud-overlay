@@ -32,6 +32,7 @@
 import { suscribe } from './datos.js';
 import { iconoAgente, iconoArma, iconoHabilidad, iconoUltimate, iconoRango, CREDITOS, OJO, SPIKE } from './cdn.js';
 import { recorte, tramos } from './poligono.js';
+import { coloresDeBando } from '../../comun/partida.js';
 
 const ESCUDOS = { heavy: 50, light: 25, regen: 25, none: 0 };
 
@@ -83,6 +84,11 @@ function pintaMarcador(e) {
   const lados = ['izq', 'der'];
   lados.forEach((suf, i) => {
     const equipo = e.equipos[i] ?? {};
+    /* El color del panel sigue al BANDO del equipo, no a su lado de pantalla
+       (ver `coloresDeBando`). Lo lee el CSS por `data-bando`. */
+    const panel = $('tri-' + suf)?.closest('.panel-equipo');
+    const bando = coloresDeBando(equipo.bando, i).ataca ? 'attack' : 'defense';
+    if (panel && panel.dataset.bando !== bando) panel.dataset.bando = bando;
     fondo($('logo-' + suf), equipo.logo);
     texto($('ini-' + suf), (equipo.tricode || '?').slice(0, 1));
     texto($('tri-' + suf), equipo.tricode ?? '');
@@ -113,7 +119,7 @@ function pintaMarcador(e) {
   lados.forEach((suf, i) => {
     const pips = $('pips-' + suf);
     const ganados = e.equipos[i]?.mapas ?? 0;
-    const clase = i === 0 ? 'on--atk' : 'on--def';
+    const clase = coloresDeBando(e.equipos[i]?.bando, i).ataca ? 'on--atk' : 'on--def';
     if (pips.children.length !== total) {
       pips.textContent = '';
       for (let k = 0; k < total; k += 1) pips.append(el('i'));
@@ -156,8 +162,8 @@ function pintaMinimo(minimo) {
 function creaTarjeta(lado) {
   const der = lado === 1;
   const tarjeta = el('div', 'tarjeta' + (der ? ' tarjeta--der' : ''));
-  tarjeta.style.setProperty('--c', der ? 'var(--def)' : 'var(--atk)');
-  tarjeta.style.setProperty('--cl', der ? 'var(--def-light)' : 'var(--atk-light)');
+  /* El color (`--c`, `--cl`) no se fija aquí: sigue al bando del equipo y lo
+     pone `pintaColumna` en cada foto. */
 
   /* Insignia. El halo y el fogonazo se crean YA y se quedan para siempre:
      son justo los dos que no pueden recrearse sin reventar en bucle. */
@@ -202,8 +208,11 @@ function creaTarjeta(lado) {
   barra.append(relleno);
   const sinDato = el('span', 'sin-dato');
   sinDato.textContent = 'sin dato de vida';
+  /* Jugador que abandonó: ocupa el hueco de la vida, sin mover nada más. */
+  const fuera = el('span', 'sin-dato tarjeta__fuera');
+  fuera.textContent = 'desconectado';
   const vida = el('div', 'vida');
-  vida.append(escudo, vidaNum, barra, sinDato);
+  vida.append(escudo, vidaNum, barra, sinDato, fuera);
 
   const cabTexto = el('div', 'cab__texto');
   cabTexto.append(fila, vida);
@@ -273,9 +282,9 @@ function creaTarjeta(lado) {
   return {
     tarjeta, ulti, halo, trazo, dentro, iconoUlt, tramos: [],
     retrato, ojo, rango, nick, spike, kda,
-    escudo, escudoNum, vidaNum, barra, relleno, sinDato,
+    escudo, escudoNum, vidaNum, barra, relleno, sinDato, fuera,
     habs, credNum, arma, foco, tecla,
-    lados: 0,
+    lados: 0, bando: '',
   };
 }
 
@@ -290,7 +299,10 @@ function creaTarjeta(lado) {
  */
 function actualizaUlti(n, p) {
   const lados = Math.max(3, p.ultMax);
-  const lista = p.ult >= p.ultMax;
+  /* Sin coste conocido (`ultMax` 0) no está «lista»: antes salía con el halo
+     encendido en los marcadores vacíos de antes de la partida y en los de un
+     jugador que se había ido. */
+  const lista = p.ultMax > 0 && p.ult >= p.ultMax;
 
   if (n.lados !== lados) {
     n.lados = lados;
@@ -306,7 +318,9 @@ function actualizaUlti(n, p) {
     }
   }
 
-  const estilos = tramos(lados, p.ult, { muerto: !p.vivo, lista: lista && p.vivo });
+  /* Muerto también se ve cuánto lleva —y si la tiene lista—: la definitiva no
+     se pierde al morir, y morir SUMA un punto. Solo se apaga el halo. */
+  const estilos = tramos(lados, p.ult, { muerto: !p.vivo, lista });
   n.tramos.forEach((span, k) => {
     if (span.style.cssText !== estilos[k]) span.style.cssText = estilos[k];
   });
@@ -343,14 +357,19 @@ function actualizaCabecera(n, p) {
  *   muerto          → escudo apagado + 0, sin barra
  */
 function actualizaVida(n, p) {
-  const escudo = ESCUDOS[p.escudo] ?? 0;
+  /* El muerto no lleva escudo: se pierde al morir (el servidor ya lo manda
+     así; esto es por si llega un estado viejo). */
+  const escudo = p.vivo ? (ESCUDOS[p.escudo] ?? 0) : 0;
   n.escudo.classList.toggle('vida__escudo--sin', escudo === 0);
   texto(n.escudoNum, escudo);
 
-  const conDato = p.vivo && p.vidaConocida;
-  ver(n.vidaNum, !p.vivo || conDato);
+  /* Desconectado: el rótulo ocupa el sitio de la cifra y la barra. */
+  const fuera = p.desconectado === true;
+  const conDato = p.vivo && p.vidaConocida && !fuera;
+  ver(n.vidaNum, (!p.vivo && !fuera) || conDato);
   ver(n.barra, conDato);
-  ver(n.sinDato, p.vivo && !p.vidaConocida);
+  ver(n.sinDato, p.vivo && !p.vidaConocida && !fuera);
+  ver(n.fuera, fuera);
 
   if (!p.vivo) {
     texto(n.vidaNum, 0);
@@ -370,10 +389,18 @@ function actualizaPie(n, p) {
     ver(h.caja, hay);
     if (!hay) return;
 
-    fuente(h.icono, iconoHabilidad(p.agente, k));
-    h.icono.classList.toggle('hab__icono--vacio', dato.tiene === 0);
-
+    /* Sin icono (agente desconocido) el hueco se queda: esconderlo con
+       `display` encogía el pie y movía el crédito y el arma. */
+    const url = iconoHabilidad(p.agente, k);
+    if (url !== '' && h.icono.getAttribute('src') !== url) h.icono.setAttribute('src', url);
+    h.icono.style.visibility = url === '' ? 'hidden' : '';
+    /* El icono dice lo mismo que los rombos, para que se lea sin mirarlos:
+       entero si tiene todas, a medias si gastó alguna, casi transparente si
+       no le queda ninguna. */
     const cuantos = Math.max(1, dato.max);
+    h.icono.classList.toggle('hab__icono--vacio', dato.tiene === 0);
+    h.icono.classList.toggle('hab__icono--gastada', dato.tiene > 0 && dato.tiene < cuantos);
+
     if (h.cargas.children.length !== cuantos) {
       h.cargas.textContent = '';
       for (let q = 0; q < cuantos; q += 1) h.cargas.append(el('i'));
@@ -435,9 +462,11 @@ function animaCambios(n, p, clave) {
 /** Los nodos de cada tarjeta, por columna. */
 const columnas = [[], []];
 
-function pintaColumna(lado, jugadores) {
+function pintaColumna(lado, jugadores, bandoEquipo) {
   const columna = $(lado === 0 ? 'col-izq' : 'col-der');
   const nodos = columnas[lado];
+  /* El color de las tarjetas sigue al bando del equipo, no a su lado. */
+  const color = coloresDeBando(bandoEquipo, lado);
 
   while (nodos.length > jugadores.length) nodos.pop().tarjeta.remove();
   while (nodos.length < jugadores.length) {
@@ -459,7 +488,13 @@ function pintaColumna(lado, jugadores) {
 
   jugadores.forEach((p, k) => {
     const n = nodos[k];
+    if (n.bando !== color.c) {
+      n.bando = color.c;
+      n.tarjeta.style.setProperty('--c', color.c);
+      n.tarjeta.style.setProperty('--cl', color.cl);
+    }
     n.tarjeta.classList.toggle('tarjeta--muerta', !p.vivo);
+    n.tarjeta.classList.toggle('tarjeta--desconectada', p.desconectado === true);
     actualizaUlti(n, p);
     actualizaCabecera(n, p);
     actualizaVida(n, p);
@@ -597,8 +632,8 @@ suscribe((e) => {
   pintaHistorial(e);
   pintaTorneo(e);
   pintaMinimo(e.minimo === true);
-  pintaColumna(0, e.jugadores[0]);
-  pintaColumna(1, e.jugadores[1]);
+  pintaColumna(0, e.jugadores[0], e.equipos[0]?.bando);
+  pintaColumna(1, e.jugadores[1], e.equipos[1]?.bando);
   pintaDuelo(e);
   pintaCamara(e);
 });

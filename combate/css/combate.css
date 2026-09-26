@@ -375,9 +375,11 @@
 .ulti--lista .ulti__fogonazo { animation: ulti-fogonazo var(--t-ulti) var(--ease) both; }
 .ulti__trazo { transition: filter 500ms ease; }
 .ulti--lista .ulti__trazo {
+  /* Se había quedado sin valor (declaración inválida, el navegador la tiraba):
+     el mismo resplandor que la insignia de la compra. */
   filter:
-    )
-    );
+    drop-shadow(0 0 5px rgb(255 255 255 / 85%))
+    drop-shadow(0 0 12px rgb(255 255 255 / 55%));
 }
 
 /* ── usa habilidad ───────────────────────────────────────────────────────
@@ -472,3 +474,56 @@
   display: block;
   border: 0;
 }
+
+/* ── el color sigue al bando, no al lado ────────────────────────────────────
+   El marcador pintaba la izquierda en verde de ataque y la derecha en rojo de
+   defensa, fijo, y en la segunda mitad eso es al revés. `js/combate.js` pone
+   `data-bando` en cada panel; aquí solo se repiten los fondos del diseño con
+   el color que toca. Sin `data-bando` (fotograma suelto) queda como estaba. */
+.panel-equipo[data-bando="attack"] { --lado: var(--atk); }
+.panel-equipo[data-bando="defense"] { --lado: var(--def); }
+.panel-equipo--izq[data-bando] {
+  background:
+    linear-gradient(90deg, #1b1e25 45%, color-mix(in srgb, var(--lado) 26%, #1b1e25) 100%),
+    linear-gradient(180deg, rgb(255 255 255 / 7%) 0%, rgb(255 255 255 / 0%) 42%),
+    linear-gradient(160deg, #26292f, #14161a);
+}
+.panel-equipo--der[data-bando] {
+  background:
+    linear-gradient(270deg, #1b1e25 45%, color-mix(in srgb, var(--lado) 26%, #1b1e25) 100%),
+    linear-gradient(180deg, rgb(255 255 255 / 7%) 0%, rgb(255 255 255 / 0%) 42%),
+    linear-gradient(160deg, #26292f, #14161a);
+}
+.panel-equipo[data-bando] .panel-equipo__filo { background: var(--lado); }
+
+/* ── habilidad gastada ──────────────────────────────────────────────────────
+   El icono dice lo mismo que los rombos: entero con todas las cargas, a medias
+   si gastó alguna (Jett con una nube de dos), casi transparente sin ninguna. */
+.hab__icono { transition: opacity 320ms ease; }
+.hab__icono--gastada { opacity: .5; }
+.hab__icono--vacio { opacity: .2; }
+
+/* ── jugador que abandonó ───────────────────────────────────────────────────
+   La tarjeta NO se quita: quitarla movería a los otros cuatro y cambiaría las
+   teclas del observador. Se queda en su sitio, como un muerto, más apagada y
+   con el rótulo en el hueco de la vida. Monocromo y sin radio: es un aviso de
+   producción, no una pieza del equipo.
+
+   El apagado entra con retraso a propósito: si el juego da a alguien muerto
+   un instante al empezar la compra y enseguida vivo, no llega a parpadear. */
+.tarjeta--desconectada .tarjeta__panel,
+.tarjeta--desconectada .ulti {
+  opacity: .55;
+  transition: opacity 400ms ease 700ms;
+}
+.tarjeta--desconectada .cab__retrato { opacity: .2; }
+.tarjeta--desconectada .kda { opacity: .6; }
+.tarjeta__fuera {
+  border-radius: 0;
+  background: rgb(255 255 255 / 10%);
+  color: #c9cbd1;
+  letter-spacing: .1em;
+}
+/* Sin escudo que enseñar: el rótulo necesita el sitio (la tarjeta del muerto
+   es estrecha). */
+.tarjeta--desconectada .vida__escudo { display: none; }

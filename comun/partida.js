@@ -150,3 +150,29 @@ export function serieDeMapas(match) {
 export function esMinimo(match) {
   return match?.broadcast?.minimal === true;
 }
+
+/**
+ * Los colores de un equipo, por su BANDO de ahora, no por su lado de pantalla.
+ *
+ * Era el «equipos al revés» del directo: cada pantalla pintaba la izquierda
+ * con el color de ataque y la derecha con el de defensa, fijo. En la primera
+ * mitad coincide (el equipo de la izquierda empieza atacando) y en la segunda
+ * mitad —y en cada ronda de prórroga— sale justo al revés. Y la compra, para
+ * «arreglarlo», cambiaba a los equipos de lado cada mitad, así que el marcador
+ * de arriba saltaba de sitio entre la compra y el combate.
+ *
+ * La regla, para todas las pantallas: **cada equipo se queda en su lado**
+ * (el que dicen `teams[0]` y `teams[1]`, igual que el marcador) y **el color
+ * sigue al bando**. Si el bando no viene, se cae al de siempre por posición.
+ *
+ * @param {'attack' | 'defense' | string | undefined} bando
+ * @param {number} posicion 0 = izquierda, 1 = derecha (solo para el defecto).
+ * @param {{ claroAtaque?: string }} [op] La compra usa otro verde claro.
+ * @returns {{ c: string, cl: string, ataca: boolean }}
+ */
+export function coloresDeBando(bando, posicion, op = {}) {
+  const ataca = bando === 'attack' ? true : bando === 'defense' ? false : posicion === 0;
+  return ataca
+    ? { c: 'var(--atk)', cl: op.claroAtaque ?? 'var(--atk-light)', ataca }
+    : { c: 'var(--def)', cl: 'var(--def-light)', ataca };
+}

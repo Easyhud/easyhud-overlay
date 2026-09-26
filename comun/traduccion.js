@@ -34,6 +34,11 @@ export function escudoDe(armorName) {
 export function traduceJugador(p) {
   const aux = p.auxiliaryAvailable ?? { health: false, abilities: false, scoreboard: false };
   const ab = p.abilities ?? { grenade: 0, ability1: 0, ability2: 0 };
+  /* La capacidad del kit (la carga más alta vista con este agente). Un
+     servidor antiguo no la manda: entonces sale 0 y el pintor usa lo que hay. */
+  const tope = p.abilitiesMax ?? {};
+  const capacidad = (tecla) => Math.max(tope[tecla] ?? 0, ab[tecla] ?? 0);
+  const ultMax = typeof p.maxUltPoints === 'number' && p.maxUltPoints > 0 ? p.maxUltPoints : 0;
 
   return {
     identity: { name: p.name ?? '', tag: p.tagline ?? '' },
@@ -53,8 +58,16 @@ export function traduceJugador(p) {
       ability1: ab.ability1 ?? 0,
       ability2: ab.ability2 ?? 0,
       charges: { grenade: ab.grenade ?? 0, ability1: ab.ability1 ?? 0, ability2: ab.ability2 ?? 0 },
+      /* Cuántos rombos lleva cada hueco: uno por carga que CABE, no por carga
+         que queda. Así la gastada se ve apagada en vez de desaparecer (Jett
+         con dos nubes y una usada: dos rombos, uno encendido). */
+      max: { grenade: capacidad('grenade'), ability1: capacidad('ability1'), ability2: capacidad('ability2') },
     },
-    ultimate: { points: p.currUltPoints ?? 0, max: p.maxUltPoints ?? 1 },
+    /* `max` 0 = el juego aún no dijo cuánto cuesta (marcador de antes de la
+       partida, o de un jugador que se fue). No es «lista con 0 de 0». */
+    ultimate: { points: p.currUltPoints ?? 0, max: ultMax },
+    /* No está en el mapa: abandonó o se cayó (lo deduce el servidor). */
+    disconnected: p.disconnected === true,
     money: p.money ?? 0,
     spentThisRound: p.moneySpent ?? 0,
     stats: { kills: p.kills ?? 0, deaths: p.deaths ?? 0, assists: p.assists ?? 0 },

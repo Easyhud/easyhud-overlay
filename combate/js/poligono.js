@@ -75,11 +75,15 @@ function tramo(k, lados) {
  *     estado que hay que ver de un vistazo desde el otro lado de la sala.
  *   - Viva y a medias: lo cargado en el color del bando, lo que falta casi
  *     transparente.
- *   - Muerto: lo cargado en blanco apagado. La ulti sigue ahí —no se pierde al
- *     morir— pero no compite con los vivos.
+ *   - Muerto: lo cargado en blanco, sin el color del bando. La ulti sigue ahí
+ *     —no se pierde al morir, y morir suma un punto— así que tiene que LEERSE:
+ *     con el 22% de antes contra el 14% del hueco no se distinguía un tramo
+ *     cargado de uno vacío, y parecía que los puntos del muerto no se movían.
+ *     Lista y muerto: todos los tramos en blanco más vivo, sin halo.
  */
 const APAGADO = 'rgb(255 255 255 / 14%)';
-const MUERTO = 'rgb(255 255 255 / 22%)';
+const MUERTO = 'rgb(255 255 255 / 58%)';
+const MUERTO_LISTA = 'rgb(255 255 255 / 86%)';
 
 /**
  * Los tramos de la insignia, ya con su color.
@@ -91,7 +95,7 @@ export function tramos(lados, cargados, { muerto = false, lista = false } = {}) 
   for (let k = 0; k < lados; k += 1) {
     const cargado = k < cargados;
     let color;
-    if (muerto) color = cargado ? MUERTO : APAGADO;
+    if (muerto) color = lista ? MUERTO_LISTA : cargado ? MUERTO : APAGADO;
     else if (lista) color = 'var(--cl)';
     else color = cargado ? 'var(--c)' : APAGADO;
 

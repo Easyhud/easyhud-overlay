@@ -38,7 +38,7 @@ function pintaCartel(match, timeout) {
    * organización. Y en la técnica **desaparece el cupo**, porque no hay
    * nada que contar — es del LEEME del diseño.
    */
-  tinta(nodo, tecnica || equipo === undefined || equipo === null ? null : timeout.teamIndex);
+  tinta(nodo, tecnica || equipo === undefined || equipo === null ? null : timeout.teamIndex, equipo?.side);
 
   if (tipo !== null) tipo.textContent = tecnica ? 'Pausa técnica' : 'Tiempo muerto';
   if (quien !== null) quien.textContent = tecnica ? 'Producción' : (equipo?.name ?? '');

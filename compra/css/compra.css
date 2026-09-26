@@ -308,3 +308,26 @@
   outline: 2px solid var(--cl);
   outline-offset: -2px;
 }
+
+/* ── habilidad gastada ──────────────────────────────────────────────────────
+   Como en combate: el icono entero con todas las cargas, a medias si gastó
+   alguna, casi transparente sin ninguna. */
+.hab-c__icono--gastada { opacity: .5; }
+
+/* ── jugador que abandonó ───────────────────────────────────────────────────
+   Su fila se queda —quitarla movería a los demás— apagada y rotulada.
+   Monocromo y sin radio. */
+.mitad--desconectada > :not(.mitad__filo) { opacity: .45; }
+.ident__fuera {
+  display: table;
+  margin-top: 2px;
+  padding: 2px 6px;
+  border-radius: 0;
+  background: rgb(255 255 255 / 12%);
+  color: #e6e7ea;
+  font-family: 'Poppins', sans-serif;
+  font-size: 10px; font-weight: 600; letter-spacing: .16em; line-height: 1.3;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.mitad--der .ident__fuera { margin-left: auto; }

@@ -14,7 +14,7 @@
    Por eso aquí lo importante no son los datos sino el ciclo: entrar, durar lo
    que tenga que durar, salir, y quedarse escondido. */
 
-import { esMinimo, etiquetaRonda, serieDeMapas } from '../../comun/partida.js';
+import { coloresDeBando, esMinimo, etiquetaRonda, serieDeMapas } from '../../comun/partida.js';
 import { abreFuente } from '../../comun/fuente.js';
 
 /** Duración de las animaciones del paquete de diseño. */
@@ -102,15 +102,20 @@ export function cartel(selector = '.escenario') {
  * El diseño lo lee de `--c` y `--cl` en el estilo en línea, así que quien
  * emite decide: el color del equipo que pide el tiempo muerto, gris en la
  * pausa técnica, verde fijo en la ronda ganada.
+ *
+ * `bando` es el del equipo AHORA (`attack`/`defense`): el color de un equipo
+ * sigue a su bando, no a su lado de pantalla (ver `coloresDeBando`). Sin él,
+ * por lado, como antes.
  */
-export function tinta(nodo, lado) {
+export function tinta(nodo, lado, bando) {
   if (lado === null) {
     nodo.style.setProperty('--c', '#6a6f7a');
     nodo.style.setProperty('--cl', '#9aa0ab');
     return;
   }
-  nodo.style.setProperty('--c', lado === 0 ? 'var(--atk)' : 'var(--def)');
-  nodo.style.setProperty('--cl', lado === 0 ? 'var(--atk-light)' : 'var(--def-light)');
+  const color = coloresDeBando(bando, lado);
+  nodo.style.setProperty('--c', color.c);
+  nodo.style.setProperty('--cl', color.cl);
 }
 
 /** Pone el mismo logo en todas las capas del relieve, o las apaga. */
@@ -181,6 +186,7 @@ export function barra() {
       if (logo !== null) {
         logo.style.backgroundImage = team.logoUrl === '' ? '' : `url(${team.logoUrl})`;
       }
+      caja.style.setProperty('--c', coloresDeBando(team.side, i).c);
       const tri = caja.querySelector('.equipo__tricode');
       if (tri !== null) tri.textContent = team.shortName;
       const tanto = caja.querySelector('.equipo__tanto');
@@ -202,7 +208,7 @@ export function barra() {
       /** @type {HTMLElement | null} */
       const franja = document.querySelector(i === 0 ? '.serie--izq' : '.serie--der');
       if (franja === null) return;
-      franja.style.setProperty('--cl', i === 0 ? 'var(--atk-light)' : 'var(--def-light)');
+      franja.style.setProperty('--cl', coloresDeBando(match.teams?.[i]?.side, i).cl);
       const estados = mapas.estados[i] ?? [];
       const cuantos = mapas.cuantos <= 1 ? 0 : estados.length;
 
