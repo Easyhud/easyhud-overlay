@@ -2,7 +2,7 @@
    ======================================================
 
    Tiene la forma exacta de `combate/js/datos.js` —un `suscribe` y un estado—
-   pero en vez de hablar con ValoSpectra espera a que alguien le dé una escena.
+   pero en vez de hablar con el servidor espera a que alguien le dé una escena.
    La página del banco lo pone en su sitio con un mapa de importación, así que
    `combate/js/combate.js` se carga SIN TOCAR NI UNA LÍNEA y no se entera de
    que detrás no hay servidor.
