@@ -2,7 +2,7 @@
    =========================================================
 
    Del otro lado del puente, `combate/js/datos.js` ya ha hecho su trabajo: ha
-   hablado con ValoSpectra y ha traducido su contrato al vocabulario del
+   hablado con el servidor y ha traducido su contrato al vocabulario del
    diseño. Esto NO vuelve a traducir nada ni añade nada: coge ese mismo estado
    —el que lee la versión DOM, campo por campo— y lo deja escrito como números
    en una zona de memoria.
