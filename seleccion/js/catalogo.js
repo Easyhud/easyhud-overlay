@@ -55,6 +55,7 @@ export const ARMAS = {
   spectre: '462080d1-4035-2937-7c09-27aa2a5c27a7',
   stinger: 'f7e1b454-4ad4-1063-ec0a-159e56b58941',
   vandal: '9c82e19d-4575-0200-1a81-3eacf00cf872',
+  warden: '8db0a1bf-4a50-832a-4566-faaaa6d250ca',
 };
 
 export const PAPELES = {
@@ -144,6 +145,7 @@ export const ARMA_POR_NOMBRE = {
   "Judge": 'judge',
   "Marshal": 'marshal',
   "Melee": 'melee',
+  "Knife": 'melee', // así lo llama el servidor
   "Odin": 'odin',
   "Operator": 'operator',
   "Outlaw": 'outlaw',
@@ -153,4 +155,5 @@ export const ARMA_POR_NOMBRE = {
   "Spectre": 'spectre',
   "Stinger": 'stinger',
   "Vandal": 'vandal',
+  "Warden": 'warden',
 };

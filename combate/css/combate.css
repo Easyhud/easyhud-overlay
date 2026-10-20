@@ -399,38 +399,7 @@
 /* ══ AÑADIDO FUERA DEL PAQUETE DE DISEÑO ═══════════════════════════════════
    Todo lo de arriba salió del fotograma y no se ha tocado. Esto de abajo lo
    escribí yo para dos piezas que el diseño no traía, y está separado a
-   propósito: se puede reescribir entero sin mirar el resto.
-
-   ── el duelo: uno contra uno ───────────────────────────────────────────────
-   Cuando queda un vivo por bando, `js/combate.js` aparta las otras ocho
-   tarjetas y pone `.columna--duelo`. Las dos columnas se acercan al centro y
-   crecen un poco. Nada más: ni fondo, ni oscurecer, ni sombras.
-
-   El movimiento va por TRANSICIÓN, no por fotogramas, porque las tarjetas
-   tienen que poder seguir animando lo suyo —daño, baja, ulti— mientras las
-   columnas se mueven. Y la columna es la que se mueve, no las tarjetas: su
-   `transform` está ocupado por las animaciones del diseño. */
-.columna {
-  transition:
-    left 520ms var(--ease),
-    right 520ms var(--ease),
-    bottom 520ms var(--ease),
-    scale 520ms var(--ease);
-  transform-origin: bottom center;
-}
-/*
- * 400 = el ancho de la tarjeta (318) más la mitad del hueco del medio.
- *
- * El hueco (164 px) es a propósito: pegadas se leen como un solo bloque y se
- * pierde justo lo que hay que ver, que son dos. Y queda libre el centro, que
- * es donde el juego pone lo suyo.
- */
-.columna--izq.columna--duelo { left: calc(50% - 400px); }
-.columna--der.columna--duelo { right: calc(50% - 400px); }
-.columna--duelo {
-  bottom: 96px;
-  scale: 1.08;
-}
+   propósito: se puede reescribir entero sin mirar el resto. */
 
 /* ── el mapa que se está jugando ───────────────────────────────────────────
    Los marcadores de serie tenían dos estados —ganado y vacío— y ahora hay un
@@ -454,25 +423,69 @@
 }
 
 /* ── Cámara del jugador observado (VDO.Ninja) ──────────────────────────────
-   Un visor 16:9 posicionado sobre el lienzo de 1920×1080. La posición es un
-   punto de partida: muévelo a donde encaje con tu escena de OBS. */
+   Visor 16:9 abajo a la izquierda del centro, justo encima del HUD del jugador
+   (lienzo de 1920×1080). Debajo lleva la barra con el nombre y el K/D/A, con el
+   filete del color del bando a la izquierda. */
 .camara {
   position: absolute;
-  left: 800px;
-  top: 118px;
-  width: 320px;
-  height: 180px;
+  left: 477px;
+  top: 753px;
+  width: 311px;
+  height: 175px;
   z-index: 40;
   overflow: hidden;
   background: #000;
-  border: 2px solid rgba(255, 255, 255, 0.14);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
+  --lado: var(--def); /* sin bando: rojo (atacante) */
 }
+/* Fuera de combate se oculta a la vista pero sigue conectada (sin display:none). */
+/* Sin animación: aparece y desaparece de golpe. */
+.camara--oculta { visibility: hidden; opacity: 0; pointer-events: none; }
+.camara[data-bando="attack"] { --lado: var(--def); } /* atacante: rojo */
+.camara[data-bando="defense"] { --lado: var(--atk); } /* defensor: verde */
 .camara__video {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   display: block;
   border: 0;
+  /* Todos pintados y apilados (uno tapa a otro): un visor invisible (opacity 0, display:none) se
+     pausa y tarda segundos en volver. Solo cambia cuál va encima. */
+  pointer-events: none;
+}
+.camara__video--activo { z-index: 1; background: #000; }
+.camara__pie {
+  position: absolute;
+  z-index: 2; /* por encima de los visores (el activo lleva z-index 1) */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px 0 14px;
+  background: linear-gradient(90deg, rgb(8 8 10 / 88%), rgb(8 8 10 / 55%));
+  border-left: 5px solid var(--lado);
+  color: #fff;
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+}
+.camara__nombre {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.camara__kda {
+  flex: 0 0 auto;
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+}
+/* El primer número (bajas) lleva el subrayado amarillo de la emisión. */
+.camara__kda b {
+  font-weight: 700;
+  box-shadow: inset 0 -3px 0 #f5d142;
 }
 
 /* ── el color sigue al bando, no al lado ────────────────────────────────────
@@ -480,8 +493,8 @@
    defensa, fijo, y en la segunda mitad eso es al revés. `js/combate.js` pone
    `data-bando` en cada panel; aquí solo se repiten los fondos del diseño con
    el color que toca. Sin `data-bando` (fotograma suelto) queda como estaba. */
-.panel-equipo[data-bando="attack"] { --lado: var(--atk); }
-.panel-equipo[data-bando="defense"] { --lado: var(--def); }
+.panel-equipo[data-bando="attack"] { --lado: var(--def); } /* atacante: rojo */
+.panel-equipo[data-bando="defense"] { --lado: var(--atk); } /* defensor: verde */
 .panel-equipo--izq[data-bando] {
   background:
     linear-gradient(90deg, #1b1e25 45%, color-mix(in srgb, var(--lado) 26%, #1b1e25) 100%),

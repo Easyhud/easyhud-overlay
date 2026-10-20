@@ -83,18 +83,15 @@
   <div class="columna columna--der" id="col-der"></div>
 
   <!-- ══ Cámara del jugador observado (VDO.Ninja) ══
-       Un solo visor: se le cambia la fuente al jugador que el observador tenga
-       delante. Oculto salvo que las cámaras estén activas, ese jugador esté
+       Un visor por jugador que emite, todos conectados; se ve el del jugador que el
+       observador tenga delante. Oculto salvo que las cámaras estén activas, ese jugador esté
        publicando y estemos en combate. -->
   <div class="camara" id="camara" hidden>
-    <iframe
-      class="camara__video"
-      id="camara-video"
-      title="Cámara del jugador"
-      allow="camera; microphone; autoplay; fullscreen"
-      frameborder="0"
-      scrolling="no"
-    ></iframe>
+    <!-- Los visores (un iframe por jugador que emite) los crea combate.js aquí dentro. -->
+    <div class="camara__pie">
+      <span class="camara__nombre" id="camara-nombre"></span>
+      <span class="camara__kda" id="camara-kda"></span>
+    </div>
   </div>
 
 </div>

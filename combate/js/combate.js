@@ -34,6 +34,18 @@ import { iconoAgente, iconoArma, iconoHabilidad, iconoUltimate, iconoRango, CRED
 import { recorte, tramos } from './poligono.js';
 import { coloresDeBando } from '../../comun/partida.js';
 
+/* Los visores de cámara (ver `sincronizaVisores`): se declaran arriba porque el primer estado puede llegar
+   antes de que el módulo termine de evaluarse. */
+const MAX_VISORES = 10;
+/* Cuánto dura la cámara tras acabar la ronda antes de ocultarse. Medido en las grabaciones: entre el
+   fin de ronda y la fase de compra pasan 7,0 s siempre; se oculta unos 0,4 s antes de que entre. */
+const DESVANECE_FIN_RONDA_MS = 6600;
+let faseCamara = '';
+let relojFinRonda = null;
+let finRondaYaVisto = false;
+let ultimoEstadoCamara = null;
+const visores = new Map(); // «Nombre#TAG» → iframe
+
 const ESCUDOS = { heavy: 50, light: 25, regen: 25, none: 0 };
 
 /* Modo OPERADOR: cuando el overlay se carga con `?operador=1` (la vista del
@@ -90,7 +102,24 @@ function pintaMarcador(e) {
     const bando = coloresDeBando(equipo.bando, i).ataca ? 'attack' : 'defense';
     if (panel && panel.dataset.bando !== bando) panel.dataset.bando = bando;
     fondo($('logo-' + suf), equipo.logo);
-    texto($('ini-' + suf), (equipo.tricode || '?').slice(0, 1));
+    /* La letra de reserva solo asoma si NO hay logo (o no carga): antes se pintaba siempre y se veía
+       a través de las zonas transparentes del logo. */
+    const letra = (equipo.tricode || '?').slice(0, 1);
+    const claveLogo = `${equipo.logo ?? ''}|${letra}`;
+    const caja = $('ini-' + suf);
+    if (caja !== null && caja.dataset.clave !== claveLogo) {
+      caja.dataset.clave = claveLogo;
+      if (!equipo.logo) {
+        texto(caja, letra);
+      } else {
+        texto(caja, '');
+        const prueba = new Image();
+        prueba.onerror = () => {
+          if (caja.dataset.clave === claveLogo) texto(caja, letra);
+        };
+        prueba.src = equipo.logo;
+      }
+    }
     texto($('tri-' + suf), equipo.tricode ?? '');
     texto($('tanto-' + suf), equipo.tantos ?? 0);
   });
@@ -374,9 +403,11 @@ function actualizaVida(n, p) {
   if (!p.vivo) {
     texto(n.vidaNum, 0);
   } else if (conDato) {
-    texto(n.vidaNum, p.vida);
+    // La vida se limita a 0-100 por si el cliente manda un valor fuera de rango.
+    const vida = Math.max(0, Math.min(100, p.vida));
+    texto(n.vidaNum, vida);
     // La anchura por estilo es lo que la transición del CSS interpola.
-    const ancho = `${p.vida}%`;
+    const ancho = `${vida}%`;
     if (n.relleno.style.width !== ancho) n.relleno.style.width = ancho;
   }
 }
@@ -408,7 +439,7 @@ function actualizaPie(n, p) {
     [...h.cargas.children].forEach((rombo, q) => rombo.classList.toggle('on', q < dato.tiene));
   });
 
-  texto(n.credNum, p.credito.toLocaleString('es-ES'));
+  texto(n.credNum, p.credito === null ? '—' : miles(p.credito));
   fuente(n.arma, p.vivo ? iconoArma(p.arma) : '');
 }
 
@@ -461,6 +492,9 @@ function animaCambios(n, p, clave) {
 
 /** Los nodos de cada tarjeta, por columna. */
 const columnas = [[], []];
+
+/** Créditos con punto de miles SIEMPRE (3.900, 10.500): `toLocaleString('es-ES')` no agrupa las cifras de cuatro dígitos. */
+const miles = (n) => String(Math.trunc(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
 function pintaColumna(lado, jugadores, bandoEquipo) {
   const columna = $(lado === 0 ? 'col-izq' : 'col-der');
@@ -519,92 +553,6 @@ function pintaColumna(lado, jugadores, bandoEquipo) {
 }
 
 
-/* ── El duelo: uno contra uno ────────────────────────────────────────────── */
-
-/*
- * Cuando queda exactamente UN vivo por bando, las otras ocho tarjetas se van
- * y las dos supervivientes se juntan en el centro.
- *
- * Es el momento más visto de una ronda y el que peor cuenta la lista normal:
- * ocho tarjetas apagadas y dos encendidas en las esquinas opuestas de la
- * pantalla, que es donde el ojo no está. El dato —quién está vivo— lo tenemos
- * desde el primer día.
- *
- * Tres cosas que decidí aquí y se pueden cambiar sin tocar esto:
- *
- * - **Solo en combate.** En la compra están los diez vivos, y al acabar la
- *   ronda la lista vuelve entera aunque siga habiendo uno y uno.
- * - **Se reusa la animación de salida del diseño** (`es-sale`), no una nueva.
- * - **Las cámaras no entran.** La referencia enseña el vídeo de los dos
- *   duelistas; aquí no, porque el vídeo lo compone el realizador en OBS y el
- *   hueco está sin diseñar. Queda anotado en `PARIDAD-PANTALLAS.md`.
- *
- * La posición y el tamaño los pone el CSS con `.columna--duelo`. Lo de aquí
- * es solo decir CUÁNDO.
- */
-
-/** Lo que tarda una tarjeta en irse, con el desfase de la última incluido. */
-const MS_FUERA = 900;
-
-/** Un número por tarjeta, para que una salida vieja no apague una entrada nueva. */
-const turnos = new WeakMap();
-
-/**
- * Saca una tarjeta de la composición, o la devuelve.
- *
- * El nodo NO se destruye ni se vuelve a crear —es la regla de esta pantalla—
- * pero sí se esconde con `display:none` al acabar de irse, y eso hace falta:
- * la columna se apoya en el suelo, así que una tarjeta invisible que siga
- * ocupando su alto mantendría a la superviviente flotando donde estaba.
- */
-function aparta(tarjeta, fuera) {
-  const turno = (turnos.get(tarjeta) ?? 0) + 1;
-  turnos.set(tarjeta, turno);
-
-  if (fuera) {
-    if (tarjeta.style.display === 'none') return;
-    tarjeta.classList.remove('es-entra');
-    tarjeta.classList.add('es-sale');
-    setTimeout(() => {
-      if (turnos.get(tarjeta) !== turno) return;
-      tarjeta.style.display = 'none';
-    }, MS_FUERA);
-    return;
-  }
-
-  if (tarjeta.style.display !== 'none' && !tarjeta.classList.contains('es-sale')) return;
-  tarjeta.style.display = '';
-  tarjeta.classList.remove('es-sale');
-  void tarjeta.offsetWidth;
-  tarjeta.classList.add('es-entra');
-  setTimeout(() => {
-    if (turnos.get(tarjeta) !== turno) return;
-    tarjeta.classList.remove('es-entra');
-  }, MS_FUERA);
-}
-
-const cuentaVivos = (jugadores) => jugadores.reduce((n, p) => n + (p.vivo ? 1 : 0), 0);
-
-function pintaDuelo(e) {
-  const hay = e.fase === 'combat'
-    && cuentaVivos(e.jugadores[0]) === 1
-    && cuentaVivos(e.jugadores[1]) === 1;
-
-  /*
-   * Se recorren las diez SIEMPRE, no solo cuando el duelo cambia: una
-   * tarjeta creada mientras el duelo ya estaba puesto nacería en la lista
-   * normal, y hay que apartarla también.
-   */
-  [0, 1].forEach((lado) => {
-    const columna = $(lado === 0 ? 'col-izq' : 'col-der');
-    columna.classList.toggle('columna--duelo', hay);
-    columnas[lado].forEach((n, k) => {
-      const sobrevive = e.jugadores[lado][k]?.vivo === true;
-      aparta(n.tarjeta, hay && !sobrevive);
-    });
-  });
-}
-
 /* ── Pintado ─────────────────────────────────────────────────────────────── */
 
 let firma = '';
@@ -634,7 +582,6 @@ suscribe((e) => {
   pintaMinimo(e.minimo === true);
   pintaColumna(0, e.jugadores[0], e.equipos[0]?.bando);
   pintaColumna(1, e.jugadores[1], e.equipos[1]?.bando);
-  pintaDuelo(e);
   pintaCamara(e);
 });
 
@@ -700,40 +647,130 @@ function pintaTorneo(e) {
    El ID de stream es determinístico: `Nombre_H_TAG` (espacios → «_»), el mismo
    que el exe del jugador usa para publicar. Solo se cambia la fuente del iframe
    cuando cambia la URL —recargarlo cortaría el WebRTC—. */
-function urlCamara(sala, nick, tag) {
-  const idVista = `${String(nick).replaceAll(' ', '_')}_H_${tag}`;
+function urlCamara(cam, nick, tag) {
+  /* Misma regla que aplica la web de vídeo al publicar: lo no alfanumérico, a «_». */
+  const idVista = `${nick}_H_${tag}`.replace(/\W+/g, '_');
+  /* Solo imagen: sin audio ni de lejos (`noaudio` + `mute`). Y poco caudal: la caja es de 311×175
+     px, no hace falta más, y así se pueden tener conectadas varias a la vez. */
   const params =
-    `room=${encodeURIComponent(sala)}&view=${encodeURIComponent(idVista)}` +
-    '&scene=0&cleanoutput&transparent&vb=5000&waitmessage=&disablehotkeys' +
-    '&codec=h265,av1,h264,vp8';
-  return `https://vdo.ninja/?${params}`;
+    `room=${encodeURIComponent(cam.sala)}&view=${encodeURIComponent(idVista)}` +
+    '&scene=0&cleanoutput&transparent&vb=1800&waitmessage=&disablehotkeys&noaudio&mute' +
+    '&codec=h265,av1,h264,vp8' +
+    (cam.password ? `&password=${encodeURIComponent(cam.password)}` : '') +
+    (cam.params ? `&${cam.params}` : '');
+  return `${cam.base || 'https://vdo.ninja'}/?${params}`;
 }
 
-let camaraUrlActual = '';
+/* Un visor por cada jugador que emite, TODOS conectados a la vez y solo uno a la vista. Cambiar la
+   fuente de un único visor obligaba a reconectar el WebRTC y la caja salía negra 2–3 s al cambiar
+   de jugador; así el cambio es instantáneo, porque el siguiente ya está conectado. */
+
+function sincronizaVisores(caja, cam, quieren) {
+  const ahora = Date.now();
+  for (const [nombre, marco] of visores) {
+    if (quieren.has(nombre)) {
+      delete marco.dataset.ausente;
+      continue;
+    }
+    /* Un parpadeo de la lista de emisores no debe tirar su conexión: se quita tras unos segundos ausente. */
+    const desde = Number(marco.dataset.ausente ?? (marco.dataset.ausente = String(ahora)));
+    if (ahora - desde > 15000) {
+      marco.remove();
+      visores.delete(nombre);
+    }
+  }
+  for (const nombre of quieren) {
+    if (visores.has(nombre)) continue;
+    const i = nombre.lastIndexOf('#');
+    if (i <= 0) continue;
+    const marco = document.createElement('iframe');
+    marco.className = 'camara__video';
+    marco.title = `Cámara de ${nombre}`;
+    marco.setAttribute('allow', 'autoplay; fullscreen');
+    marco.setAttribute('frameborder', '0');
+    marco.setAttribute('scrolling', 'no');
+    marco.src = urlCamara(cam, nombre.slice(0, i), nombre.slice(i + 1));
+    marco.dataset.url = marco.src;
+    marco.dataset.desde = String(Date.now());
+    caja.insertBefore(marco, caja.querySelector('.camara__pie'));
+    visores.set(nombre, marco);
+  }
+}
+
+/* Un visor que se conectó ANTES de que el jugador terminara de publicar se queda sin vídeo y no
+   reintenta (por eso a veces una cámara no salía hasta la ronda siguiente). Se reconectan, de uno
+   en uno y SOLO los que no se están viendo, los visores que llevan un rato vivos: así, cuando toca
+   mostrarlos, llevan poco conectados y lo normal es que ya tengan imagen. */
+const REFRESCO_VISOR_MS = 8000;
+const EDAD_MINIMA_VISOR_MS = 20000;
+let turnoRefresco = 0;
+setInterval(() => {
+  const candidatos = [...visores.values()].filter(
+    (m) => !m.classList.contains('camara__video--activo') && Date.now() - Number(m.dataset.desde) > EDAD_MINIMA_VISOR_MS,
+  );
+  if (candidatos.length === 0) return;
+  const marco = candidatos[turnoRefresco++ % candidatos.length];
+  marco.dataset.desde = String(Date.now());
+  marco.src = `${marco.dataset.url}&r=${Date.now()}`;
+}, REFRESCO_VISOR_MS);
+
 function pintaCamara(e) {
   const caja = $('camara');
-  const video = $('camara-video');
-  if (caja === null || video === null) return;
+  if (caja === null) return;
 
-  const cam = e.camaras ?? { activas: false, sala: '', publicando: [] };
+  const cam = e.camaras ?? { activas: false, sala: '', publicando: [], base: '', params: '', password: '' };
   const obs = [...(e.jugadores[0] ?? []), ...(e.jugadores[1] ?? [])].find((p) => p.observado);
   const fullName = obs ? `${obs.nick}#${obs.tag}` : '';
   const publicando = obs && cam.publicando.includes(fullName);
-  const mostrar = cam.activas && cam.sala && obs && publicando && e.fase === 'combat';
 
-  if (!mostrar) {
-    if (caja.hasAttribute('hidden')) return;
-    caja.setAttribute('hidden', '');
-    /* Se corta la fuente al ocultar: un iframe oculto seguiría trayendo vídeo. */
-    video.removeAttribute('src');
-    camaraUrlActual = '';
+  /* Conectados: todos los que emiten, mientras las cámaras estén activas. */
+  const quieren = cam.activas && cam.sala ? new Set(cam.publicando.slice(0, MAX_VISORES)) : new Set();
+  sincronizaVisores(caja, cam, quieren);
+
+  /* Visible: hay un jugador observado que está emitiendo, y estamos en combate o fin de ronda. La conexión se
+     MANTIENE entre fases (solo se oculta a la vista) para no reconectar cada ronda. */
+  const conectada = quieren.size > 0 && obs && publicando;
+  /* En combate y también al acabar la ronda (los avisos de fin de ronda no la tapan); solo se oculta
+     donde algo la cubre: compra, selección de agentes, fin de mapa. */
+  /* Al acabar la ronda se queda un momento y se oculta ANTES de que entre la compra: si se
+     quitara justo con ella, la caja y el panel de compra coincidirían en pantalla. */
+  if (e.fase !== faseCamara) {
+    faseCamara = e.fase;
+    clearTimeout(relojFinRonda);
+    finRondaYaVisto = false;
+    if (e.fase === 'roundEnd') {
+      relojFinRonda = setTimeout(() => {
+        finRondaYaVisto = true;
+        pintaCamara(ultimoEstadoCamara);
+      }, DESVANECE_FIN_RONDA_MS);
+    }
+  }
+  ultimoEstadoCamara = e;
+  const visible = conectada && (e.fase === 'combat' || (e.fase === 'roundEnd' && !finRondaYaVisto));
+
+  if (!conectada) {
+    /* Sin nadie que mostrar: se oculta a la vista, pero con visores vivos NO se quita de la página
+       (un display:none los dejaría sin pintar y el siguiente tardaría en salir). */
+    if (quieren.size > 0) {
+      caja.removeAttribute('hidden');
+      caja.classList.add('camara--oculta');
+    } else {
+      caja.setAttribute('hidden', '');
+    }
     return;
   }
-
-  const url = urlCamara(cam.sala, obs.nick, obs.tag);
-  if (url !== camaraUrlActual) {
-    video.setAttribute('src', url);
-    camaraUrlActual = url;
-  }
+  for (const [nombre, marco] of visores) marco.classList.toggle('camara__video--activo', nombre === fullName);
   caja.removeAttribute('hidden');
+  caja.classList.toggle('camara--oculta', !visible);
+
+  /* La barra de abajo: nombre, K/D/A y el color del bando del jugador observado. */
+  const equipo = (e.jugadores[0] ?? []).includes(obs) ? 0 : 1;
+  caja.dataset.bando = coloresDeBando(e.equipos[equipo]?.bando, equipo).ataca ? 'attack' : 'defense';
+  const nombre = $('camara-nombre');
+  if (nombre !== null && nombre.textContent !== obs.nick) nombre.textContent = obs.nick;
+  const [k = '0', d = '0', a = '0'] = String(obs.kda ?? '0/0/0').split('/');
+  const kda = $('camara-kda');
+  const n = (v) => Number(v) || 0; // son cifras: nada que escapar
+  const html = `<b>${n(k)}</b> / ${n(d)} / ${n(a)}`;
+  if (kda !== null && kda.innerHTML !== html) kda.innerHTML = html;
 }

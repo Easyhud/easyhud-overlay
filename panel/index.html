@@ -373,11 +373,14 @@
 
               <button class="boton" type="button" id="cam-generar" style="width: 100%">Create lobby</button>
 
-              <!-- CALL PLAYERS (mockup): invita a los jugadores a la sala. Hoy el
-                   servidor no expone ninguna acción para esto (los exes de jugador
-                   se unen con el código), así que queda PRESENTE pero inerte. No se
-                   inventa backend: ver el TODO del handler en panel.js. -->
+              <!-- CALL PLAYERS (BETA): avisa por puuid a los clientes de jugador
+                   de los dos equipos del match en antena. Ver el handler real en
+                   panel.js y el puente window.__easyLlamaJugadores en shell.js. -->
               <button class="boton boton--secundario" type="button" id="cam-llamar" style="width: 100%; margin-top: 12px">Call players</button>
+              <p class="apunte" id="llamada-estado" style="margin-top: 8px" hidden></p>
+              <label class="apunte" style="display: flex; gap: 8px; align-items: center; margin-top: 10px; cursor: pointer" title="Moves each player who joins the lobby to their team's side (Attackers / Defenders) using the Riot Client. You must be the lobby host.">
+                <input type="checkbox" id="auto-colocar" checked /> Auto-place players on their team
+              </label>
 
               <!-- Cámaras: bloque secundario, aparte de la sala. La sala funciona
                    sin ellas. -->
@@ -1158,5 +1161,14 @@
          mismo fichero, misma versión, y así el panel tampoco pide nada por red
          a un tercero. -->
     <script type="module" src="js/shell.js"></script>
+    <!-- Pausa detectada por pantalla (el juego en gris con el timer quieto): aviso con los equipos para asignarla. -->
+    <div id="pausa-aviso" class="pausa-aviso" role="alert" hidden>
+      <div class="pausa-aviso__texto"><strong>PAUSA DETECTADA</strong><span id="pausa-aviso-sub">¿Quién la pidió?</span></div>
+      <div class="pausa-aviso__botones">
+        <button type="button" id="pausa-izq" class="pausa-aviso__b"></button>
+        <button type="button" id="pausa-der" class="pausa-aviso__b"></button>
+        <button type="button" id="pausa-tec" class="pausa-aviso__b pausa-aviso__b--sec">Técnica</button>
+      </div>
+    </div>
   </body>
 </html>

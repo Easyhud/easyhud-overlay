@@ -52,6 +52,8 @@
     visibility: hidden;
   }
   .capa--puesta { visibility: visible; }
+  /* Capas que se superponen a la pantalla de turno (pausa, aviso, ceremonia): siempre por encima de combate/compra. */
+  .capa--encima { z-index: 10; }
 
   /* Un aviso en la esquina cuando no hay nada que enseñar, solo con dev=1. */
   #dev {

@@ -15,6 +15,7 @@
 import { PAPEL_DE_AGENTE, AGENTE_POR_INTERNO, AGENTES } from './catalogo.js';
 import { avisa } from './aviso-dev.js';
 import { abreFuente, GRUPO } from '../../comun/fuente.js';
+import { ponFondoMapa } from './fondo-mapa.js';
 
 /** Por si el servidor manda un agente que el catálogo no conoce todavía. */
 const RUEDA = Object.keys(AGENTES).sort();
@@ -92,13 +93,10 @@ function construye(match) {
       bando: team.side === 'attack' ? 'ATK' : 'DEF',
       logo: absoluta(team.logoUrl),
       /*
-       * Está eligiendo UNO por equipo, no todos los que faltan.
-       *
-       * El juego enseña el agente señalado antes de confirmarlo, así que
-       * tener agente no basta para distinguir a quien está decidiendo: si se
-       * usara eso, en cuanto el roster trae los diez agentes aparecerían
-       * cuatro o cinco "eligiendo" a la vez y la pantalla perdería el sentido.
-       * El que decide es el primero de la fila que aún no ha bloqueado.
+       * Eligiendo = no ha bloqueado todavía. El juego enseña a cada uno el agente que tiene SEÑALADO antes de
+       * confirmarlo, y es ese el que se pinta (antes la pantalla tenía una rueda de adorno que cambiaba de
+       * agente al azar y no decía nada cierto). Si aún no señala ninguno, solo el primero de la fila que falta
+       * sale como «eligiendo», con el hueco vacío.
        */
       jugadores: team.players.map((p, k) => {
         const clave = (AGENTE_POR_INTERNO[p.agentInternal] ?? p.agentName ?? '').toLowerCase();
@@ -106,10 +104,11 @@ function construye(match) {
         return {
           nick: p.identity?.name ?? '',
           agente: clave,
-          nombre: p.agentName ?? '',
+          // `agentName` llega vacío para quien ya bloqueó: se escribe el nombre del agente a partir de su clave.
+          nombre: p.agentName || (clave === 'kayo' ? 'KAY/O' : clave.charAt(0).toUpperCase() + clave.slice(1)),
           papel: PAPEL_DE_AGENTE[clave] ?? '',
           elegido: p.locked === true,
-          eligiendo: p.locked !== true && k === turno,
+          eligiendo: p.locked !== true && (clave !== '' || k === turno),
         };
       }),
     })),
@@ -161,10 +160,12 @@ else avisa(`Conectando al grupo ${GRUPO}…`);
 abreFuente({
   onMatch: (match) => {
     if (match.phase !== 'agentSelect') {
+      ponFondoMapa('', false);
       sale();
       return;
     }
     avisa('');
+    ponFondoMapa(match.map, true);
 
     const datos = construye(match);
     const ahora = JSON.stringify(datos);

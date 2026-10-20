@@ -11,6 +11,9 @@
 window.pintaCompra = (D) => {
   const { iconoAgente, iconoArma, iconoHabilidad, iconoUltimate, CREDITOS, recortePoligono, tramos } = window.HUD;
 
+  /** Créditos con punto de miles SIEMPRE (3.900, 10.500): `toLocaleString('es-ES')` no agrupa las cifras de cuatro dígitos. */
+  const miles = (n) => String(Math.trunc(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
   const el = (t, c) => { const n = document.createElement(t); if (c) n.className = c; return n; };
   const fondo = u => 'background-image:url(' + u + ')';
   const CAPAS = 26;   // capas del logo extruido
@@ -36,9 +39,10 @@ window.pintaCompra = (D) => {
   const colorDe = (i) => {
     const bando = D.lados?.[i];
     const ataca = bando === 'attack' ? true : bando === 'defense' ? false : i === 0;
+    // Atacante ROJO, defensor VERDE (el verde suave de compra es el del defensor).
     return ataca
-      ? { c: 'var(--atk)', cl: 'var(--atk-claro)', luzSerie: 'var(--atk-light)' }
-      : { c: 'var(--def)', cl: 'var(--def-light)', luzSerie: 'var(--def-light)' };
+      ? { c: 'var(--def)', cl: 'var(--def-light)', luzSerie: 'var(--def-light)' }
+      : { c: 'var(--atk)', cl: 'var(--atk-claro)', luzSerie: 'var(--atk-light)' };
   };
 
   /* ── Media fila ─────────────────────────────────────────────────────────── */
@@ -95,9 +99,9 @@ window.pintaCompra = (D) => {
     m.innerHTML =
       '<div class="mitad__filo"></div>'
       + '<div class="dinero">'
-        + '<span class="dinero__gasto">−' + p.gasto.toLocaleString('es-ES') + '</span>'
+        + '<span class="dinero__gasto">' + (p.credito === null ? '' : '−' + miles(p.gasto)) + '</span>'
         + '<i class="dinero__icono" style="' + fondo(CREDITOS) + '"></i>'
-        + '<span class="dinero__saldo">' + p.credito.toLocaleString('es-ES') + '</span>'
+        + '<span class="dinero__saldo">' + (p.credito === null ? '—' : miles(p.credito)) + '</span>'
       + '</div>'
       + '<div class="corte"></div>';
     m.append(hab);
@@ -146,7 +150,7 @@ window.pintaCompra = (D) => {
   function banco(i) {
     const der = i === 1;
     const eq = D.equipos[i];
-    const total = D.jugadores[i].reduce((a, p) => a + p.credito, 0);
+    const total = D.jugadores[i].reduce((a, p) => a + (p.credito ?? 0), 0);
     const b = el('div', 'banco' + (der ? ' banco--der' : ''));
     b.style.setProperty('--c', colorDe(i).c);
     b.append(extruido(eq.logo));
@@ -156,7 +160,7 @@ window.pintaCompra = (D) => {
         + '<div class="banco__fila">'
           + '<span class="banco__etq">valor neto</span>'
           + '<i class="banco__icono" style="' + fondo(CREDITOS) + '"></i>'
-          + '<span class="banco__val">' + total.toLocaleString('es-ES') + '</span>'
+          + '<span class="banco__val">' + miles(total) + '</span>'
         + '</div>'
       + '</div>');
     return b;

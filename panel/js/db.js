@@ -10,7 +10,7 @@
    El Start reusa `iniciaConfig` de panel.js (parchea al servidor), con el mapeo
    local→servidor del plan (equipos {name,tricode,url}, seriesInfo, tournamentInfo). */
 
-import { iniciaConfig } from './panel.js';
+import { iniciaConfig, reiniciaEstadoJuego } from './panel.js';
 import { cuenta, tokenSesion, API_CUENTAS, seguro, ponEmision, sal } from './sesion.js';
 import { calientaAssets, mapaSplash } from './valassets.js';
 import { animaConteo } from './contador.js';
@@ -67,6 +67,39 @@ const escalona = (c) => {
 const snap = (t) => (t ? { name: t.name || '', tricode: t.tricode || '', logoUrl: t.logoUrl || '' } : { name: '', tricode: '', logoUrl: '' });
 const equipoPorId = (id) => teams.find((t) => t.id === id) || null;
 const torneoPorId = (id) => tournaments.find((t) => t.id === id) || null;
+
+/* Puuids llamables del match EN ANTENA (BETA, "Call players"): se llena en
+   `arrancaMatch` con los jugadores de los dos equipos registrados (los que
+   tengan puuid resuelto -HenrikDev pudo no encontrar a alguno todavía-). Vive
+   aparte de `M` (panel.js): eso es el estado EN VIVO que manda el servidor,
+   esto es la config local de ANTES de que la partida exista. */
+/* Se calcula AL MOMENTO desde el match en antena y los equipos de ahora: antes se
+   guardaba una vez al pulsar Start, y si se reiniciaba la app o se añadía un
+   jugador al equipo después, «Call players» se quedaba sin nadie a quien llamar. */
+function equiposDelVivo() {
+  const m = matches.find((x) => estadoReal(x) === 'live');
+  if (!m) return null;
+  return [equipoPorId(m.teamAId) || m.teamASnap || {}, equipoPorId(m.teamBId) || m.teamBSnap || {}];
+}
+/* Los dos equipos del match en antena con sus jugadores (puuids), para colocarlos en su lado de la sala de Riot. */
+export function equiposConJugadoresDelVivo() {
+  const e = equiposDelVivo();
+  return e === null ? [] : e.map((eq) => ({ name: eq.name || '', tricode: eq.tricode || '', puuids: puuidsDe(eq) }));
+}
+export function puuidsDelMatchEnVivo() {
+  const e = equiposDelVivo();
+  return e === null ? [] : [...new Set([...puuidsDe(e[0]), ...puuidsDe(e[1])])];
+}
+
+/* Nombre/logo de los dos equipos del match EN ANTENA, para el lobby (BETA)
+   -antes de que exista M (nada del servidor todavía), pintaGod solo tenía
+   los roles genéricos "Attackers"/"Defenders" porque no llegaba a esto: la
+   base de equipos vive aquí, en db.js, no en panel.js. */
+export function equiposDelMatchEnVivo() {
+  const e = equiposDelVivo();
+  if (e === null) return [null, null];
+  return e.map((eq) => (eq.name ? { name: eq.name, logoUrl: eq.logoUrl || '' } : null));
+}
 
 /* ── Color de equipo ────────────────────────────────────────────────────────
    Regla de marca: el color VIENE DEL PARTIDO y solo vive en piezas de equipo
@@ -187,6 +220,27 @@ window.addEventListener('serie-fin', async (e) => {
   await recarga();
 });
 
+/* ── Mapa en vivo ──
+   El panel sabe el mapa real de la partida (M.map, el de la barra superior) y
+   avisa con «mapa-vivo». Se guarda en el match en antena para que su card y el
+   hero enseñen ESE mapa y no uno decorativo derivado del id. */
+let mapaVivo = '';
+async function aplicaMapaVivo() {
+  if (!mapaVivo) return;
+  const m = matches.find((x) => estadoReal(x) === 'live');
+  if (!m || m.mapaActual === mapaVivo) return;
+  m.mapaActual = mapaVivo;
+  await DB().matches.update(m.id, { mapaActual: mapaVivo });
+  pintaMatches();
+  pintaHero();
+}
+window.addEventListener('mapa-vivo', (e) => {
+  const mapa = String(e.detail?.map ?? '');
+  if (!mapa || mapa === mapaVivo) return;
+  mapaVivo = mapa;
+  void aplicaMapaVivo();
+});
+
 /* ── carga ── */
 async function recarga() {
   const [t, m, to] = await Promise.all([
@@ -207,6 +261,7 @@ async function recarga() {
      recarga() corre al iniciar el cliente y después de cada cambio, así que
      esta es también la vía natural para mantenerlo al día. */
   precargaJugadores();
+  void aplicaMapaVivo();
 }
 
 let precargaEnCurso = false;
@@ -504,6 +559,23 @@ function cierra(dlg) { $(dlg)?.close(); }
    form). */
 let jugadoresTeamActual = [];
 
+/* ── Quién tiene la app abierta ──
+   El servidor sabe qué puuids tienen el programa de jugador abierto (latido de
+   presencia). Se le pregunta mientras el diálogo del equipo está abierto, para
+   que el operador compruebe de un vistazo que cada jugador está listo.
+   `null` = no se pudo preguntar (sin mando o sin respuesta): no se afirma nada. */
+let presenciaApp = null; // Set de puuids con la app, o null
+async function actualizaPresencia() {
+  const puuids = jugadoresTeamActual.map((j) => j.puuid).filter(Boolean);
+  if (puuids.length === 0) return;
+  const activos = await window.__easyPresencia?.(puuids);
+  presenciaApp = Array.isArray(activos) ? new Set(activos) : null;
+  pintaJugadoresTeam();
+}
+setInterval(() => {
+  if ($("dlg-team")?.open) void actualizaPresencia();
+}, 5000);
+
 function abreTeam(t) {
   $('dlg-team-tit').textContent = t ? 'Edit team' : 'New team';
   $('team-id').value = t?.id ?? '';
@@ -515,8 +587,10 @@ function abreTeam(t) {
   const msg = $('team-jug-msg');
   if (msg) msg.hidden = true;
   if ($('team-jug-input')) $('team-jug-input').value = '';
+  presenciaApp = null;
   pintaJugadoresTeam();
   abre('dlg-team');
+  void actualizaPresencia();
   /* Jugadores sembrados solo con name/tag (sin puuid/card todavía, ej. datos de
      prueba escritos a mano) se completan solos acá, sin que el operador tenga
      que volver a buscarlos uno por uno. */
@@ -531,14 +605,41 @@ async function guardaTeam(ev) {
     tricode: $('team-tri').value.trim(),
     logoUrl: $('team-logo').value.trim(),
     color: $('team-color').value.trim(), // hex opcional; vacío = color derivado (colorEquipo)
-    players: jugadoresTeamActual,
+    players: jugadoresTeamActual.map(jugadorPlano),
   };
   if (!dato.name) return;
   const id = $('team-id').value;
-  if (id) await DB().teams.update(id, dato);
-  else await DB().teams.create(dato);
+  // El puente IPC devuelve { ok, item?/error? } — nunca tira. Si no se
+  // comprueba `ok`, un fallo de guardado (p.ej. electron-json-storage no
+  // pudiendo escribir el fichero) cierra el diálogo igual que un éxito, sin
+  // avisar a nadie: el operador ve la lista de jugadores "guardada" y no lo
+  // está.
+  let res;
+  try {
+    res = id ? await DB().teams.update(id, dato) : await DB().teams.create(dato);
+  } catch (e) {
+    res = { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+  if (!res?.ok) {
+    const msg = $('team-jug-msg');
+    if (msg) {
+      msg.textContent = `Could not save the team: ${res?.error ?? 'unknown error'}.`;
+      msg.hidden = false;
+    }
+    return;
+  }
   cierra('dlg-team');
   await recarga();
+}
+
+/* «Ready» solo si el servidor confirma que tiene el programa abierto; «No app» si
+   lo confirma ausente o no tiene puuid; nada si no se pudo preguntar. */
+function insigniaApp(j) {
+  if (!j.puuid) return '<span class="prep__noapp" title="No puuid yet">No app</span>';
+  if (presenciaApp === null) return '';
+  return presenciaApp.has(j.puuid)
+    ? '<span class="prep__ready" title="Easy HUD is open on their PC">App open</span>'
+    : '<span class="prep__noapp" title="Easy HUD is not open on their PC">No app</span>';
 }
 
 function pintaJugadoresTeam() {
@@ -554,6 +655,7 @@ function pintaJugadoresTeam() {
             ? `<img class="team-jug-av" src="${esc(j.cardUrl)}" alt="" />`
             : `<span class="team-jug-av team-jug-av--vacia"></span>`) +
         `<span class="team-jug-nom">${esc(j.name)}<span class="team-jug-tag">#${esc(j.tag)}</span></span>` +
+        insigniaApp(j) +
         (j.rango
           ? `<span class="team-jug-rango">${esc(j.rango)}</span>`
           : `<span class="team-jug-rango team-jug-rango--vacio">—</span>`) +
@@ -598,6 +700,28 @@ async function buscaRangoHenrik(jugador) {
 
 /* HenrikDev exige API key en TODA llamada (no solo para subir el rate limit,
    sin key es 401 directo) — se guarda solo local, nunca va al servidor. */
+/* La imagen pequeña de la tarjeta del jugador. HenrikDev devolvía `card` como
+   objeto ({small, large, wide}) y ahora devuelve el ID de la tarjeta (texto): con
+   `card.small` sobre un texto sale la FUNCIÓN String.prototype.small, que no se
+   puede guardar (IPC: «An object could not be cloned») y rompe el <img>. */
+function cardUrlDe(card) {
+  if (typeof card === 'string' && card !== '') return `https://media.valorant-api.com/playercards/${card}/smallart.png`;
+  if (card && typeof card === 'object' && typeof card.small === 'string') return card.small;
+  return '';
+}
+
+/* Un jugador solo con datos planos: lo que va al guardado no puede llevar funciones. */
+function jugadorPlano(j) {
+  return {
+    puuid: typeof j.puuid === 'string' ? j.puuid : '',
+    name: String(j.name ?? ''),
+    tag: String(j.tag ?? ''),
+    cardUrl: typeof j.cardUrl === 'string' ? j.cardUrl : '',
+    rango: typeof j.rango === 'string' ? j.rango : '',
+    rangoIconUrl: typeof j.rangoIconUrl === 'string' ? j.rangoIconUrl : '',
+  };
+}
+
 function henrikKey() {
   try { return localStorage.getItem('easy.henrikKey') || ''; } catch { return ''; }
 }
@@ -662,7 +786,7 @@ async function enriqueceJugador(jugador) {
     const d = (await r.json())?.data;
     if (!d?.puuid) return;
     jugador.puuid = d.puuid;
-    jugador.cardUrl = d.card?.small ?? '';
+    jugador.cardUrl = cardUrlDe(d.card);
     henrikCacheSet(jugador.name, jugador.tag, { puuid: jugador.puuid, cardUrl: jugador.cardUrl });
     pintaJugadoresTeam();
     buscaRangoHenrik(jugador);
@@ -710,7 +834,7 @@ async function buscaJugadorHenrik() {
       puuid: d.puuid,
       name: d.name ?? nombre,
       tag: d.tag ?? tag,
-      cardUrl: d.card?.small ?? '',
+      cardUrl: cardUrlDe(d.card),
       rango: '',
       rangoIconUrl: '',
     };
@@ -719,6 +843,7 @@ async function buscaJugadorHenrik() {
     if (input) input.value = '';
     if (msg) msg.hidden = true;
     pintaJugadoresTeam();
+    void actualizaPresencia();
     /* El rango se resuelve después, sin bloquear el agregado: si la región está
        mal o el jugador no tiene partidas competitivas, el jugador igual queda
        en el equipo, solo sin rango. */
@@ -801,9 +926,13 @@ async function guardaMatch(ev) {
 }
 
 /* ── Start: empuja la config del match a emisión ── */
+const puuidsDe = (equipo) =>
+  (equipo.players ?? []).map((j) => j.puuid).filter((p) => typeof p === 'string' && p.length > 0);
+
 async function arrancaMatch(id) {
   const m = matches.find((x) => x.id === id);
   if (!m) return;
+  window.__easyAsegura?.(); // entre partidas la conexión del observador puede estar cerrada
   const a = equipoPorId(m.teamAId) || m.teamASnap || {};
   const b = equipoPorId(m.teamBId) || m.teamBSnap || {};
   const torneo = torneoPorId(m.tournamentId);
@@ -819,9 +948,11 @@ async function arrancaMatch(id) {
       wonRight: m.score?.wonRight ?? 0,
       mapInfo: m.mapInfo ?? [],
     },
+    /* `puuids`: con ellos el servidor coloca solo a cada equipo en su lado
+       según quién juega de verdad («Switch teams» lo invierte a mano). */
     equipos: [
-      { name: a.name || '', tricode: a.tricode || '', url: a.logoUrl || '' },
-      { name: b.name || '', tricode: b.tricode || '', url: b.logoUrl || '' },
+      { name: a.name || '', tricode: a.tricode || '', url: a.logoUrl || '', puuids: puuidsDe(a) },
+      { name: b.name || '', tricode: b.tricode || '', url: b.logoUrl || '', puuids: puuidsDe(b) },
     ],
   });
   /* Solo un match EN ANTENA a la vez: cualquier otro que estuviera 'live' deja
@@ -841,6 +972,8 @@ async function arrancaMatch(id) {
   }
   await DB().matches.update(id, { estado: 'live' });
   m.estado = 'live';
+  await aplicaMapaVivo();
+  reiniciaEstadoJuego(); // partida nueva: sin restos de la anterior en el overlay
   alIniciar?.(); // cierra el dashboard → vista operativa
 }
 

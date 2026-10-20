@@ -79,6 +79,14 @@ const BANNER_DEMO = 'data:image/svg+xml,' + encodeURIComponent(
 
 /* ── El estado que leen las pantallas ────────────────────────────────────── */
 
+/*
+ * La DEMO (equipos, jugadores, mapas y banner inventados) sólo se enseña con `?demo=1` en la dirección, para maquetar.
+ * En directo el estado inicial es NEUTRO: antes se pintaba un marcador «INF 8 – PRX 9» y diez jugadores falsos hasta
+ * que llegaba el primer mensaje, y esa demo se quedaba de relleno si el servidor mandaba el roster, los mapas o el logo
+ * del torneo vacíos.
+ */
+export const DEMO = new URLSearchParams(location.search).get('demo') === '1';
+
 export const estado = {
   ronda: 1,
   /** Lo que se escribe en el chip: «ronda 7» o «prórroga 2». */
@@ -90,28 +98,31 @@ export const estado = {
   /** Los mapas de la serie en orden: { name, state:'past'|'live'|'future',
       score:[a,b] }. Para la tira de mapas de arriba. En el estado de ejemplo van
       un par jugados y uno en vivo, para ver el diseño sin servidor. */
-  mapasSerie: [
+  mapasSerie: DEMO ? [
     { name: 'Ascent', state: 'past', score: [13, 11], winner: 0, winnerLogo: LOGO_DEMO_A, leftLogo: LOGO_DEMO_A, rightLogo: LOGO_DEMO_B },
     { name: 'Sunset', state: 'past', score: [11, 13], winner: 1, winnerLogo: LOGO_DEMO_B, leftLogo: LOGO_DEMO_A, rightLogo: LOGO_DEMO_B },
     { name: 'Bind', state: 'live' },
-  ],
+  ] : [],
   /** Torneo: para el rectángulo de la esquina superior derecha. Si hay banner
       (imagen) se pinta; si no, la marca «EASY HUD». En demo va un banner de
       ejemplo para ver el diseño sin servidor. */
-  torneoNombre: 'EASY OPEN',
-  torneoLogo: BANNER_DEMO,
+  torneoNombre: DEMO ? 'EASY OPEN' : '',
+  torneoLogo: DEMO ? BANNER_DEMO : '',
   /** Modo mínimo: sin barra de arriba, para cuando el realizador pone la suya. */
   minimo: false,
   fase: 'buy',
-  equipos: [
+  equipos: DEMO ? [
     { tricode: 'INF', nombre: 'Infinite', logo: LOGO_DEMO_A, tantos: 8, mapas: 1, bando: 'attack', tiemposUsados: 0, tiemposTotal: 2 },
     { tricode: 'PRX', nombre: 'Paradox', logo: LOGO_DEMO_B, tantos: 9, mapas: 1, bando: 'defense', tiemposUsados: 0, tiemposTotal: 2 },
+  ] : [
+    { tricode: '', nombre: '', logo: '', tantos: 0, mapas: 0, bando: 'defense', tiemposUsados: 0, tiemposTotal: 0 },
+    { tricode: '', nombre: '', logo: '', tantos: 0, mapas: 0, bando: 'attack', tiemposUsados: 0, tiemposTotal: 0 },
   ],
   spike: { plantadaEn: null, sitio: '' },
   /** Cuánto tarda la spike en explotar. Del formato, no a fuego. */
   spikeSegundos: 45,
   historial: [],
-  jugadores: DEMO_JUGADORES,
+  jugadores: DEMO ? DEMO_JUGADORES : [[], []],
   bloqueados: [0, 0],
   aviso: { visible: false, tipo: 'info', equipo: 0, titulo: '', texto: '' },
   pausa: { visible: false, tactica: true, equipo: 0, reloj: '0:00', avance: 0 },
@@ -216,7 +227,8 @@ function jugador(player) {
     ultMax: player.ultimate?.max ?? 0,
     /* Abandonó o se cayó: la tarjeta se queda en su sitio, apagada y rotulada. */
     desconectado: player.disconnected === true,
-    credito: player.money ?? 0,
+    /* `null` = su dinero no se está actualizando (no llega su marcador): se pinta «—». */
+    credito: player.moneyStale === true ? null : (player.money ?? 0),
     gasto: player.spentThisRound ?? 0,
     kda: `${stats.kills}/${stats.deaths}/${stats.assists}`,
     /*
@@ -275,6 +287,28 @@ const MOTIVOS = {
   timeout: 'time',
 };
 
+/*
+ * La cuenta de la spike se PARA mientras dura un tiempo muerto o una pausa. El reloj va desde el instante del
+ * plantado, así que durante la pausa se desplaza ese instante lo mismo que dura la pausa: el resto queda congelado y,
+ * al reanudar, sigue por donde iba.
+ */
+const pausaSpike = { clave: null, acumulado: 0, desde: null };
+
+function tiempoPausadoSpike(plantada, enPausa) {
+  const ahora = Date.now();
+  if (plantada !== pausaSpike.clave) {
+    pausaSpike.clave = plantada;
+    pausaSpike.acumulado = 0;
+    pausaSpike.desde = null;
+  }
+  if (enPausa && pausaSpike.desde === null) pausaSpike.desde = ahora;
+  if (!enPausa && pausaSpike.desde !== null) {
+    pausaSpike.acumulado += ahora - pausaSpike.desde;
+    pausaSpike.desde = null;
+  }
+  return pausaSpike.acumulado + (pausaSpike.desde === null ? 0 : ahora - pausaSpike.desde);
+}
+
 function aplicaEstado(match) {
   estado.ronda = match.round;
   estado.etiquetaRonda = etiquetaRonda(match);
@@ -287,7 +321,7 @@ function aplicaEstado(match) {
   estado.mapasSerie =
     Array.isArray(match.series?.maps) && match.series.maps.length > 0
       ? match.series.maps
-      : estado.mapasSerie;
+      : DEMO ? estado.mapasSerie : [];
   /* El mapa en vivo no trae nombre en `mapInfo` (present solo da logo): se toma
      el mapa actual del partido. */
   for (const mp of estado.mapasSerie) {
@@ -327,7 +361,7 @@ function aplicaEstado(match) {
      conserva el roster de ejemplo para poder VER las tarjetas y las teclas. */
   const roster = match.teams.map((team) => team.players.map(jugador));
   const hayRoster = roster.some((equipo) => equipo.length > 0);
-  estado.jugadores = hayRoster ? roster : estado.jugadores;
+  estado.jugadores = hayRoster || !DEMO ? roster : estado.jugadores;
 
   /* Historial: el contrato lo guarda por equipo, y el diseño lo quiere como
      una sola lista en orden de ronda. Se toma la fila del ganador, que es la
@@ -345,8 +379,9 @@ function aplicaEstado(match) {
      reloj, así que se le pasa el instante y no los segundos que quedan. */
   const spike = match.spike ?? {};
   estado.spikeSegundos = match.rules?.spikeDurationSec ?? 45;
+  const plantada = spike.status === 'planted' ? spike.plantedAt : null;
   estado.spike = {
-    plantadaEn: spike.status === 'planted' ? spike.plantedAt : null,
+    plantadaEn: plantada === null ? null : plantada + tiempoPausadoSpike(plantada, match.timeout != null),
     sitio: spike.site ?? '',
   };
 
@@ -373,11 +408,11 @@ function aplicaEstado(match) {
   estado.marca = marca.watermark ?? '';
   /* Torneo (esquina superior derecha). El banner real sale del panel; si el
      partido no trae logo, se conserva el ejemplo de la demo. */
-  estado.torneoNombre = marca.tournamentName || estado.torneoNombre;
+  estado.torneoNombre = marca.tournamentName || (DEMO ? estado.torneoNombre : '');
   estado.torneoLogo =
     typeof marca.tournamentLogo === 'string' && marca.tournamentLogo
       ? marca.tournamentLogo
-      : estado.torneoLogo;
+      : DEMO ? estado.torneoLogo : '';
   estado.patrocinadores = marca.sponsors ?? [];
 
   const cam = match.playercams ?? {};
@@ -385,6 +420,9 @@ function aplicaEstado(match) {
     activas: cam.enabled === true,
     sala: cam.room ?? '',
     publicando: Array.isArray(cam.enabledPlayers) ? cam.enabledPlayers : [],
+    base: cam.base ?? '',
+    params: cam.params ?? '',
+    password: cam.password ?? '',
   };
 
   publica();

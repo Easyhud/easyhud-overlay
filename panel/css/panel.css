@@ -1753,6 +1753,27 @@ h3.display {
   padding: 2px 6px;
   border: 1px solid rgb(61 220 132 / 45%);
 }
+/* DATA / NO DATA / CAM: depuración por jugador (¿llegan datos de su partida? ¿su cámara publica?). */
+.prep__dato, .prep__camara {
+  flex: 0 0 auto;
+  margin-left: 4px;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  color: #3ddc84;
+  border: 1px solid rgb(61 220 132 / 45%);
+}
+.prep__dato--mal { color: #ff6b6b; border-color: rgb(255 107 107 / 55%); }
+.prep__camara { color: #7cc4ff; border-color: rgb(124 196 255 / 50%); background: none; cursor: pointer; }
+.prep__camara:hover { background: rgb(124 196 255 / 15%); }
+#cam-vista { position: fixed; right: 16px; bottom: 16px; z-index: 60; width: 360px; background: #0c141c; border: 1px solid var(--linea); box-shadow: 0 8px 28px rgb(0 0 0 / 60%); }
+#cam-vista[hidden] { display: none; }
+.cam-vista__barra { display: flex; justify-content: space-between; align-items: center; padding: 4px 8px; font-size: 12px; }
+.cam-vista__barra button { background: none; border: 0; color: inherit; font-size: 18px; cursor: pointer; }
+#cam-vista iframe { display: block; width: 100%; aspect-ratio: 16 / 9; border: 0; background: #000; }
 /* NO APP: el jugador aún no tiene el cliente de Easy HUD. Apagado, sin alarma. */
 .prep__noapp {
   flex: 0 0 auto;
@@ -3197,3 +3218,121 @@ body { font-size: 14px; }
   background: rgb(255 255 255 / 55%);
   transition: left var(--dur) var(--ease-out), width var(--dur) var(--ease-out);
 }
+
+
+/* ── Veredicto del programa de cada jugador (sustituye a «Ready / No app») ── */
+.prep__estado {
+  flex: 0 0 auto;
+  font-family: 'Poppins', system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 9px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border: 1px solid var(--linea);
+  cursor: help;
+}
+.prep__estado--ok { color: #3ddc84; border-color: rgb(61 220 132 / 45%); }
+.prep__estado--aviso { color: #f5c542; border-color: rgb(245 197 66 / 50%); }
+.prep__estado--mal { color: #ff6b6b; border-color: rgb(255 107 107 / 55%); }
+.prep__estado--off { color: var(--mute); }
+
+/* ── La causa que concluye el informe completo de cada PC ── */
+.diag__c--causa { min-width: 260px; max-width: 380px; }
+.diag__concl { margin-bottom: 4px; line-height: 1.35; }
+.diag__concl b { font-size: 9px; letter-spacing: 0.12em; margin-right: 6px; padding: 1px 5px; border: 1px solid currentColor; }
+.diag__concl--confirmada { color: #ff6b6b; }
+.diag__concl--probable { color: #f5c542; }
+.diag__concl--info { color: var(--mute); }
+.diag__nada { color: var(--mute); font-size: 10px; margin-right: 6px; }
+.diag__pide { background: none; border: 1px solid var(--linea); color: inherit; padding: 2px 8px; font: inherit; font-size: 10px; cursor: pointer; }
+.diag__pide:hover { border-color: #6a6a72; }
+
+/* ── Tabla de diagnóstico en vivo ── */
+#diag-btn {
+  /* Arriba, junto a los controles de la ventana: abajo quedaba pegado al borde y a veces fuera de pantalla. */
+  position: fixed;
+  top: 5px;
+  right: 150px;
+  z-index: 10000;
+  -webkit-app-region: no-drag; /* la barra de arriba arrastra la ventana: el botón tiene que poder recibir clics */
+  background: #16161a;
+  color: inherit;
+  border: 1px solid var(--linea);
+  padding: 4px 12px;
+  font: 600 11px 'Poppins', system-ui, sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+#diag-btn:hover { border-color: #6a6a72; }
+#diag-panel {
+  position: fixed;
+  left: 84px;
+  right: 14px;
+  top: 44px;
+  max-height: calc(100vh - 64px);
+  overflow: auto;
+  z-index: 9999;
+  background: #0b0b0e;
+  border: 1px solid var(--linea);
+  box-shadow: 0 10px 34px rgb(0 0 0 / 70%);
+  padding: 10px 12px;
+  -webkit-app-region: no-drag;
+}
+#diag-panel[hidden] { display: none; }
+.diag__barra { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 12px; }
+.diag__acc button { background: none; border: 1px solid var(--linea); color: inherit; padding: 2px 9px; margin-left: 6px; cursor: pointer; font: inherit; }
+.diag__t { width: 100%; border-collapse: collapse; font-size: 11px; }
+.diag__t th { text-align: left; font-weight: 600; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mute); padding: 3px 8px 5px 0; white-space: nowrap; }
+.diag__t td { padding: 3px 8px 3px 0; border-top: 1px solid #1a1a1f; vertical-align: top; }
+.diag__n { font-weight: 600; white-space: nowrap; }
+.diag__c--ok { color: #3ddc84; }
+.diag__c--aviso { color: #f5c542; }
+.diag__c--mal { color: #ff6b6b; font-weight: 600; }
+.diag__c--off { color: var(--mute); }
+.diag__c--cam { color: #7cc4ff; }
+.diag__c--err { color: var(--mute); max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diag__p { display: inline-block; margin-right: 8px; white-space: nowrap; }
+.diag__p i { font-style: normal; color: var(--mute); margin-left: 4px; }
+.diag__p--falta { color: #ff6b6b; font-weight: 600; }
+.diag__vacio, .diag__nota { color: var(--mute); font-size: 11px; margin: 8px 0 0; }
+
+
+/* ── Aviso de pausa detectada: el único bloque claro, encima de todo ───────── */
+.pausa-aviso {
+  position: fixed;
+  top: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-5, 20px);
+  padding: 12px 16px;
+  background: var(--papel);
+  color: #08080a;
+  border: 2px solid var(--rec);
+  border-radius: 0;
+  box-shadow: 4px 4px 0 0 var(--rec);
+  font-family: 'Poppins', system-ui, sans-serif;
+}
+.pausa-aviso[hidden] { display: none; }
+.pausa-aviso__texto { display: flex; flex-direction: column; line-height: 1.2; }
+.pausa-aviso__texto strong { font-size: 15px; letter-spacing: 0.06em; }
+.pausa-aviso__texto span { font-size: 12px; color: #3a3b41; }
+.pausa-aviso__botones { display: flex; gap: 8px; }
+.pausa-aviso__b {
+  min-width: 132px;
+  padding: 10px 14px;
+  border: 1px solid #08080a;
+  border-radius: 0;
+  background: #08080a;
+  color: var(--blanco);
+  font: 600 13px 'Poppins', system-ui, sans-serif;
+  cursor: pointer;
+}
+.pausa-aviso__b small { display: block; font-weight: 400; font-size: 11px; color: var(--gris); }
+.pausa-aviso__b:hover { background: var(--rec-hondo); }
+.pausa-aviso__b--sec { background: transparent; color: #08080a; min-width: 90px; }
+.pausa-aviso__b--sec:hover { background: #08080a; color: var(--blanco); }

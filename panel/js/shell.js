@@ -21,7 +21,7 @@
 
 import { arranca, apaga } from './panel.js';
 import { montaAcceso, muestraAcceso } from './acceso.js';
-import { montaDashboard, muestraDashboard } from './db.js';
+import { montaDashboard, muestraDashboard, puuidsDelMatchEnVivo, equiposDelMatchEnVivo, equiposConJugadoresDelVivo } from './db.js';
 import { montaAtajos, muestraAtajos, cargaAtajos, guardaAtajos, atajos } from './atajos.js';
 import {
   alCambiar,
@@ -46,7 +46,13 @@ function perfil() {
   }
 }
 
-const ES_OBSERVADOR = perfil().mode === 'observer';
+/* OJO: compara contra 'player', no contra 'observer'. BUILD_PROFILE.mode
+   tiene tres valores ('normal' | 'player' | 'observer'), y el build 'normal'
+   -el que usa el operador dia a dia, sin IP fija- es tan observador como el
+   build 'observer' fijo. Comparar con === 'observer' dejaba el acceso
+   inalcanzable en 'normal': ni pantalla de login ni pintaEstado, solo el
+   fondo negro con el rotulo "No session" del index.html estatico. */
+const ES_OBSERVADOR = perfil().mode !== 'player';
 
 /** Dónde apuntar OBS. La monta el proceso principal, que sabe el puerto. */
 function urlObs() {
@@ -95,7 +101,39 @@ function montaBarra() {
   /* Crear la sala de torneo la hace el proceso principal (escribe en el cliente
      de Riot). El panel es web puro, así que el shell le presta el puente: una
      función que devuelve el código, o null si no hay puente (fuera del exe). */
-  window.__easyCreaSala = () => api()?.creaSalaTorneo?.() ?? null;
+  /* Pide al programa un observador conectado: si ya lo está no hace nada (el programa lo ignora), y si la
+     conexión se cerró al acabar una partida, la reabre. Entre partidas es lo que deja trabajar al panel. */
+  window.__easyAsegura = () => {
+    if (entrado()) api()?.conecta?.(tokenEmision(), codigoGrupo());
+  };
+  window.__easyCreaSala = () => {
+    window.__easyAsegura?.();
+    return api()?.creaSalaTorneo?.() ?? null;
+  };
+
+  /* "Call players" (BETA): mismo patrón que __easyCreaSala -- el panel es web
+     puro, el shell le presta el puente hacia el proceso principal. Los
+     puuids a llamar los da db.js (el match EN ANTENA), no un parámetro del
+     caller: así el botón siempre llama a los jugadores del match correcto. */
+  window.__easyLlamaJugadores = () => {
+    const puuids = puuidsDelMatchEnVivo();
+    if (puuids.length === 0) return Promise.resolve({ ok: false, error: 'no hay jugadores con puuid en este match' });
+    return api()?.llamaJugadores?.(puuids) ?? Promise.resolve({ ok: false, error: 'sin puente' });
+  };
+
+  /* Para el progreso de «Call players»: cuántos puuids hay que encontrar, y
+     cancelar la llamada (el servidor entiende la lista vacía como «deja de llamar»). */
+  window.__easyPuuidsLlamables = () => puuidsDelMatchEnVivo();
+  window.__easyCancelaLlamada = () =>
+    api()?.llamaJugadores?.([]) ?? Promise.resolve({ ok: false, error: 'sin puente' });
+
+  /* Nombre/logo de los equipos registrados del match en antena, para que el
+     lobby (pintaGod, antes de que exista M) muestre el nombre real en vez de
+     "Attackers"/"Defenders" genérico. */
+  window.__easyEquiposMatch = () => equiposDelMatchEnVivo();
+  /* Colocar a cada jugador en su lado de la sala de Riot: el panel calcula quién va dónde y se lo pasa al programa. */
+  window.__easyEquiposConJugadores = () => equiposConJugadoresDelVivo();
+  window.__easyColoca = (lista) => api()?.colocaJugadores?.(lista);
 
   /* La base local (equipos/matches/torneos): el panel es web puro y no toca el
      puente `electronAPI`; el shell le presta `window.__easyDB` con el CRUD. Cada
@@ -124,6 +162,12 @@ function montaBarra() {
   /* Fin de mapa (detección local del observador): el panel lleva la serie. */
   api()?.onSerieFin?.((datos) => {
     window.dispatchEvent(new CustomEvent('serie-fin', { detail: datos }));
+  });
+
+  /* El juego se ve en gris (timeout o pausa): lo detecta el observador mirando la pantalla; el panel lo
+     reenvía al servidor, que pone o quita la pausa solo. */
+  api()?.onPausaVisual?.((d) => {
+    window.dispatchEvent(new CustomEvent('pausa-visual', { detail: d }));
   });
 
   api()?.onSalaLocal?.((sala) => {

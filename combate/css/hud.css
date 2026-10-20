@@ -236,23 +236,23 @@ a:hover { color: var(--atk-light); }
 .pips--izq { right: calc(50% + 120px); flex-direction: row-reverse; }
 .pips--der { left: calc(50% + 120px); flex-direction: row; }
 .pips i { width: 20px; height: 9px; display: block; border-radius: 3px; background: rgb(255 255 255 / 26%); }
-.pips i.on--atk { background: var(--atk-light); }
-.pips i.on--def { background: var(--def-light); }
+.pips i.on--atk { background: var(--def-light); } /* atacante: rojo */
+.pips i.on--def { background: var(--atk-light); } /* defensor: verde */
 
 /* ── aletas del contador: triángulos rectángulos apuntando hacia fuera ── */
 .aleta {
   position: absolute; top: 0;
-  width: 42px; height: 72px;
+  width: 42px; height: 60px; /* = alto de la barra: la punta de abajo queda a ras de los paneles */
   z-index: 4;
   background: #0f1923;
 }
 .aleta--izq {
   right: calc(50% + 68px);
-  clip-path: path('M 0,0 L 42,0 L 42,72 Z');
+  clip-path: path('M 0,0 L 42,0 L 42,60 Z');
 }
 .aleta--der {
   left: calc(50% + 68px);
-  clip-path: path('M 0,0 L 42,0 L 0,72 Z');
+  clip-path: path('M 0,0 L 42,0 L 0,60 Z');
 }
 
 /* ══ Badge de tecla del observador (solo vista del operador) ════════════════

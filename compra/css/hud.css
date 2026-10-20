@@ -107,17 +107,17 @@ a:hover { color: var(--atk-light); }
   position: absolute;
   top: 0;
   width: 42px;
-  height: 72px;
+  height: 60px; /* = alto de la barra */
   z-index: 4;
   background: #0f1923;
 }
 .aleta--izq {
   right: calc(50% + 68px);
-  clip-path: path('M 5,0 L 37,0 Q 42,0 42,5 L 42,68 Q 42,72 39.98,68.54 L 2.52,4.32 Q 0,0 5,0 Z');
+  clip-path: path('M 5,0 L 37,0 Q 42,0 42,5 L 42,56 Q 42,60 39.98,56.54 L 2.52,4.32 Q 0,0 5,0 Z');
 }
 .aleta--der {
   left: calc(50% + 68px);
-  clip-path: path('M 5,0 L 37,0 Q 42,0 39.98,3.46 L 2.02,68.54 Q 0,72 0,68 L 0,5 Q 0,0 5,0 Z');
+  clip-path: path('M 5,0 L 37,0 Q 42,0 39.98,3.46 L 2.02,56.54 Q 0,60 0,56 L 0,5 Q 0,0 5,0 Z');
 }
 .ronda-chip {
   position: absolute;

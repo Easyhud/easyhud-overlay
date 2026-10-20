@@ -85,19 +85,23 @@ function monta(nombre, pantalla) {
 
 function enseña(nombre) {
   for (const [otro, marco] of marcos) {
-    if (otro === 'ceremonia') continue;
+    if (marco.classList.contains('capa--encima')) continue;
     marco.classList.toggle('capa--puesta', otro === nombre);
   }
   const marco = marcos.get(nombre) ?? monta(nombre, PANTALLAS[nombre]);
   marco.classList.add('capa--puesta');
 }
 
-/* La ceremonia se monta desde el principio y se queda visible siempre: ella
-   misma se esconde cuando no hay nada que anunciar. */
+/* La ceremonia, la PAUSA y el aviso se montan desde el principio y se quedan visibles siempre, ENCIMA de la pantalla de
+   turno: cada una se esconde sola cuando no hay nada que anunciar. Antes la pausa y el aviso SUSTITUÍAN a la pantalla
+   (combate o compra) y, con su barra apagada, el marcador y las tarjetas desaparecían mientras duraba un tiempo muerto
+   o una pausa técnica y volvían de golpe al terminar («se apaga y se prende todo»). */
 function montaCeremonia() {
-  const marco = monta('ceremonia', ENCIMA);
-  marco.classList.add('capa--puesta');
-  marco.style.pointerEvents = 'none';
+  for (const [nombre, pantalla] of [['pausa', PANTALLAS.pausa], ['aviso', PANTALLAS.aviso], ['ceremonia', ENCIMA]]) {
+    const marco = monta(nombre, pantalla);
+    marco.classList.add('capa--puesta', 'capa--encima');
+    marco.style.pointerEvents = 'none';
+  }
 }
 
 /* ── Qué toca ────────────────────────────────────────────────────────────── */
@@ -105,8 +109,6 @@ function montaCeremonia() {
 function decide(match) {
   if (match.phase === 'gameOver') return 'victoria';
   if (match.phase === 'agentSelect') return 'seleccion';
-  if (match.timeout !== null && match.timeout !== undefined) return 'pausa';
-  if (match.broadcast?.toast?.visible === true) return 'aviso';
   if (match.phase === 'shopping') return 'compra';
   return 'combate';
 }

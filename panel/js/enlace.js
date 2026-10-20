@@ -76,6 +76,30 @@ export function conecta({ endpoint, grupo, token, alEstado, alEntrar, alFallar, 
   });
 
   /* ── El mando ──────────────────────────────────────────────────────────── */
+  let colaPresencia = Promise.resolve(null);
+
+  const consulta = (puuids) => {
+    const pregunta = () =>
+      new Promise((resolve) => {
+        if (!mando.connected) return resolve(null);
+        const oyente = (crudo) => {
+          clearTimeout(reloj);
+          try {
+            resolve(JSON.parse(crudo));
+          } catch {
+            resolve(null);
+          }
+        };
+        const reloj = setTimeout(() => {
+          mando.off('presencia', oyente);
+          resolve(null);
+        }, 4000);
+        mando.once('presencia', oyente);
+        mando.emit('presencia_consulta', JSON.stringify({ puuids }));
+      });
+    colaPresencia = colaPresencia.then(pregunta, pregunta);
+    return colaPresencia;
+  };
   const mando = io(`${endpoint}/operador`, { transports: ['websocket'] });
 
   mando.on('connect', () => {
@@ -119,6 +143,23 @@ export function conecta({ endpoint, grupo, token, alEstado, alEntrar, alFallar, 
      */
     parchea(parche) {
       mando.emit('configura', JSON.stringify(parche));
+    },
+
+    /**
+     * ¿Quién de estos puuids tiene el programa abierto? Devuelve la lista de los
+     * que sí, o `null` si no se pudo preguntar (sin mando o sin respuesta). Las
+     * preguntas van de una en una para que dos sondeos no se mezclen las respuestas.
+     */
+    presencia(puuids) {
+      return consulta(puuids).then((r) => (r === null ? null : (r.activos ?? [])));
+    },
+
+    /**
+     * Para depurar, por jugador: `{ puuid: { app, dentro, datosMs, camara } }` (programa abierto,
+     * dentro de la partida, ms desde su último dato de juego y si su cámara publica), o `null`.
+     */
+    estadoJugadores(puuids) {
+      return consulta(puuids).then((r) => (r === null ? null : (r.estado ?? {})));
     },
 
     cierra() {

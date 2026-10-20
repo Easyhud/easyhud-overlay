@@ -61,9 +61,14 @@ const TITULOS = {
 
 let temporizador;
 
+/** La última ronda anunciada: un aviso repetido (reconexión, estado releído) no vuelve a sacar el cartel. */
+let rondaAnunciada = -1;
+
 function anuncia(evento) {
   const equipo = equipos[evento.winnerIndex];
-  if (equipo === undefined) return;
+  if (equipo === undefined || equipo.name === undefined || equipo.name === '') return;
+  if (ronda === rondaAnunciada) return;
+  rondaAnunciada = ronda;
 
   /*
    * Verde fijo, no el color del bando.
@@ -108,6 +113,7 @@ let puesto = false;
 conecta({
   alEstado: (match) => {
     equipos = match.teams;
+    if (match.round < ronda) rondaAnunciada = -1; // mapa nuevo
     ronda = match.round;
 
     /*

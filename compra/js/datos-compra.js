@@ -40,7 +40,7 @@ const MOTIVOS = {
 function armas(nombre) {
   if (nombre === null || nombre === '') return { primaria: null, secundaria: null };
 
-  const clave = nombre.toLowerCase();
+  const clave = nombre.toLowerCase() === 'knife' ? 'melee' : nombre.toLowerCase(); // el servidor lo llama «Knife»
   return PISTOLAS.has(clave) || clave === 'melee'
     ? { primaria: null, secundaria: clave }
     : { primaria: clave, secundaria: null };
@@ -142,7 +142,8 @@ function jugador(player, agentes, posicion) {
     posicion,
     /* El crédito del tablero es el de ANTES de comprar; el servidor manda el
        que queda y lo gastado, así que se suma. */
-    credito: (player.money ?? 0) + gasto,
+    /* `null` = su dinero no se está actualizando (no llega su marcador): se pinta «—». */
+    credito: player.moneyStale === true ? null : (player.money ?? 0) + gasto,
     gasto,
     cargas: tiene,
     cargasMax: capacidades(player, tiene),

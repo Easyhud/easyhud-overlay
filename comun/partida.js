@@ -167,12 +167,16 @@ export function esMinimo(match) {
  *
  * @param {'attack' | 'defense' | string | undefined} bando
  * @param {number} posicion 0 = izquierda, 1 = derecha (solo para el defecto).
- * @param {{ claroAtaque?: string }} [op] La compra usa otro verde claro.
+ * Colores: **el defensor es VERDE y el atacante ROJO**, en todas las pantallas. (Los nombres de
+ * las variables vienen del diseño original, donde `--atk` era el verde: por eso el atacante usa
+ * `--def` y el defensor `--atk`. Los valores de los tokens no se tocan porque otras cosas los usan.)
+ *
+ * @param {{ claroVerde?: string }} [op] La compra usa otro verde claro (el del defensor).
  * @returns {{ c: string, cl: string, ataca: boolean }}
  */
 export function coloresDeBando(bando, posicion, op = {}) {
   const ataca = bando === 'attack' ? true : bando === 'defense' ? false : posicion === 0;
   return ataca
-    ? { c: 'var(--atk)', cl: op.claroAtaque ?? 'var(--atk-light)', ataca }
-    : { c: 'var(--def)', cl: 'var(--def-light)', ataca };
+    ? { c: 'var(--def)', cl: 'var(--def-light)', ataca } // atacante: rojo
+    : { c: 'var(--atk)', cl: op.claroVerde ?? 'var(--atk-light)', ataca }; // defensor: verde
 }

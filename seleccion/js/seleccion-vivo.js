@@ -1,8 +1,7 @@
 /* ══ Selección — comportamiento en vivo ═══════════════════════════════════
    Trabaja sobre el marcado YA presente, así que sirve igual al estático y al
-   generado. Dos cosas que son cambios de estado, no dibujo:
+   generado. Un cambio de estado, no dibujo:
 
-     · el que está eligiendo va cambiando de agente cada 620 ms
      · al confirmar, la tarjeta da un golpe y suelta el destello
 
    Las animaciones de bucle (logo extruido, rótulo, casilla vacía) no pasan por
@@ -28,27 +27,9 @@ import { AGENTES, PAPEL_DE_AGENTE } from './catalogo.js';
   const PAPELES = PAPEL_DE_AGENTE;
   const nombre = a => a.charAt(0).toUpperCase() + a.slice(1);
 
-  /* ── el que duda va cambiando de agente ──
-     Solo se toca su retrato y su nombre; la tarjeta no se repinta, para no
-     reiniciar las animaciones de entrada ni el latido del rótulo. */
-  let vuelta = 0;
-  setInterval(() => {
-    vuelta++;
-    banda.querySelectorAll('.celda--eligiendo').forEach(c => {
-      const lado = +c.dataset.lado || 0;
-      const pos = +c.dataset.pos || 0;
-      const agente = RUEDA[(vuelta + pos * 3 + lado * 5) % RUEDA.length];
-      const r = c.querySelector('.celda__retrato');
-      if (!r) return;
-      r.style.backgroundImage = "url('" + retratoAgente(agente) + "')";
-      c.querySelector('.celda__agente').textContent = nombre(agente);
-      /* Reiniciar una animación exige quitarla, forzar un reflujo y reponerla:
-         sin el reflujo el navegador no reinicia nada. */
-      r.style.animation = 'none';
-      void r.offsetWidth;
-      r.style.animation = '';
-    });
-  }, 620);
+  /* El que duda ya NO va pasando por agentes al azar: la tarjeta enseña el que tiene señalado de verdad
+     (lo pinta `seleccion.js` con el dato del juego). La rueda de adorno cambiaba el retrato cada 620 ms y
+     mentía sobre lo que iba a elegir. Solo queda el comportamiento de «confirmar» de la maqueta. */
 
   /* ── confirmar el agente del que está eligiendo ──
      Avanza el equipo que va por detrás, igual que el juego alterna turnos. */

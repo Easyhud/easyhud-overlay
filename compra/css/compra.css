@@ -168,8 +168,8 @@
   background: rgb(255 255 255 / 6%); color: #e6e7ea;
 }
 .hcel--gana { color: #08090c; font-size: 14px; }
-.hcel--atk { background: var(--atk); }
-.hcel--def { background: var(--def); }
+.hcel--atk { background: var(--def); } /* atacante: rojo */
+.hcel--def { background: var(--atk); } /* defensor: verde */
 .hcel i { width: 17px; height: 17px; filter: brightness(0) invert(1); background: center / contain no-repeat; }
 .hcel--pend { display: grid; place-items: center; }
 

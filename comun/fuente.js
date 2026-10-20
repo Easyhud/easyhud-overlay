@@ -24,6 +24,8 @@
 import { io } from './vendor/socket.io.esm.min.js';
 import {
   traduceEstado,
+  defensoresIzquierda,
+  marcaDineroViejo,
   mapaDecidido,
   equipoGanador,
   ceremoniaDe,
@@ -78,6 +80,9 @@ let ultimosEventos = [];
    no manda como dato. Vive por contexto (una pantalla), que es justo lo que
    hace falta: cada pantalla detecta sus propias transiciones sobre el mismo
    flujo. */
+/* Dinero de cada jugador y desde qué ronda no cambia (ver `marcaDineroViejo`). */
+const memoriaDinero = new Map();
+
 const memoria = {
   spikePlantadaEn: null,
   spikeActiva: false,
@@ -90,6 +95,10 @@ const memoria = {
      ahorrada. Al terminar ya no se puede leer: los muertos sueltan el arma. */
   economia: { ronda: -1, valor: [0, 0] },
   faseAnterior: '',
+  /* Rondas ganadas por cada equipo ANTES de que acabara la ronda (último estado que no era el fin de ronda). */
+  marcadorPrevio: null,
+  /* Cuándo empezó el fin de ronda actual (para esperar al marcador unos instantes). */
+  finInicio: null,
 };
 
 function alMatchData(raw) {
@@ -105,6 +114,10 @@ function alMatchData(raw) {
   const decidido = mapaDecidido(raw);
   const match = traduceEstado(raw, decidido);
   if (match.roomCode === '') match.roomCode = GRUPO;
+  /* Defensores a la izquierda, atacantes a la derecha. `volteo` corrige lo que va por índice. */
+  marcaDineroViejo(match, memoriaDinero);
+  const volteo = defensoresIzquierda(match);
+  const otro = (i) => (volteo ? 1 - i : i);
 
   /* La spike: el servidor manda booleanos, el diseño quiere el instante del
      plantado para contar con su propio reloj. */
@@ -128,7 +141,7 @@ function alMatchData(raw) {
       durationSec: dur,
       startedAt: memoria.tiempoInicio,
       kind: to.techPause ? 'technical' : 'tactical',
-      teamIndex: to.leftTeam ? 0 : to.rightTeam ? 1 : null,
+      teamIndex: to.leftTeam ? otro(0) : to.rightTeam ? otro(1) : null,
     };
   } else {
     memoria.tiempoInicio = null;
@@ -140,22 +153,42 @@ function alMatchData(raw) {
      deducen de las transiciones del estado. */
   const eventos = [];
 
-  if (raw.roundPhase === 'end' && memoria.ultimaRondaFin !== raw.roundNumber) {
-    memoria.ultimaRondaFin = raw.roundNumber;
-    const ganador = equipoGanador(raw);
-    eventos.push({
-      type: 'roundEnd',
-      winnerIndex: ganador,
-      winnerSide: raw.teams?.[ganador]?.isAttacking ? 'attack' : 'defense',
-      ceremony: ceremoniaDe(raw, ganador, memoria.clutch, memoria.economia),
-    });
+  /*
+   * Quién ganó la ronda: el equipo que SUBIÓ en el marcador. Antes se leía `attackersWon`, que el servidor
+   * actualiza con el paquete de marcador; si ese paquete llegaba después del aviso de «fin de ronda», el cartel
+   * salía con el ganador de la ronda ANTERIOR (ganaba uno y el cartel decía el otro). Ahora se espera hasta 2,5 s a
+   * que el marcador cambie y se mira quién subió; sólo si no cambia (o no hay marcador previo) se usa `attackersWon`.
+   */
+  const ganadas = [raw.teams?.[0]?.roundsWon ?? 0, raw.teams?.[1]?.roundsWon ?? 0];
+  if (raw.roundPhase !== 'end') {
+    memoria.marcadorPrevio = ganadas;
+    memoria.finInicio = null;
+  } else if (memoria.ultimaRondaFin !== raw.roundNumber) {
+    memoria.finInicio ??= Date.now();
+    const previo = memoria.marcadorPrevio;
+    let ganador = -1;
+    if (previo !== null) {
+      if (ganadas[0] > previo[0]) ganador = 0;
+      else if (ganadas[1] > previo[1]) ganador = 1;
+    }
+    const esperando = ganador === -1 && previo !== null && Date.now() - memoria.finInicio < 2500;
+    if (!esperando) {
+      if (ganador === -1) ganador = equipoGanador(raw);
+      memoria.ultimaRondaFin = raw.roundNumber;
+      eventos.push({
+        type: 'roundEnd',
+        winnerIndex: otro(ganador),
+        winnerSide: raw.teams?.[ganador]?.isAttacking ? 'attack' : 'defense',
+        ceremony: ceremoniaDe(raw, ganador, memoria.clutch, memoria.economia),
+      });
+    }
   }
 
   if (decidido && !memoria.finAnunciado) {
     memoria.finAnunciado = true;
     const a = raw.teams?.[0]?.roundsWon ?? 0;
     const b = raw.teams?.[1]?.roundsWon ?? 0;
-    eventos.push({ type: 'matchEnd', winnerIndex: a >= b ? 0 : 1 });
+    eventos.push({ type: 'matchEnd', winnerIndex: otro(a >= b ? 0 : 1) });
   }
   if (!decidido) memoria.finAnunciado = false;
 

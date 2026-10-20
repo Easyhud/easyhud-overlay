@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Depura cámaras</title>
+<style>
+  :root { --fondo:#0f1923; --panel:#16212d; --linea:#2a3948; --txt:#e6e7ea; --dim:#8a97a6; --ok:#43cfa4; --mal:#e05561; }
+  * { box-sizing: border-box; }
+  body { margin:0; padding:16px; background:var(--fondo); color:var(--txt); font:14px/1.45 system-ui, sans-serif; }
+  h1 { font-size:18px; margin:0 0 12px; }
+  .fila { display:flex; gap:12px; flex-wrap:wrap; }
+  .caja { background:var(--panel); border:1px solid var(--linea); padding:12px; flex:1 1 360px; min-width:0; }
+  .caja h2 { font-size:13px; letter-spacing:.08em; text-transform:uppercase; color:var(--dim); margin:0 0 8px; }
+  button { background:#2b3b4c; color:var(--txt); border:1px solid var(--linea); padding:7px 12px; cursor:pointer; font:inherit; }
+  button:hover { background:#34495f; }
+  input { background:#0c141c; color:var(--txt); border:1px solid var(--linea); padding:6px 8px; font:inherit; width:100%; margin:2px 0 8px; }
+  label { color:var(--dim); font-size:12px; }
+  iframe { width:100%; aspect-ratio:16/9; border:1px solid var(--linea); background:#000; }
+  pre { margin:0; white-space:pre-wrap; word-break:break-all; font-size:12px; max-height:260px; overflow:auto; }
+  .ok { color:var(--ok); } .mal { color:var(--mal); }
+</style>
+</head>
+<body>
+<h1>Depura cámaras</h1>
+<p style="color:var(--dim);margin:0 0 12px">
+  Publica tu cámara con la misma web de vídeo y los mismos parámetros que usan los jugadores, y mírala aquí
+  o desde otro dispositivo. La configuración se toma del servidor si hay partido; si no, rellena los campos.
+</p>
+
+<div class="fila">
+  <div class="caja">
+    <h2>Configuración</h2>
+    <label>Web de vídeo</label><input id="base" placeholder="https://cam.easyhud.net">
+    <label>Parámetros (wss2=…&amp;turn=…&amp;relay)</label><input id="params">
+    <label>Clave (password)</label><input id="clave">
+    <label>Sala</label><input id="sala" value="DEPURA">
+    <label>ID del stream</label><input id="id" value="DEPURA_H_TEST">
+    <div id="estado-fuente" style="color:var(--dim);font-size:12px">Esperando al servidor…</div>
+  </div>
+  <div class="caja">
+    <h2>Publicar mi cámara</h2>
+    <button id="pub">Publicar</button> <button id="pub-parar">Parar</button>
+    <p style="font-size:12px;color:var(--dim)">Para probar desde el celular con datos móviles, copia esta dirección y ábrela allí:</p>
+    <input id="url-pub" readonly>
+    <iframe id="f-pub" allow="camera; microphone; autoplay; display-capture" hidden style="aspect-ratio:auto;height:120px"></iframe>
+  </div>
+</div>
+
+<div class="fila" style="margin-top:12px">
+  <div class="caja">
+    <h2>Ver (como el overlay)</h2>
+    <button id="ver">Ver</button> <button id="ver-parar">Parar</button> <button id="stats">Estadísticas</button>
+    <iframe id="f-ver" allow="autoplay" style="margin-top:8px"></iframe>
+  </div>
+  <div class="caja">
+    <h2>Diagnóstico</h2>
+    <pre id="diag">Sin datos todavía.</pre>
+  </div>
+</div>
+
+<script type="module">
+import { abreFuente } from '../comun/fuente.js';
+
+const $ = (id) => document.getElementById(id);
+const q = new URLSearchParams(location.search);
+for (const k of ['base', 'params', 'clave', 'sala', 'id']) if (q.get(k)) $(k).value = q.get(k);
+
+/* Del servidor (si hay partido): rellena lo que esté vacío. */
+let llegoConfig = false;
+abreFuente({
+  onMatch(m) {
+    const c = m.playercams ?? {};
+    if (!c.base) { $('estado-fuente').textContent = 'Hay conexión, pero el partido no trae config de cámaras.'; return; }
+    if (!llegoConfig) {
+      llegoConfig = true;
+      if (!$('base').value) $('base').value = c.base;
+      if (!$('params').value) $('params').value = c.params ?? '';
+      if (!$('clave').value) $('clave').value = c.password ?? '';
+      $('estado-fuente').innerHTML =
+        `<span class="ok">Config del servidor recibida.</span> Sala en directo: ${c.room || '—'} · publicando: ${(c.enabledPlayers ?? []).join(', ') || 'nadie'}`;
+    }
+  },
+});
+
+const enc = encodeURIComponent;
+const comunes = () => {
+  const p = [];
+  const clave = $('clave').value.trim();
+  const extra = $('params').value.trim().replace(/^[?&]+/, '');
+  if (clave) p.push(`password=${enc(clave)}`);
+  if (extra) p.push(extra);
+  return p;
+};
+const urlPub = () => `${$('base').value.replace(/\/+$/, '')}/?` + [
+  `push=${enc($('id').value)}`, `room=${enc($('sala').value)}`, 'webcam', 'autostart', 'noaudio', 'cleanoutput', 'hidehome', 'vb=3500', ...comunes(),
+].join('&');
+const urlVer = () => `${$('base').value.replace(/\/+$/, '')}/?` + [
+  `room=${enc($('sala').value)}`, `view=${enc($('id').value)}`, 'scene=0', 'cleanoutput', 'transparent', 'vb=1800', 'waitmessage=', 'disablehotkeys', 'noaudio', 'mute', 'codec=h265,av1,h264,vp8', ...comunes(),
+].join('&');
+
+const diag = (t) => { $('diag').textContent = t; };
+$('pub').onclick = () => { const u = urlPub(); $('url-pub').value = u; $('f-pub').hidden = false; $('f-pub').src = u; diag('Publicando…'); };
+$('pub-parar').onclick = () => { $('f-pub').removeAttribute('src'); $('f-pub').hidden = true; };
+$('ver').onclick = () => { $('f-ver').src = urlVer(); diag('Viendo…'); };
+$('ver-parar').onclick = () => $('f-ver').removeAttribute('src');
+$('url-pub').onfocus = () => { $('url-pub').value = urlPub(); $('url-pub').select(); };
+
+/* Estadísticas del visor: la web de vídeo contesta a getStats por postMessage. */
+$('stats').onclick = () => $('f-ver').contentWindow?.postMessage({ getStats: true }, '*');
+window.addEventListener('message', (e) => {
+  if (e.source !== $('f-ver').contentWindow && e.source !== $('f-pub').contentWindow) return;
+  const d = e.data ?? {};
+  if (d.stats) {
+    const s = d.stats;
+    const resumen = {
+      entrada: s.inbound_stats ?? s.inbound ?? null,
+      candidatos: s.candidate_stats ?? s.candidates ?? null,
+      salida: s.outbound_stats ?? null,
+    };
+    diag(JSON.stringify(resumen, null, 1).replace(/(password|credential)"?:\s*"[^"]*"/gi, '$1: "…"'));
+  } else if (d.action || d.info || d.error) {
+    diag(JSON.stringify(d).slice(0, 800));
+  }
+});
+</script>
+</body>
+</html>

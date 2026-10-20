@@ -29,9 +29,10 @@ window.pintaSeleccion = (D) => {
     const b = D.equipos?.[lado]?.bando;
     return b === 'ATK' ? true : b === 'DEF' ? false : lado === 0;
   };
+  // Atacante ROJO, defensor VERDE.
   const tinta = (lado) => atacaLado(lado)
-    ? { c: '--atk', cl: '--atk-light' }
-    : { c: '--def', cl: '--def-light' };
+    ? { c: '--def', cl: '--def-light' }
+    : { c: '--atk', cl: '--atk-light' };
 
   /* ── cabecera ── */
   const cab = document.getElementById('cabecera');
@@ -68,11 +69,11 @@ window.pintaSeleccion = (D) => {
     const eligiendo = jug.elegido === undefined
       ? k === D.elegidos[lado]
       : jug.eligiendo === true;
-    /* El que duda muestra un agente de la rueda, no el suyo. */
-    const agente = elegido ? jug.agente
-      : eligiendo ? D.rueda[(rueda + k * 3 + lado * 5) % D.rueda.length] : null;
+    /* El que duda enseña el agente que tiene SEÑALADO ahora mismo (lo manda el juego antes de confirmar), no
+       uno de adorno. Sin agente señalado todavía, queda el hueco. */
+    const agente = elegido ? jug.agente : (jug.agente || null);
     const nombre = elegido ? jug.nombre
-      : eligiendo ? agente.charAt(0).toUpperCase() + agente.slice(1) : 'sin elegir';
+      : agente ? agente.charAt(0).toUpperCase() + agente.slice(1) : eligiendo ? 'eligiendo…' : 'sin elegir';
 
     /* El desfase va del centro hacia fuera: es como se leen las dos
        alineaciones. */

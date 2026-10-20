@@ -62,18 +62,55 @@ let SALA = null;
    server tenga un partido viejo), y en «Agent Select» sí. Llega por IPC. */
 let escena = '';
 
+/* El mapa que toca enseñar AHORA. En partida manda el de la partida (M.map); en
+   el lobby manda el de la sala, porque el servidor aún puede tener el de una
+   partida anterior. Así sigue en tiempo real cuando se cambia el mapa en la sala. */
+const mapaValido = (m) => (m && String(m).toLowerCase() !== 'loading' ? String(m) : '');
+function mapaEnAntena() {
+  /* El mapa del servidor solo vale con una partida real: en fase LOBBY sigue siendo
+     el de la última (p. ej. «Practice Range») aunque la sala ya tenga otro. */
+  const hayPartida = M !== null && String(M.roundPhase ?? '').toUpperCase() !== 'LOBBY';
+  const partida = hayPartida ? mapaValido(M.map) : '';
+  const sala = mapaValido(SALA?.mapa);
+  return partida || sala || mapaValido(M?.map);
+}
+
+/* Avisa a db.js (card y hero del match en antena) cada vez que cambia. */
+let ultimoMapaAvisado = '';
+function avisaMapa() {
+  const mapa = mapaEnAntena();
+  if (!mapa || mapa === ultimoMapaAvisado) return;
+  ultimoMapaAvisado = mapa;
+  window.dispatchEvent(new CustomEvent('mapa-vivo', { detail: { map: mapa } }));
+}
+
 /* Aplica una sala recibida (del socket o del IPC local). Un `null` significa
    «ya no estás en el lobby custom»; se conserva la última sala para el panel de
    config, pero la fase la decide la escena, no la sala. */
 function aplicaSala(valor) {
-  if (valor) SALA = valor;
+  // El IPC local (cada 1s, lectura cruda de Riot) no trae `conectados` -eso
+  // solo lo sabe el servidor, cruzando presencia de todos los jugadores-. Sin
+  // este merge, cada tick local pisaba el `conectados` que el servidor SÍ
+  // había mandado un instante antes, y el badge de "No app" volvía enseguida
+  // aunque el jugador ya estuviera presente.
+  if (valor) SALA = { ...valor, conectados: valor.conectados ?? SALA?.conectados ?? [] };
+  avisaMapa();
   pintaMatch();
   pintaPrepEquipos();
   pintaEstadoVivo();
 }
 
+/* El CAMPO DE TIRO (Practice Range) también reporta la escena como «Round 1», pero no es
+   una partida: sin esto el panel saltaba de frente a la vista de partida aunque la sala
+   siguiera en el lobby. Se recuerda que se entró en él hasta que cambie de escena de verdad. */
+let enRange = false;
+const enElRange = () => enRange || /range/i.test(String(M?.map ?? ''));
+
 window.addEventListener('escena', (e) => {
   escena = String(e.detail || '');
+  if (escena === 'Practice Range') enRange = true;
+  else if (escena === 'Main Menu' || escena === 'Agent Select' || escena === 'Game Started') enRange = false;
+  avisaMapa();
   pinta();
 });
 
@@ -91,6 +128,67 @@ function serieActual() {
    mapa en el historial (para el banner) y lo manda al server por su canal.
    Anti-duplicado por matchId (o firma mapa+score si no hay id). */
 let ultimaSerieClave = '';
+/* El juego se ve en gris (timeout o pausa técnica): lo detecta el observador mirando la pantalla y el servidor
+   pone o quita la pausa solo. Así el overlay enseña la pausa y se para la cuenta de la spike al instante. */
+window.addEventListener('pausa-visual', (e) => {
+  const activa = e.detail?.activa === true;
+  enlace?.orden('pausaVisual', { activa });
+  muestraAvisoPausa(activa);
+});
+
+/* ── Aviso de pausa: pita, y con un clic se asigna al equipo que la pidió ──────
+   El overlay ya enseña la pausa (técnica) desde el primer instante; al pulsar un equipo pasa a ser SU timeout,
+   con cuenta atrás y descontado. «Técnica» la deja como está. Se esconde solo al volver el color. */
+
+function pitido() {
+  try {
+    const ac = new (window.AudioContext || window.webkitAudioContext)();
+    [0, 0.22].forEach((retardo) => {
+      const o = ac.createOscillator();
+      const g = ac.createGain();
+      o.type = 'square';
+      o.frequency.value = 880;
+      g.gain.value = 0.07;
+      o.connect(g).connect(ac.destination);
+      o.start(ac.currentTime + retardo);
+      o.stop(ac.currentTime + retardo + 0.14);
+    });
+    setTimeout(() => ac.close(), 800);
+  } catch {
+    /* sin audio: el aviso visual basta */
+  }
+}
+
+function textoEquipoPausa(i) {
+  const quedan = i === 0 ? M?.tools?.timeoutCounter?.left : M?.tools?.timeoutCounter?.right;
+  return `${nombreEquipo(i)}<small>${quedan ?? 0} left</small>`;
+}
+
+function muestraAvisoPausa(activa) {
+  const caja = $('pausa-aviso');
+  if (caja === null) return;
+  if (!activa) {
+    caja.hidden = true;
+    return;
+  }
+  $('pausa-izq').innerHTML = textoEquipoPausa(0);
+  $('pausa-der').innerHTML = textoEquipoPausa(1);
+  $('pausa-aviso-sub').textContent = '¿Quién la pidió?';
+  caja.hidden = false;
+  pitido();
+}
+
+for (const [id, orden, lado] of [['pausa-izq', 'tiempoMuertoIzq', 0], ['pausa-der', 'tiempoMuertoDer', 1]]) {
+  $(id)?.addEventListener('click', () => {
+    enlace?.orden(orden);
+    $('pausa-aviso').hidden = true;
+    void lado;
+  });
+}
+$('pausa-tec')?.addEventListener('click', () => {
+  $('pausa-aviso').hidden = true;
+});
+
 window.addEventListener('serie-fin', (e) => {
   const d = e.detail || {};
   const clave = d.matchId || `${d.map}-${d.izq}-${d.der}`;
@@ -194,6 +292,7 @@ function modoPanel() {
       const primero = M === null;
       M = m;
       if (primero) avisa('');
+      avisaMapa();
       pinta();
     },
     alEntrar: ({ ok, motivo }) => {
@@ -615,9 +714,7 @@ let mapaPintado = null;
 function pintaMapaTile() {
   const tile = $('mapa-tile');
   if (tile === null) return;
-  const vivo = M?.map && String(M.map).toLowerCase() !== 'loading' ? M.map : '';
-  const sala = SALA?.mapa && String(SALA.mapa).toLowerCase() !== 'loading' ? SALA.mapa : '';
-  const nombre = vivo || sala;
+  const nombre = mapaEnAntena();
   const nom = $('mapa-tile-nombre');
   if (!nombre) {
     tile.hidden = true;
@@ -736,15 +833,25 @@ function pintaGod() {
   const marco = $('vista-directo');
 
   if (M === null) {
+    // Los equipos ya registrados para este match (nombre/logo), si el
+    // operador los asignó al crearlo. Sin esto, el lobby mostraba siempre el
+    // rol genérico aunque el match ya tuviera equipos de verdad elegidos.
+    const equiposMatch = window.__easyEquiposMatch?.() ?? [null, null];
     for (const i of [0, 1]) {
       const enSala = salaDeLado(i);
+      const equipo = equiposMatch[i];
       // Como en el lobby de VALORANT: la izquierda es ATACANTES, la derecha
-      // DEFENSORES. Fijo; solo cambia quién los ocupa.
-      $(`nombre-${i}`).textContent = i === 0 ? 'ATTACKERS' : 'DEFENDERS';
+      // DEFENSORES por rol — pero si el match ya tiene un equipo registrado
+      // en ese lado, se muestra su nombre real en vez del rol genérico.
+      $(`nombre-${i}`).textContent = equipo?.name
+        ? equipo.name.toUpperCase()
+        : i === 0
+          ? 'ATTACKERS'
+          : 'DEFENDERS';
       $(`meta-${i}`).textContent = enSala.length ? `In lobby · ${enSala.length}` : 'no match';
       $(`roster-${i}`).innerHTML =
         enSala.map(filaSala).join('') || '<span class="apunte">No players yet.</span>';
-      $(`logo-${i}`).style.backgroundImage = '';
+      $(`logo-${i}`).style.backgroundImage = equipo?.logoUrl ? `url('${encodeURI(equipo.logoUrl)}')` : '';
       $(`score-${i}`).textContent = '0';
       // Modo sala: izquierda ATAQUE (rojo), derecha DEFENSA (teal), como en la
       // pantalla de VALORANT. Fijo: solo cambian los equipos, no el color.
@@ -883,7 +990,7 @@ let permiso = 'sin-sesion'; // 'sin-sesion' | 'conectando' | 'sin-mando' | 'ok'
 function estadoJuego() {
   /* El estado sigue la MISMA autoridad que la vista: la escena en vivo. */
   if (escena === 'Agent Select') return { texto: 'Agent select', vivo: true };
-  if (escena.startsWith('Round ')) {
+  if (escena.startsWith('Round ') && !enElRange()) {
     const n = M?.roundNumber ?? escena.slice(6).trim();
     return { texto: `In game · R${n}`, vivo: true };
   }
@@ -908,9 +1015,7 @@ function pintaEstadoVivo() {
   pintaEstado(texto, vivo);
   /* Mapa: del partido en vivo, o si aún no hay (estamos en lobby), el de la sala.
      Así «Breeze» sale en la cabecera desde el lobby, no solo dentro del juego. */
-  const vivoMap = M?.map && String(M.map).toLowerCase() !== 'loading' ? M.map : '';
-  const salaMap = SALA?.mapa && String(SALA.mapa).toLowerCase() !== 'loading' ? SALA.mapa : '';
-  ponMapa(vivoMap || salaMap);
+  ponMapa(mapaEnAntena());
 }
 
 /* El reloj de la cuenta atrás del tiempo muerto. Lo lleva el navegador: el
@@ -958,6 +1063,7 @@ $('cam-generar')?.addEventListener('click', async () => {
     if (estado) estado.textContent = 'Create lobby only works inside the observer exe.';
     return;
   }
+  reiniciaEstadoJuego(); // sala nueva = partida nueva: fuera lo que quedó de la anterior
   boton.disabled = true;
   const antes = boton.textContent;
   boton.textContent = 'Creating…';
@@ -985,14 +1091,435 @@ $('cam-generar')?.addEventListener('click', async () => {
   }
 });
 
-/* CALL PLAYERS (mockup): en el diseño invita a los jugadores a unirse a la sala.
-   Hoy NO existe una acción de servidor para invitar —los exes de jugador entran
-   con el código de sala, no hay puente de invitación—, así que el botón queda
-   presente pero sin efecto. No se inventa backend aquí.
-   TODO: cablear a la acción real de invitar/llamar cuando el shell exponga el
-   puente correspondiente (p. ej. window.__easyLlamaJugadores). */
-$('cam-llamar')?.addEventListener('click', () => {
-  /* Inerte a propósito — ver el comentario de arriba. */
+/* CALL PLAYERS (BETA): avisa por su puuid a los clientes de jugador de los
+   dos equipos registrados en el match en antena, si ya tienen el exe abierto
+   (latido de presencia). No es una invitación de Riot -eso lo sigue haciendo
+   el operador a mano, en el juego-: es lo que hace que el exe del jugador se
+   conecte solo al servidor apenas puede, en vez de esperar a que el GEP vea
+   match_start. */
+/* Quién de los jugadores registrados tiene el programa abierto (lo sabe el
+   servidor por los latidos de presencia). Va con el panel: `enlace` es suyo. */
+window.__easyPresencia = (puuids) => enlace?.presencia(puuids) ?? Promise.resolve(null);
+
+/* Depuración por jugador en la vista Match: programa abierto, ¿manda datos del juego? y cámara.
+   Lo sabe el servidor; aquí se sondea cada pocos segundos y se guarda por puuid. Las insignias
+   usan categorías (no segundos) para repintar solo cuando algo cambia de verdad. */
+const DATOS_VIVOS_MS = 45_000; // más viejo que esto, la fila del overlay ya se da por sin datos
+const ESTADO_JUG = new Map();
+let firmaEstado = '';
+function puuidsDeLaVista() {
+  const ids = new Set();
+  for (const e of [SALA?.equipoUno, SALA?.equipoDos]) for (const j of e ?? []) if (j?.puuid) ids.add(j.puuid);
+  for (const t of M?.teams ?? []) for (const p of t?.players ?? []) if (p?.playerId) ids.add(p.playerId);
+  return [...ids];
+}
+async function sondeaEstadoJugadores() {
+  const puuids = puuidsDeLaVista();
+  if (puuids.length === 0 || !enlace) return;
+  const r = await enlace.estadoJugadores(puuids);
+  if (r === null) return;
+  ESTADO_JUG.clear();
+  for (const [id, e] of Object.entries(r)) {
+    const datos = e.datosMs === null ? 'nada' : e.datosMs <= DATOS_VIVOS_MS ? 'ok' : 'viejo';
+    ESTADO_JUG.set(id, { ...e, datos, seg: e.datosMs === null ? null : Math.round(e.datosMs / 1000) });
+  }
+  const f = JSON.stringify([partidaEnCurso(), ...[...ESTADO_JUG].map(([id, e]) => [id, e.app, e.dentro, e.datos, e.camara, e.veredicto])]);
+  if (f !== firmaEstado) {
+    firmaEstado = f;
+    firmaPrep = '';
+    firmaVivo = '';
+    pintaMatch();
+  }
+  pintaDiagnostico();
+}
+setInterval(() => void sondeaEstadoJugadores(), 3000);
+
+/* ── Veredicto del programa de cada jugador ────────────────────────────────
+   El exe cuenta en su latido cómo está por dentro (Overwolf, juego, eventos, conexión…); el servidor lo
+   reduce a un veredicto. Sustituye al simple «Ready / No app»: «Ready» ahora significa que de verdad
+   le llegan eventos del juego. Un exe antiguo no cuenta nada y sale como Ready con aviso en el tooltip. */
+const VEREDICTOS = {
+  ok: ['Ready', 'ok', 'Overwolf sees VALORANT and game events are arriving.'],
+  'sin-diagnostico': ['Ready', 'ok', 'App is open (an old version: it cannot report its state).'],
+  'gep-esperando': ['Starting', 'aviso', 'The Overwolf package is still starting.'],
+  'gep-caido': ['GEP fail', 'mal', 'The Overwolf game-events package failed. The player must restart Easy HUD.'],
+  'sin-juego': ['No game', 'aviso', 'VALORANT is not open on their PC.'],
+  'juego-no-detectado': ['Game not seen', 'mal', 'VALORANT is open but Overwolf does not detect it. Restart Easy HUD, then VALORANT.'],
+  'sin-eventos': ['No events', 'mal', 'Overwolf sees VALORANT but delivers no game events.'],
+  conflicto: ['Conflict', 'mal', 'Another program (a second Easy HUD, ValoSpectra or Overwolf) is open on their PC and splits the game data, so they get no health or abilities. They must close it.'],
+  espectador: ['Spectator?', 'mal', 'The app believes this player is a spectator, so it sends NO health or abilities. Update Easy HUD, or restart it with VALORANT closed.'],
+  'sin-programa': ['No app', 'off', 'Easy HUD is not open on their PC.'],
+};
+const segs = (ms) => (ms === null || ms === undefined ? 'never' : ms < 2000 ? 'now' : ms < 120000 ? `${Math.round(ms / 1000)}s` : `${Math.round(ms / 60000)}m`);
+function detalleDiag(e) {
+  const d = e.diag;
+  if (!d) return '';
+  const lineas = [
+    `v${d.version} · GEP ${d.gep}${d.gepVersion ? ' ' + d.gepVersion : ''}`,
+    `VALORANT: ${d.juegoAbierto ? 'open' : 'closed'}, ${d.juegoDetectado ? 'detected' : 'not detected'}`,
+    `last game event: ${segs(d.eventosHace)}`,
+    d.espectador ? 'treated as SPECTATOR: sends no health/abilities' : '',
+    (d.conflictos ?? []).length ? `CONFLICT: ${d.conflictos.join(', ')}` : '',
+    (d.infoClaves ?? []).length ? `GEP has now: ${d.infoClaves.join(' ')}` : '',
+    Object.keys(d.claves ?? {}).length ? `GEP keys: ${Object.entries(d.claves).map(([k, n]) => `${k}=${n}`).join(' ')}` : '',
+    `match connection: ${d.datos}`,
+    d.red ? `network: ${d.red}` : '',
+    d.riot ? `Riot: ${d.riot}` : '',
+    ...d.errores.map((x) => `error: ${x}`),
+  ];
+  return lineas.filter(Boolean).join('\n');
+}
+/** La insignia «Ready/No app» de un jugador. `tieneLegado`: lo que decía el método antiguo (sala/easyHud). */
+function insigniaPrograma(puuid, tieneLegado) {
+  const e = puuid ? ESTADO_JUG.get(puuid) : undefined;
+  if (e === undefined) {
+    return tieneLegado ? '<span class="prep__ready">Ready</span>' : '<span class="prep__noapp">No app</span>';
+  }
+  const [texto, nivel, ayuda] = VEREDICTOS[e.veredicto] ?? VEREDICTOS['sin-programa'];
+  const tip = [ayuda, detalleDiag(e)].filter(Boolean).join('\n\n');
+  return `<span class="prep__estado prep__estado--${nivel}" title="${escapa(tip)}">${texto}</span>`;
+}
+
+/* Las dos insignias de depuración de un jugador: DATA (¿llegan datos de su partida?) y CAM. */
+function insigniasDepura(puuid, nick = '', tag = '') {
+  const e = ESTADO_JUG.get(puuid);
+  if (!e) return '';
+  let html = '';
+  /* DATA / NO DATA solo tienen sentido con la partida en marcha: en el lobby aún no hay datos de juego que mandar. */
+  if (e.dentro && partidaEnCurso()) {
+    html += e.datos === 'ok'
+      ? `<span class="prep__dato" title="Game data arriving (${e.seg}s ago)">Data</span>`
+      : `<span class="prep__dato prep__dato--mal" title="${e.datos === 'nada' ? 'Connected to the match, but no game data received yet' : `Last game data ${e.seg}s ago`}">No data</span>`;
+  }
+  if (e.camara) {
+    html += `<button type="button" class="prep__camara" data-cam-nick="${escapa(nick)}" data-cam-tag="${escapa(tag)}" title="Camera publishing — click to preview">Cam</button>`;
+  }
+  return html;
+}
+
+/* Vista previa de la cámara de un jugador, desde el panel: la misma web de vídeo y los mismos
+   parámetros que usa el overlay, así se ve lo que llega de verdad. Un clic en «Cam» la abre. */
+function urlVistaCamara(nick, tag) {
+  const c = M?.tools?.playercamsInfo ?? {};
+  if (!c.base || !c.identifier) return '';
+  const id = `${nick}_H_${tag}`.replace(/\W+/g, '_');
+  const p = [
+    `room=${encodeURIComponent(c.identifier)}`, `view=${encodeURIComponent(id)}`,
+    'scene=0', 'cleanoutput', 'vb=1800', 'disablehotkeys', 'noaudio', 'mute', 'codec=h265,av1,h264,vp8',
+  ];
+  if (c.clave) p.push(`password=${encodeURIComponent(c.clave)}`);
+  if (c.params) p.push(c.params);
+  return `${c.base}/?${p.join('&')}`;
+}
+/* ── Colocar a cada jugador en su lado de la sala de Riot ──────────────────
+   El panel sabe en qué equipo juega cada uno y qué equipo ataca; el programa (anfitrión de la sala) mueve con la
+   API local de Riot a quien esté en el lado equivocado: Attackers = TeamTwo, Defenders = TeamOne. Sólo con la
+   partida sin empezar (con la partida en marcha no se toca nada) y se puede apagar con la casilla. */
+const CLAVE_COLOCAR = 'easy.autocolocar';
+let colocarActivo = true;
+try {
+  colocarActivo = localStorage.getItem(CLAVE_COLOCAR) !== '0';
+} catch {
+  /* sin almacenamiento: queda activo */
+}
+let firmaColocacion = '';
+function sincronizaColocacion() {
+  const envia = (lista) => {
+    const f = JSON.stringify(lista);
+    if (f === firmaColocacion) return;
+    firmaColocacion = f;
+    window.__easyColoca?.(lista);
+  };
+  if (!colocarActivo || !M?.teams || partidaEnCurso()) return envia([]);
+  const eqs = window.__easyEquiposConJugadores?.() ?? [];
+  const norm = (t) => String(t ?? '').trim().toLowerCase();
+  const lista = [];
+  for (const t of M.teams) {
+    const db = eqs.find(
+      (e) => (norm(e.tricode) !== '' && norm(e.tricode) === norm(t.teamTricode)) || (norm(e.name) !== '' && norm(e.name) === norm(t.teamName)),
+    );
+    if (!db) continue;
+    const equipo = t.isAttacking ? 'TeamTwo' : 'TeamOne';
+    for (const puuid of db.puuids) lista.push({ puuid, equipo });
+  }
+  envia(lista);
+}
+setInterval(sincronizaColocacion, 2000);
+const casillaColocar = document.getElementById('auto-colocar');
+if (casillaColocar) {
+  casillaColocar.checked = colocarActivo;
+  casillaColocar.addEventListener('change', () => {
+    colocarActivo = casillaColocar.checked;
+    try {
+      localStorage.setItem(CLAVE_COLOCAR, colocarActivo ? '1' : '0');
+    } catch {
+      /* sin almacenamiento */
+    }
+    sincronizaColocacion();
+  });
+}
+
+/* ── Tabla de diagnóstico ─────────────────────────────────────────────────
+   Un botón flotante abre una tabla con TODO lo que se sabe de cada jugador, en tiempo real: qué dice su
+   exe de sí mismo (Overwolf, juego, eventos, red), qué paquetes han llegado de él (y cuáles faltan) y si
+   el observador recibe su marcador. Para ver qué falla ANTES de que se note en el overlay. */
+const PAQUETES_ESPERADOS = ['aux_health', 'aux_abilities'];
+const ETIQUETA_PAQUETE = { aux_health: 'life', aux_abilities: 'abilities', aux_round_report: 'report' };
+let diagAbierto = false;
+
+function nombreDeJugador(puuid) {
+  for (const e of [SALA?.equipoUno, SALA?.equipoDos]) {
+    const j = (e ?? []).find((x) => x?.puuid === puuid);
+    if (j) return j.tag ? `${j.nombre}#${j.tag}` : j.nombre;
+  }
+  for (const t of M?.teams ?? []) {
+    const p = (t?.players ?? []).find((x) => x?.playerId === puuid);
+    if (p) return p.name ?? puuid.slice(0, 8);
+  }
+  return `${puuid.slice(0, 8)}…`;
+}
+
+const celdaDiag = (texto, nivel = '', tip = '') =>
+  `<td class="diag__c${nivel ? ` diag__c--${nivel}` : ''}"${tip ? ` title="${escapa(tip)}"` : ''}>${escapa(texto)}</td>`;
+
+function filaDiagnostico(puuid, e) {
+  const d = e.diag;
+  const [texto, nivel] = VEREDICTOS[e.veredicto] ?? VEREDICTOS['sin-programa'];
+  const celdas = [`<td class="diag__n">${escapa(nombreDeJugador(puuid))}</td>`, celdaDiag(texto, nivel, detalleDiag(e))];
+  if (d) {
+    celdas.push(celdaDiag(`v${d.version}`));
+    celdas.push(celdaDiag(d.gep === 'listo' ? 'ready' : d.gep, d.gep === 'listo' ? 'ok' : d.gep === 'esperando' ? 'aviso' : 'mal'));
+    celdas.push(
+      celdaDiag(
+        d.juegoDetectado ? 'seen' : d.juegoAbierto ? 'NOT seen' : 'closed',
+        d.juegoDetectado ? 'ok' : d.juegoAbierto ? 'mal' : 'aviso',
+      ),
+    );
+    celdas.push(celdaDiag(segs(d.eventosHace), d.eventosHace === null ? 'aviso' : ''));
+    celdas.push(celdaDiag(d.datos === 'conectada' ? 'in match' : d.datos, d.datos === 'conectada' ? 'ok' : '', d.red));
+  } else {
+    celdas.push(
+      celdaDiag(e.app ? 'old app' : '—', e.app ? 'aviso' : '', 'This app version does not report diagnostics.'),
+      celdaDiag('—'),
+      celdaDiag('—'),
+      celdaDiag('—'),
+      celdaDiag(e.dentro ? 'in match' : '—', e.dentro ? 'ok' : ''),
+    );
+  }
+  // Paquetes de su exe: lo que llegó y lo que falta (sólo se exige cuando ya está dentro de la partida).
+  const tipos = [...new Set([...PAQUETES_ESPERADOS, ...Object.keys(e.paquetes ?? {})])];
+  const partes = tipos.map((t) => {
+    const f = e.paquetes?.[t];
+    const nombre = ETIQUETA_PAQUETE[t] ?? t;
+    if (f) return `<span class="diag__p">${escapa(nombre)} ${f.n}<i>${segs(f.haceMs)}</i></span>`;
+    return PAQUETES_ESPERADOS.includes(t) && e.dentro ? `<span class="diag__p diag__p--falta">${escapa(nombre)} missing</span>` : '';
+  });
+  celdas.push(`<td class="diag__c">${partes.join('') || '—'}</td>`);
+  // Marcador (dinero, kills, ulti) que el OBSERVADOR recibió de este jugador.
+  const sb = e.marcador;
+  const sbMal = e.dentro && (sb === null || sb.haceMs > 180000);
+  celdas.push(
+    celdaDiag(sb === null ? 'none' : `${sb.n} · ${segs(sb.haceMs)}`, sbMal ? 'mal' : '', 'Scoreboard packets the OBSERVER received for this player (money, kills, ultimate).'),
+  );
+  celdas.push(
+    celdaDiag(e.camara ? 'live' : d?.camara?.error ? 'error' : d?.camara?.permitida ? 'ready' : 'off', e.camara ? 'cam' : d?.camara?.error ? 'mal' : '', d?.camara?.error ?? ''),
+  );
+  celdas.push(`<td class="diag__c diag__c--err" title="${escapa((d?.errores ?? []).join('\n'))}">${escapa(d?.errores?.at(-1) ?? '')}</td>`);
+  // La CAUSA: lo que concluye el informe completo del PC (caja negra), con su certeza; o el botón para pedirlo.
+  const inf = e.informe;
+  const concl = (inf?.conclusiones ?? [])
+    .map((c) => `<div class="diag__concl diag__concl--${c.certeza}" title="${escapa(c.id)}"><b>${c.certeza === 'confirmada' ? 'CONFIRMED' : c.certeza === 'probable' ? 'LIKELY' : 'INFO'}</b> ${escapa(c.texto)}</div>`)
+    .join('');
+  const boton = e.app
+    ? `<button type="button" class="diag__pide" data-puuid="${escapa(puuid)}">${inf ? 'Refresh report' : 'Request report'}</button> <button type="button" class="diag__pide diag__reconecta" data-puuid="${escapa(puuid)}" title="Makes their app reconnect to the server and rejoin the match">Reconnect</button>`
+    : '';
+  celdas.push(`<td class="diag__c diag__c--causa">${concl || '<span class="diag__nada">no report yet</span>'}${inf ? `<span class="diag__nada">report ${segs(inf.haceMs)} ago</span> ` : ''}${boton}</td>`);
+  return `<tr>${celdas.join('')}</tr>`;
+}
+
+function textoDiagnosticoPanel() {
+  const lineas = [];
+  for (const [puuid, e] of ESTADO_JUG) {
+    const [v] = VEREDICTOS[e.veredicto] ?? VEREDICTOS['sin-programa'];
+    lineas.push(`${nombreDeJugador(puuid)}: ${v}`, ...detalleDiag(e).split('\n').filter(Boolean).map((l) => `   ${l}`));
+    const pk = Object.entries(e.paquetes ?? {}).map(([t, f]) => `${t}=${f.n}(${segs(f.haceMs)})`).join(' ');
+    lineas.push(`   packets: ${pk || 'none'}; scoreboard: ${e.marcador ? `${e.marcador.n} (${segs(e.marcador.haceMs)})` : 'none'}`);
+  }
+  return lineas.join('\n');
+}
+
+function pintaDiagnostico() {
+  const cuerpo = document.getElementById('diag-cuerpo');
+  if (!diagAbierto || cuerpo === null) return;
+  if (ESTADO_JUG.size === 0) {
+    cuerpo.innerHTML = '<p class="diag__vacio">No players to show yet. Add players to the teams, or press “Call players”.</p>';
+    return;
+  }
+  const cab = ['Player', 'Status', 'App', 'Overwolf', 'VALORANT', 'Last event', 'Match link', 'Packets from the app', 'Scoreboard (observer)', 'Camera', 'Last error', 'Cause (from the full report)'];
+  cuerpo.innerHTML =
+    `<table class="diag__t"><thead><tr>${cab.map((c) => `<th>${c}</th>`).join('')}</tr></thead><tbody>` +
+    [...ESTADO_JUG].map(([puuid, e]) => filaDiagnostico(puuid, e)).join('') +
+    '</tbody></table>';
+}
+
+function montaDiagnostico() {
+  if (document.getElementById('diag-btn') !== null) return;
+  const btn = document.createElement('button');
+  btn.id = 'diag-btn';
+  btn.type = 'button';
+  btn.textContent = 'Diagnostics';
+  const caja = document.createElement('div');
+  caja.id = 'diag-panel';
+  caja.hidden = true;
+  caja.innerHTML =
+    '<div class="diag__barra"><b>Players · live diagnostics</b><span class="diag__acc">' +
+    '<button type="button" id="diag-copia">Copy</button><button type="button" id="diag-cierra" aria-label="Close">×</button></span></div>' +
+    '<div id="diag-cuerpo"></div>' +
+    '<p class="diag__nota">Updates every 3 s. “Status” comes from each player’s own app; “Packets” are what the server actually received from it; ' +
+    '“Scoreboard” is what your observer received for that player.</p>';
+  document.body.append(btn, caja);
+  const alterna = (si) => {
+    diagAbierto = si;
+    caja.hidden = !si;
+    if (si) {
+      pintaDiagnostico();
+      void sondeaEstadoJugadores();
+    }
+  };
+  btn.addEventListener('click', () => alterna(caja.hidden));
+  // Atajo: Ctrl+Shift+D abre y cierra el diagnóstico (por si el botón no se ve).
+  document.addEventListener('keydown', (ev) => {
+    if (ev.ctrlKey && ev.shiftKey && ev.key.toLowerCase() === 'd') {
+      ev.preventDefault();
+      alterna(caja.hidden);
+    }
+  });
+  document.getElementById('diag-cierra').addEventListener('click', () => alterna(false));
+  // Pedir el informe completo (caja negra) del programa de un jugador.
+  caja.addEventListener('click', (ev) => {
+    const b = ev.target instanceof Element ? ev.target.closest('.diag__pide') : null;
+    if (b === null) return;
+    if (b.classList.contains('diag__reconecta')) {
+      enlace?.orden('ordenJugador', { puuid: b.dataset.puuid, accion: 'reconecta' });
+      b.textContent = 'Sent';
+      b.disabled = true;
+      return;
+    }
+    enlace?.orden('pideInforme', { puuid: b.dataset.puuid });
+    b.textContent = 'Requested…';
+    b.disabled = true;
+    setTimeout(() => void sondeaEstadoJugadores(), 12000);
+  });
+  document.getElementById('diag-copia').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(textoDiagnosticoPanel());
+      document.getElementById('diag-copia').textContent = 'Copied';
+      setTimeout(() => (document.getElementById('diag-copia').textContent = 'Copy'), 1500);
+    } catch {
+      /* sin portapapeles: no pasa nada */
+    }
+  });
+}
+montaDiagnostico();
+
+document.addEventListener('click', (ev) => {
+  const b = ev.target instanceof Element ? ev.target.closest('.prep__camara') : null;
+  if (b === null) return;
+  let caja = document.getElementById('cam-vista');
+  if (caja === null) {
+    caja = document.createElement('div');
+    caja.id = 'cam-vista';
+    caja.innerHTML = '<div class="cam-vista__barra"><span></span><button type="button" aria-label="Close">×</button></div><iframe allow="autoplay"></iframe>';
+    document.body.appendChild(caja);
+    caja.querySelector('button').onclick = () => { caja.hidden = true; caja.querySelector('iframe').removeAttribute('src'); };
+  }
+  const url = urlVistaCamara(b.dataset.camNick ?? '', b.dataset.camTag ?? '');
+  caja.querySelector('span').textContent = `${b.dataset.camNick}#${b.dataset.camTag}` + (url ? '' : ' — no camera config yet');
+  if (url) caja.querySelector('iframe').src = url;
+  caja.hidden = false;
+});
+
+/* «Call players» no es un disparo único: el servidor sigue llamando a cada
+   jugador hasta que abre el programa. Mientras tanto el botón enseña cuántos lo
+   tienen ya abierto (p. ej. 5/10) y se puede parar. */
+const dice = (txt) => {
+  const el = $('llamada-estado');
+  if (el === null) return;
+  el.textContent = txt;
+  el.hidden = txt === '';
+};
+let llamando = false;
+let llamadaReloj = null;
+const SONDEO_LLAMADA_MS = 4000;
+
+function paraLlamada(textoBoton) {
+  llamando = false;
+  if (llamadaReloj !== null) clearInterval(llamadaReloj);
+  llamadaReloj = null;
+  const boton = $('cam-llamar');
+  if (boton) {
+    boton.textContent = textoBoton;
+    boton.disabled = false;
+  }
+}
+
+async function progresoLlamada() {
+    const puuids = window.__easyPuuidsLlamables?.() ?? [];
+  if (puuids.length === 0) return;
+  const activos = await window.__easyPresencia(puuids);
+  if (!llamando) return;
+  if (activos === null) {
+    dice('Calling… (waiting for the server to answer)');
+    return;
+  }
+  const n = activos.length;
+  /* Quién de ellos ya está DENTRO de la sala de Riot (la lee el observador). */
+  const enSala = new Set(
+    [SALA?.equipoUno, SALA?.equipoDos, SALA?.observadores, SALA?.coaches].flatMap((l) => (Array.isArray(l) ? l.map((j) => j.puuid) : [])),
+  );
+  const dentro = puuids.filter((p) => enSala.has(p)).length;
+  const resumen = `${n}/${puuids.length} have the app open · ${dentro}/${puuids.length} are in the lobby`;
+  if (n >= puuids.length && dentro >= puuids.length) {
+    dice(`${resumen} — everyone is here.`);
+    paraLlamada('Call players');
+    return;
+  }
+  dice(`${resumen} · still calling the rest…`);
+}
+
+$('cam-llamar')?.addEventListener('click', async () => {
+  const boton = $('cam-llamar');
+    if (llamando) {
+    void window.__easyCancelaLlamada?.();
+    paraLlamada('Call players');
+    dice('Stopped calling players.');
+    return;
+  }
+  const llamar = window.__easyLlamaJugadores;
+  if (typeof llamar !== 'function') {
+    dice('Call players only works inside the observer exe.');
+    return;
+  }
+  boton.disabled = true;
+  boton.textContent = 'Calling…';
+  try {
+    const res = await llamar();
+    if (!res?.ok) {
+      dice(`Couldn’t call players: ${res?.error ?? 'unknown error'}`);
+      boton.textContent = 'Call players';
+      boton.disabled = false;
+      return;
+    }
+    llamando = true;
+    boton.textContent = 'Stop calling';
+    boton.disabled = false;
+    await progresoLlamada();
+    if (llamando) llamadaReloj = setInterval(() => void progresoLlamada(), SONDEO_LLAMADA_MS);
+  } catch {
+    dice('Error calling players.');
+    boton.textContent = 'Call players';
+    boton.disabled = false;
+  }
 });
 
 /* El raíl de iconos de la lobby reabre el dashboard (#menu-inicio) en la sección
@@ -1054,16 +1581,15 @@ function slotPrep(j, rol) {
     return `<div class="prep__slot">${cuadro}<span class="jug__nick">${escapa(nick)}</span></div>`;
   }
 
-  /* jugador: estado del cliente de Easy HUD. Hoy `easyHud` aún no lo alimenta
-     nadie (falta el exe del jugador), así que sale «No app» hasta que ese
-     cliente reporte su presencia. */
-  const tiene = !!j.easyHud;
-  const insignia = tiene
-    ? '<span class="prep__ready">Ready</span>'
-    : '<span class="prep__noapp">No app</span>';
+  /* jugador: estado del cliente de Easy HUD. El servidor manda `conectados`
+     (puuids con presencia o ya conectados a esta partida) en la propia SALA
+     -ver emiteSala en MatchController- así que se cruza acá en vez de
+     esperar un `j.easyHud` que nadie llena nunca. */
+  const tiene = !!j.easyHud || (SALA?.conectados ?? []).includes(j.puuid);
+  const insignia = insigniaPrograma(j.puuid, tiene);
   return (
     `<div class="prep__slot" data-app="${tiene ? 'si' : 'no'}">` +
-    `${cuadro}<span class="jug__nick">${escapa(nick)}</span>${insignia}</div>`
+    `${cuadro}<span class="jug__nick">${escapa(nick)}</span>${insignia}${insigniasDepura(j.puuid, j.nombre, j.tag)}</div>`
   );
 }
 
@@ -1154,7 +1680,7 @@ function slotJugadorVivo(p) {
   const online = conCliente(p) ? 'si' : 'no';
   return (
     `<div class="prep__slot" data-online="${online}">` +
-    `${cuadro}<span class="jug__nick">${escapa(nick)}</span></div>`
+    `${cuadro}<span class="jug__nick">${escapa(nick)}</span>${insigniasDepura(p.playerId, p.name, p.tagline)}</div>`
   );
 }
 function pintaSlotsVivo(id, jugadores) {
@@ -1216,7 +1742,7 @@ function pintaColumnasVivo() {
    clara, se asume lobby (el fallo seguro). */
 function partidaEnCurso() {
   if (escena === 'Agent Select') return true;
-  if (escena.startsWith('Round ')) return true; // «Round N» = en juego
+  if (escena.startsWith('Round ') && !enElRange()) return true; // «Round N» = en juego (salvo en el campo de tiro)
   return false;
 }
 
@@ -1377,6 +1903,16 @@ setInterval(pintaReloj, 250);
 export function arranca(sesion) {
   cuenta = sesion;
   modoPanel();
+}
+
+/** Deja limpio el estado de JUEGO del servidor (ronda, marcador, jugadores de la partida anterior). Se pide al
+   empezar un match o crear una sala nueva: sin esto, el overlay seguía enseñando «ronda 2, LLL 2-0» de antes. */
+export function reiniciaEstadoJuego() {
+  /* NUNCA con la partida ya en marcha: si el juego está en «Agent Select», «Game Started» o «Round N», el estado que
+     hay en el servidor es el de ESTA partida, que GEP no vuelve a mandar. Borrarlo dejaba la partida sin iniciar y a
+     los jugadores sin datos (había que reiniciar todo). Sólo se limpia desde el menú, que es cuando sobra lo viejo. */
+  if (/^(agent select|game started|round \d+)$/i.test(escena)) return;
+  enlace?.orden('reiniciaPartida');
 }
 
 /** Empuja un patch de configuración a emisión (para el «Start» del dashboard).

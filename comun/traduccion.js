@@ -88,6 +88,36 @@ export function traduceJugador(p) {
   };
 }
 
+/**
+ * Marca a los jugadores cuyo DINERO no se está actualizando.
+ *
+ * Cuando el observador no recibe el marcador de alguien, su dinero se queda en el último valor (o en
+ * el 800 por defecto) y el overlay lo pinta como si fuera real. Un jugador sano cambia de dinero
+ * cada ronda (cobra y compra); si lleva dos rondas seguidas con la misma cifra en juego, se marca con
+ * `moneyStale` y las pantallas ponen «—» en vez de un número falso. No toca nada más.
+ *
+ * `memo` es un Map que guarda quien llama (uno por pantalla): se vacía solo si la ronda retrocede
+ * (mapa nuevo).
+ *
+ * @param {any} match Estado traducido (se modifica).
+ * @param {Map<string, {money: number, ronda: number}>} memo
+ */
+export function marcaDineroViejo(match, memo) {
+  const ronda = match?.round ?? 0;
+  if (memo.get('@ronda')?.ronda > ronda) memo.clear();
+  memo.set('@ronda', { money: 0, ronda });
+  const enJuego = match?.phase !== 'agentSelect';
+  for (const team of match?.teams ?? []) {
+    for (const p of team.players ?? []) {
+      const clave = `${p.identity?.name}#${p.identity?.tag}`;
+      const previo = memo.get(clave);
+      if (previo === undefined || previo.money !== p.money) memo.set(clave, { money: p.money, ronda });
+      const desde = memo.get(clave).ronda;
+      p.moneyStale = enJuego && !p.disconnected && ronda - desde >= 2;
+    }
+  }
+}
+
 /* ── Historial ───────────────────────────────────────────────────────────── */
 
 /** El tipo del servidor -> el motivo que el diseño mapea con MOTIVOS. */
@@ -149,6 +179,35 @@ export function mapasSerie(mapInfo) {
   return salida;
 }
 
+/**
+ * Los defensores SIEMPRE a la izquierda (verde) y los atacantes a la derecha (rojo).
+ *
+ * Si el equipo de la izquierda ataca, se da la vuelta a TODO lo que va por equipo:
+ * equipos, marcador de la serie (puntos, logos, quién ganó cada mapa) y el aviso con
+ * equipo. Se hace una sola vez, sobre el estado ya traducido, para que todas las
+ * pantallas lean lo mismo. Lo que no se puede tocar aquí (tiempo muerto, finales)
+ * se corrige con el valor que devuelve.
+ *
+ * @param {any} match Estado traducido (se modifica).
+ * @returns {boolean} true si se dio la vuelta.
+ */
+export function defensoresIzquierda(match) {
+  const t = match?.teams;
+  if (!Array.isArray(t) || t.length !== 2) return false;
+  if (!(t[0].side === 'attack' && t[1].side === 'defense')) return false;
+
+  match.teams = [t[1], t[0]];
+  for (const m of match.series?.maps ?? []) {
+    if (m.state !== 'past') continue;
+    m.score = [m.score[1], m.score[0]];
+    m.winner = m.winner === 0 ? 1 : 0;
+    [m.leftLogo, m.rightLogo] = [m.rightLogo, m.leftLogo];
+  }
+  const toast = match.broadcast?.toast;
+  if (toast && toast.teamIndex !== null) toast.teamIndex = toast.teamIndex === 0 ? 1 : 0;
+  return true;
+}
+
 /* ── Fase y fin de mapa ──────────────────────────────────────────────────── */
 
 /** `roundPhase` del servidor -> la fase del contrato del diseño. */
@@ -204,7 +263,7 @@ const PRECIO_ARMA = {
   shorty: 300, frenzy: 450, ghost: 500, sheriff: 800,
   bucky: 850, stinger: 950, marshal: 950,
   ares: 1600, spectre: 1600, judge: 1850, bulldog: 2050,
-  guardian: 2250, outlaw: 2400, phantom: 2900, vandal: 2900,
+  guardian: 2250, outlaw: 2400, phantom: 2900, vandal: 2900, warden: 2250,
   odin: 3200, operator: 4700,
 };
 
@@ -396,6 +455,10 @@ export function traduceEstado(m, decidido) {
       enabled: camaras.enable === true,
       room: camaras.identifier ?? '',
       enabledPlayers: Array.isArray(camaras.enabledPlayers) ? camaras.enabledPlayers : [],
+      /* Cómo llegar a la web de vídeo: lo manda el servidor. */
+      base: camaras.base ?? '',
+      params: camaras.params ?? '',
+      password: camaras.clave ?? '',
     },
   };
 }
