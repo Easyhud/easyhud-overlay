@@ -167,3 +167,11 @@ lee desde el otro lado de la sala.
 
 El canal `/operador` **todavía no existe en el servidor**. Hasta que exista, el
 panel se conecta, enseña el estado real del partido y se queda en sólo lectura.
+
+## Rama `copia-funcional`: lo que se añadió
+
+- **Settings → Connection**: «Reconnect everything» (lo mismo que Ctrl+Alt+R; canal `reconecta-todo`). También sale como botón en los avisos de conexión caída.
+- **Settings → On-air display / Seeding / Player aliases / Round-win box**: modo mínimo, quitar tricodes de los nombres, cabezas de serie, alias de jugador y caja de fin de ronda. Todo se valida antes de mandarse (`js/validacion.js`) y el servidor dice qué corrigió.
+- Los cabezas de serie también se ponen **por match** (formulario del match); al arrancarlo se mandan siempre, vacíos si no tiene, para que no quede el del anterior.
+- **A prueba de tontos**: confirmación al intercambiar equipos o bandos, cerrar sesión, crear sala con partida en marcha, terminar un broadcast y sustituir un match en antena (`js/dialogo.js`); mandos apagados con el motivo en el tooltip; banda «¿qué hago ahora?» (`js/guia.js`); errores del servidor en una frase con botón (`js/errores.js`); campos con dirección de imagen o número fuera de rango se rechazan antes de enviar.
+- Tests: `node --test panel/js/validacion.test.mjs panel/js/guia.test.mjs`.

@@ -9,6 +9,9 @@
  */
 window.pintaSeleccion = (D) => {
   const { retratoAgente, iconoPapel } = window.HUD;
+  /* Todo texto o dirección que viene de fuera se escapa antes de ir a `innerHTML` / a un atributo `style`. */
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const urlCss = (u) => String(u ?? '').replace(/['"()\\\s<>]/g, (c) => encodeURIComponent(c));
 
   /* Extrusión del logo: capas OPACAS del mismo dibujo, oscurecidas hacia
      atrás. Con capas semitransparentes cada borde se suma al siguiente y el
@@ -40,15 +43,15 @@ window.pintaSeleccion = (D) => {
     const [izq, der] = D.equipos;
     cab.innerHTML =
       '<div class="sel-cab__mitad sel-cab__mitad--izq" style="--cl: var(' + tinta(0).cl + ');">'
-        + '<div class="sel-cab__fondo sel-cab__fondo--izq" style="--logo: url(\'' + izq.logo + '\');"><div>' + extruido() + '</div></div>'
-        + '<span class="sel-cab__equipo">' + izq.nombre.toUpperCase() + '</span>'
+        + '<div class="sel-cab__fondo sel-cab__fondo--izq" style="--logo: url(\'' + urlCss(izq.logo) + '\');"><div>' + extruido() + '</div></div>'
+        + '<span class="sel-cab__equipo">' + esc(izq.nombre.toUpperCase()) + '</span>'
         + '<span class="sel-cab__bando">' + izq.bando + '</span>'
       + '</div>'
       + '<div class="sel-cab__vs"><span>VS</span></div>'
       + '<div class="sel-cab__mitad" style="--cl: var(' + tinta(1).cl + ');">'
         + '<span class="sel-cab__bando">' + der.bando + '</span>'
-        + '<span class="sel-cab__equipo">' + der.nombre.toUpperCase() + '</span>'
-        + '<div class="sel-cab__fondo sel-cab__fondo--der" style="--logo: url(\'' + der.logo + '\');"><div>' + extruido() + '</div></div>'
+        + '<span class="sel-cab__equipo">' + esc(der.nombre.toUpperCase()) + '</span>'
+        + '<div class="sel-cab__fondo sel-cab__fondo--der" style="--logo: url(\'' + urlCss(der.logo) + '\');"><div>' + extruido() + '</div></div>'
       + '</div>';
   }
 
@@ -89,10 +92,10 @@ window.pintaSeleccion = (D) => {
         : '<div class="celda__hueco"></div>')
       + '<div class="celda__velo"></div>'
       + '<div class="celda__info">'
-        + '<span class="celda__nick">' + jug.nick + '</span>'
+        + '<span class="celda__nick">' + esc(jug.nick) + '</span>'
         + '<div class="celda__meta">'
           + (elegido ? '<div class="celda__papel" style="background-image: url(\'' + iconoPapel(jug.papel) + '\');"></div>' : '')
-          + '<span class="celda__agente">' + nombre + '</span>'
+          + '<span class="celda__agente">' + esc(nombre) + '</span>'
         + '</div>'
       + '</div>'
       + '<div class="celda__barra"></div>'

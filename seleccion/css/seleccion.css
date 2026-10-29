@@ -34,6 +34,8 @@
   font-family: 'Oswald', sans-serif;
   font-size: 38px; font-weight: 600; line-height: 1;
   letter-spacing: .04em; color: #fff; white-space: nowrap;
+  /* Un nombre larguísimo se corta con «…» en vez de salirse de su mitad (y de pisar el VS). */
+  min-width: 0; overflow: hidden; text-overflow: ellipsis;
 }
 .sel-cab__bando {
   position: relative; z-index: 2;

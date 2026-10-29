@@ -15,7 +15,10 @@ window.pintaCompra = (D) => {
   const miles = (n) => String(Math.trunc(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
   const el = (t, c) => { const n = document.createElement(t); if (c) n.className = c; return n; };
-  const fondo = u => 'background-image:url(' + u + ')';
+  /* Todo texto que viene de fuera (nick, alias, tricode) se escapa antes de ir a `innerHTML`. */
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  /* Con la dirección vacía, `url()` haría que el navegador intentase cargar la propia página como imagen. */
+  const fondo = u => (u ? 'background-image:url(' + u + ')' : '');
   const CAPAS = 26;   // capas del logo extruido
 
   const ESCUDO = {
@@ -123,9 +126,12 @@ window.pintaCompra = (D) => {
         + '<div class="ident__retrato" style="' + fondo(iconoAgente(p.agente)) + '"></div>'
         /* El rótulo del que abandonó va DEBAJO del nick: al lado le comía el
            sitio y el nick se quedaba en una letra. */
-        + '<span class="ident__nick">' + p.nick
+        /* Nombre del agente bajo el nick (adaptado de ValoSpectra/Spectra-Frontend, Elastic License 2.0 —
+           components/shopping/player-scoreboard-card/player-scoreboard-card.component.html). Sin agente, solo el nick. */
+        + '<span class="ident__texto"><span class="ident__nick">' + esc(p.nick)
           + (p.desconectado ? '<small class="ident__fuera">desconectado</small>' : '') + '</span>'
-        + '<span class="ident__kda">' + p.kda + '</span>'
+          + (p.agenteNombre ? '<span class="ident__agente">' + esc(p.agenteNombre) + '</span>' : '') + '</span>'
+        + '<span class="ident__kda">' + esc(p.kda) + '</span>'
       + '</div>');
     return m;
   }
@@ -156,7 +162,7 @@ window.pintaCompra = (D) => {
     b.append(extruido(eq.logo));
     b.insertAdjacentHTML('beforeend',
       '<div class="banco__texto">'
-        + '<span class="banco__tri">' + eq.tricode + '</span>'
+        + '<span class="banco__tri">' + esc(eq.tricode) + '</span>'
         + '<div class="banco__fila">'
           + '<span class="banco__etq">valor neto</span>'
           + '<i class="banco__icono" style="' + fondo(CREDITOS) + '"></i>'
@@ -177,20 +183,31 @@ window.pintaCompra = (D) => {
   }
 
   /**
-   * Doce rondas por mitad: el corte va entre la 12 y la 13.
+   * Una columna por ronda, más las marcas.
    *
-   * En PRÓRROGA el bloque de la derecha se alarga. No es un capricho: estaba
-   * escrito a fuego de la 13 a la 24, así que a partir de la 25 las rondas
-   * simplemente desaparecían del tablero — y la prórroga es justo el momento en
-   * que el público más mira el historial.
+   * El corte entre mitades, el número de rondas y dónde empieza la prórroga NO van escritos aquí: salen de las reglas
+   * del servidor (`D.plan`, ver `planHistorial` en `comun/partida.js`). La segunda mitad empieza con una marca de
+   * «cambio de lado» y cada prórroga con «OT n»; las columnas de prórroga aparecen según se juegan.
    *
-   * Se alarga y no se abre un bloque nuevo porque las columnas reparten el
-   * ancho entre ellas (`flex: 1 1 0`): cuatro columnas más caben solas, sin
-   * desbordar la banda ni tocar el diseño.
+   * Adaptado de ValoSpectra/Spectra-Frontend (Elastic License 2.0) — components/shopping/roundreasons/roundreasons.component.html
    */
-  function historial(desde, hasta) {
+  function historial(columnas) {
     const h = el('div', 'historial');
-    for (let n = desde; n <= hasta; n++) {
+    for (const col of columnas) {
+      if (col.cambio) {
+        const c = el('div', 'hcol hcol--marca');
+        c.title = 'sides swap';
+        c.innerHTML = '<span class="hmarca hmarca--cambio">⇄</span>';
+        h.append(c);
+        continue;
+      }
+      if (col.ot) {
+        const c = el('div', 'hcol hcol--marca');
+        c.innerHTML = '<span class="hmarca"><b>OT</b>' + col.ot + '</span>';
+        h.append(c);
+        continue;
+      }
+      const n = col.ronda;
       const jugada = n <= D.jugadas;
       const gana = jugada ? D.ganadores[n - 1] : null;
       const etq = String(n).padStart(2, '0');
@@ -224,7 +241,6 @@ window.pintaCompra = (D) => {
     }
     return h;
   }
-
   /* ── Pintado ────────────────────────────────────────────────────────────── */
   /*
    * Se vacían los contenedores antes de construir. El tablero de compra se
@@ -235,12 +251,13 @@ window.pintaCompra = (D) => {
   const banda = document.querySelector('#banda');
   banda.textContent = '';
   const izq = el('div', 'banda__mitad banda__mitad--izq');
-  izq.append(banco(0), tiempos(0), historial(1, 12));
+  const plan = D.plan ?? { izq: Array.from({ length: 12 }, (_, k) => ({ ronda: k + 1 })), der: Array.from({ length: 12 }, (_, k) => ({ ronda: k + 13 })) };
+  izq.append(banco(0), tiempos(0), historial(plan.izq));
   const der = el('div', 'banda__mitad banda__mitad--der');
   /* La segunda mitad llega hasta la 24, o hasta donde haya llegado la prórroga.
      `D.jugadas` es la última ronda con resultado, así que las columnas de
      prórroga aparecen según se juegan y no antes. */
-  der.append(historial(13, Math.max(24, D.jugadas)), tiempos(1), banco(1));
+  der.append(historial(plan.der), tiempos(1), banco(1));
   banda.append(izq, der);
 
   const filas = document.querySelector('#filas');
@@ -265,9 +282,17 @@ window.pintaCompra = (D) => {
     if (caja === undefined) return;
     caja.style.setProperty('--c', colorDe(i).c);
     const logo = caja.querySelector('.equipo__logo');
-    if (equipo.logo) logo.src = equipo.logo;
-    logo.style.display = equipo.logo ? '' : 'none';
+    /* Un logo que no carga (dirección mal puesta, sin red) no deja la imagen rota a la vista: se esconde. */
+    logo.onerror = () => { logo.style.display = 'none'; };
+    if (equipo.logo && logo.getAttribute('src') !== equipo.logo) {
+      logo.style.display = '';
+      logo.src = equipo.logo;
+    }
+    if (!equipo.logo) logo.style.display = 'none';
     caja.querySelector('.equipo__tri').textContent = equipo.tricode;
+    /* Cabeza de serie bajo el tricode (`tools.seedingInfo`). */
+    const semilla = caja.querySelector('.equipo__semilla');
+    if (semilla !== null) semilla.textContent = equipo.semilla ?? '';
     caja.querySelector('.equipo__tanto').textContent = equipo.tanto;
   });
 

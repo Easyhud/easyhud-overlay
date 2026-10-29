@@ -1,3 +1,5 @@
+import { buscaAlias, leeAlias, limpiaUrl, normalizaCaja } from './extras.js';
+
 /* LA TRADUCCIÓN — de `IMatchData` del servidor al contrato `match` del diseño.
    =============================================================================
 
@@ -31,7 +33,7 @@ export function escudoDe(armorName) {
  * dato o pintar un hueco. El daño no lo da el servidor: `provenance.damage`
  * queda en `server` siempre, y el diseño esconde la columna.
  */
-export function traduceJugador(p) {
+export function traduceJugador(p, alias = '') {
   const aux = p.auxiliaryAvailable ?? { health: false, abilities: false, scoreboard: false };
   const ab = p.abilities ?? { grenade: 0, ability1: 0, ability2: 0 };
   /* La capacidad del kit (la carga más alta vista con este agente). Un
@@ -41,7 +43,12 @@ export function traduceJugador(p) {
   const ultMax = typeof p.maxUltPoints === 'number' && p.maxUltPoints > 0 ? p.maxUltPoints : 0;
 
   return {
-    identity: { name: p.name ?? '', tag: p.tagline ?? '' },
+    /* `full` es el «Nombre#TAG» REAL (el servidor lo manda aparte: con «quitar tricodes» el `name` que sale ya
+       no lleva el del equipo y dejaría de coincidir con la cámara o el alias). `alias` es el nombre que se
+       enseña en pantalla en su lugar, si el operador puso uno (ver `leeAlias`). */
+    identity: { name: p.name ?? '', tag: p.tagline ?? '', full: p.fullName || `${p.name ?? ''}#${p.tagline ?? ''}`, alias },
+    /* Sufijo del icono especial del agente (Clove «NotDeadYet», Vyse «Evolution», Astra «Targeting»). */
+    iconSuffix: typeof p.iconNameSuffix === 'string' ? p.iconNameSuffix : '',
     /* el servidor manda el nombre en clave de Overwolf (Wushu, Aggrobot…),
        que es exactamente lo que el catálogo del diseño sabe traducir. */
     agentInternal: p.agentInternal ?? '',
@@ -72,6 +79,8 @@ export function traduceJugador(p) {
     spentThisRound: p.moneySpent ?? 0,
     stats: { kills: p.kills ?? 0, deaths: p.deaths ?? 0, assists: p.assists ?? 0 },
     hasSpike: p.hasSpike === true,
+    /* Bajas de esta ronda (la cámara las enseña). */
+    killsRound: typeof p.killsThisRound === 'number' ? p.killsThisRound : 0,
     isObserved: p.isObserved === true,
     /* Rango competitivo (tier 0..27). Lo resuelve el cliente del observador por
        puuid; 0 = sin rango, no se pinta icono. */
@@ -165,14 +174,16 @@ export function mapasSerie(mapInfo) {
         /* Lado del ganador + los logos de AMBOS equipos: el historial pinta el
            ganador brillante y el perdedor en gris. */
         winner: ganoIzq ? 0 : 1,
-        winnerLogo: (ganoIzq ? m.left?.logo : m.right?.logo) ?? '',
-        leftLogo: m.left?.logo ?? '',
-        rightLogo: m.right?.logo ?? '',
+        winnerLogo: limpiaUrl(ganoIzq ? m.left?.logo : m.right?.logo),
+        leftLogo: limpiaUrl(m.left?.logo),
+        rightLogo: limpiaUrl(m.right?.logo),
       });
     } else if (m.type === 'present') {
       salida.push({ name: '', state: 'live' });
     } else if (m.type === 'future') {
-      salida.push({ name: m.map ?? '', state: 'future' });
+      /* Con logo, el mapa lo eligió un equipo («Next»); sin él es el decisivo («Decider»), como en el original.
+         Adaptado de ValoSpectra/Spectra-Frontend (Elastic License 2.0) — components/top/auxiliary/series-maps/series-maps.component.html */
+      salida.push({ name: m.map ?? '', state: 'future', logo: limpiaUrl(m.logo), decider: !m.logo });
     }
     /* `disabled` no es un mapa: se omite. */
   }
@@ -306,6 +317,16 @@ export function actualizaEconomia(m, eco) {
 }
 
 /**
+ * Los nombres con los que el killfeed puede citar a un jugador: el que sale en el estado y el REAL (la parte
+ * anterior al «#» de `fullName`). Con «quitar tricodes» activo el servidor emite el nombre sin el tricode, pero
+ * `killedPlayerNames` lleva el que mandó el juego, y sin esto el ace dejaba de reconocerse.
+ */
+function nombresReales(p) {
+  const real = typeof p.fullName === 'string' && p.fullName.includes('#') ? p.fullName.slice(0, p.fullName.lastIndexOf('#')) : '';
+  return real === '' || real === p.name ? [p.name] : [p.name, real];
+}
+
+/**
  * La ceremonia de la ronda.
  *
  * `clutch` y `eco` no se pueden leer en el instante del final —a esas alturas
@@ -322,7 +343,7 @@ export function ceremoniaDe(m, ganador, clutch, eco) {
   if (!gana || !pierde) return 'roundWin';
 
   const suyos = gana.players ?? [];
-  const nombresPerdedor = new Set((pierde.players ?? []).map((p) => p.name));
+  const nombresPerdedor = new Set((pierde.players ?? []).flatMap((p) => nombresReales(p)));
 
   /* Ace: UNO solo se lleva a los cinco del rival. Se cuentan por nombre y solo
      los del bando contrario, que el fuego amigo no cuenta. */
@@ -400,15 +421,23 @@ export function traduceEstado(m, decidido) {
   const camaras = m.tools?.playercamsInfo ?? { enable: false, identifier: '', enabledPlayers: [] };
   const aviso = m.toastInfo ?? { active: false, title: '', message: '', selectedTeam: 'none' };
 
+  /* Alias de jugador y cabezas de serie. Los dos viajan CON el equipo/jugador (no con la posición en pantalla):
+     `defensoresIzquierda` da la vuelta a los equipos enteros y el cabeza de serie del izquierdo del panel se va con él. */
+  const alias = leeAlias(m.tools?.nameOverrides);
+  const semilla = m.tools?.seedingInfo ?? {};
+
   const equipos = (m.teams ?? []).map((team, i) => ({
     shortName: team.teamTricode ?? '',
     name: team.teamName ?? '',
-    logoUrl: team.teamUrl ?? '',
+    logoUrl: limpiaUrl(team.teamUrl),
+    seeding: String((i === 0 ? semilla.left : semilla.right) ?? '').trim(),
     roundsWon: team.roundsWon ?? 0,
     mapsWon: i === 0 ? (serie.wonLeft ?? 0) : (serie.wonRight ?? 0),
     side: team.isAttacking ? 'attack' : 'defense',
     timeoutsRemaining: i === 0 ? (cuentaTiempos.left ?? 0) : (cuentaTiempos.right ?? 0),
-    players: (team.players ?? []).map(traduceJugador),
+    players: (team.players ?? []).map((p) =>
+      traduceJugador(p, buscaAlias(alias, p.fullName, `${p.name ?? ''}#${p.tagline ?? ''}`)),
+    ),
     roundHistory: historialDe(team),
   }));
 
@@ -421,6 +450,8 @@ export function traduceEstado(m, decidido) {
     phase: fase,
     rules: {
       overtimeStartRound: m.firstOtRound ?? 0,
+      /* Primera ronda de la segunda mitad (13 en el formato normal): sirve para cortar el historial. */
+      switchRound: m.switchRound ?? 0,
       timeoutsPerTeam: cuentaTiempos.max ?? 0,
       spikeDurationSec: 45,
     },
@@ -433,9 +464,15 @@ export function traduceEstado(m, decidido) {
     timeout: null, // idem
     broadcast: {
       watermark: agua.customTextEnabled ? (agua.customText ?? '') : '',
-      minimal: false,
+      /* Modo mínimo: lo pone el operador desde el panel (`tools.minimal`). Apaga la barra de arriba. */
+      minimal: m.tools?.minimal === true,
+      /* «Créditos de los vivos»: el mando `kdaCreditos` del panel (`showAliveKDA`). Las tarjetas lo leen para esconder el dinero de quien sigue vivo. */
+      hideAliveCredits: m.showAliveKDA === true,
       tournamentName: torneo.name ?? '',
-      tournamentLogo: torneo.logoUrl ?? '',
+      tournamentLogo: limpiaUrl(torneo.logoUrl),
+      tournamentBackdrop: limpiaUrl(torneo.backdropUrl),
+      /* Qué decora la ceremonia de fin de ronda (ver `eligeCaja`). */
+      roundWinBox: normalizaCaja(m.tools?.roundWinBox),
       sponsors: {
         enabled: patro.enabled === true,
         urls: Array.isArray(patro.sponsors) ? patro.sponsors : [],
@@ -446,6 +483,8 @@ export function traduceEstado(m, decidido) {
         title: aviso.title ?? '',
         message: aviso.message ?? '',
         teamIndex: aviso.selectedTeam === 'left' ? 0 : aviso.selectedTeam === 'right' ? 1 : null,
+        /* Si el rótulo lleva también el logo del torneo (`eventLogoEnabled`). */
+        eventLogo: aviso.eventLogoEnabled === true,
       },
     },
     /* Cámaras de jugador (VDO.Ninja). `room` es la sala; cada cámara se arma

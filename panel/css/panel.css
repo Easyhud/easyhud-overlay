@@ -3336,3 +3336,58 @@ body { font-size: 14px; }
 .pausa-aviso__b:hover { background: var(--rec-hondo); }
 .pausa-aviso__b--sec { background: transparent; color: #08080a; min-width: 90px; }
 .pausa-aviso__b--sec:hover { background: #08080a; color: var(--blanco); }
+
+/* ══ Copia funcional: avisos con acción, guía, validación y caja de fin de ronda ═══
+   Sin radios (salvo los diálogos), monocromo; el rojo solo para lo que hay que atender YA. */
+
+/* La pila de avisos: abajo a la derecha, por encima de todo, sin tapar los mandos. */
+#avisos {
+  position: fixed; right: 16px; bottom: 16px; z-index: 900;
+  display: flex; flex-direction: column; gap: 8px;
+  width: min(460px, calc(100vw - 32px));
+  margin: 0 !important;
+  pointer-events: none;
+}
+#avisos:empty { display: none; }
+.aviso--pila { pointer-events: auto; align-items: flex-start; background: #101216; }
+.aviso--pila.aviso--rojo { background: var(--rec-sombra); }
+.aviso__cuerpo { flex: 1; min-width: 0; line-height: 1.45; }
+.aviso__cuerpo p { margin: 0; color: #fff; }
+.aviso__cuerpo ul { margin: 6px 0 0; padding-left: 18px; color: var(--gris); }
+.aviso__acciones { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.aviso__cerrar { border: 0; background: transparent; color: var(--gris); cursor: pointer; font-size: 13px; padding: 4px 6px; }
+.aviso__cerrar:hover { color: #fff; }
+
+/* «¿Qué hago ahora?»: una banda con el siguiente paso. */
+.guia {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  margin: 0 0 12px; padding: 10px 14px;
+  border: 1px solid var(--linea); border-left-width: 4px; background: var(--alzado);
+  font-size: 13px; color: var(--gris);
+}
+.guia[hidden] { display: none; }
+.guia__txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.guia__txt b { color: #fff; font-family: 'Oswald', sans-serif; font-size: 15px; letter-spacing: .04em; text-transform: uppercase; font-weight: 600; }
+.guia[data-nivel='bien'] { border-left-color: var(--gris); }
+.guia[data-nivel='espera'] { border-left-color: var(--linea-alta); }
+.guia[data-nivel='falta'] { border-left-color: #fff; }
+
+/* Notas y listas de errores bajo un campo. */
+.campo__nota { display: block; margin-top: 4px; font-size: 12px; color: var(--rec-claro); line-height: 1.4; }
+.campo__errores { margin: 10px 0 0; padding-left: 18px; font-size: 12px; color: var(--rec-claro); line-height: 1.5; }
+.campo__errores[hidden] { display: none; }
+#al-texto { font-family: ui-monospace, Consolas, monospace; font-size: 13px; min-height: 120px; resize: vertical; }
+
+/* Filas de la caja de fin de ronda. */
+.rw__filas { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.rw__fila {
+  display: grid; grid-template-columns: 1fr 1fr 2fr 2fr auto; gap: 10px; align-items: end;
+  padding: 10px; border: 1px solid var(--linea); background: var(--alzado);
+}
+@media (max-width: 900px) { .rw__fila { grid-template-columns: 1fr 1fr; } }
+
+/* Un mando apagado dice por qué en su tooltip; aquí además se ve que es adrede. */
+.mando:disabled { cursor: not-allowed; }
+
+/* El diálogo de confirmar usa el estilo de los diálogos (redondeado, como el resto de diálogos). */
+.dlg--confirma { width: min(460px, 92vw); }

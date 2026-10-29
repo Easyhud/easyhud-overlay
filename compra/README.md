@@ -83,3 +83,12 @@ significa que no tenga pistola**, significa que no sabemos cuál.
   ceros en pantalla.
 - **Cargas**: un rombo por habilidad hasta que una partida real diga si la
   plataforma manda el número.
+
+## Historial, cabezas de serie y alias (rama `copia-funcional`)
+
+- El historial ya no lleva el corte a fuego: `planHistorial` (`comun/partida.js`)
+  lo saca de `switchRound` y `firstOtRound` del servidor. La segunda mitad
+  empieza con la marca «⇄» (cambio de lado) y cada prórroga con «OT n».
+- Cabeza de serie bajo el tricode de la barra de arriba (`tools.seedingInfo`).
+- Nombres con alias (`tools.nameOverrides`); lo que viene de fuera se escapa.
+- Un arma que el catálogo no conoce («Unknown») deja el hueco vacío.

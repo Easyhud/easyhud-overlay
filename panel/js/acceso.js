@@ -27,12 +27,12 @@ function marcha(activa) {
     if (el !== null) el.disabled = activa;
   }
   const boton = $('ac-entrar');
-  if (boton !== null) boton.textContent = activa ? 'Comprobando…' : 'Entrar';
+  if (boton !== null) boton.textContent = activa ? 'Checking…' : 'Sign in';
   const rotulo = $('ac-marcha');
   if (rotulo !== null) {
     rotulo.dataset.vivo = activa ? 'si' : 'no';
     const texto = rotulo.querySelector('[data-texto]');
-    if (texto !== null) texto.textContent = activa ? 'Entrando' : 'Observador';
+    if (texto !== null) texto.textContent = activa ? 'Signing in' : 'Observer';
   }
 }
 

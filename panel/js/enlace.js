@@ -25,6 +25,7 @@
    la misma cosa vista desde dos sitios.                                     */
 
 import { io } from '../../comun/vendor/socket.io.esm.min.js';
+import { leeError } from './errores.js';
 
 /**
  * Abre las dos conexiones.
@@ -40,7 +41,7 @@ import { io } from '../../comun/vendor/socket.io.esm.min.js';
  * @param {(e: {ok: boolean, motivo?: string}) => void} p.alEntrar
  * @param {(msg: string) => void} p.alFallar
  */
-export function conecta({ endpoint, grupo, token, alEstado, alEntrar, alFallar, alSala }) {
+export function conecta({ endpoint, grupo, token, alEstado, alEntrar, alFallar, alSala, alError, alCaida }) {
   /* ── Lo que sale en antena ─────────────────────────────────────────────── */
   const mirada = io(endpoint, { transports: ['websocket'] });
 
@@ -68,12 +69,17 @@ export function conecta({ endpoint, grupo, token, alEstado, alEntrar, alFallar, 
   });
 
   mirada.on('logon_denied', (crudo) => {
-    alFallar(`El servidor no deja ver este grupo: ${motivoDe(crudo)}`);
+    /* Con `alError` el panel decide cómo enseñarlo (frase, botón de volver a entrar). */
+    if (alError) alError(leeError(crudo));
+    else alFallar(`El servidor no deja ver este grupo: ${motivoDe(crudo)}`);
   });
 
   mirada.on('connect_error', () => {
-    alFallar(`No se llega a ${endpoint}. ¿Está encendido el servidor?`);
+    if (alCaida) alCaida('datos', endpoint);
+    else alFallar(`Cannot reach ${endpoint}. Is the server running?`);
   });
+  /* Al volver la conexión, el aviso de caída ya no vale. */
+  mirada.on('connect', () => alCaida?.('datos-ok', endpoint));
 
   /* ── El mando ──────────────────────────────────────────────────────────── */
   let colaPresencia = Promise.resolve(null);
@@ -107,21 +113,27 @@ export function conecta({ endpoint, grupo, token, alEstado, alEntrar, alFallar, 
   });
 
   mando.on('operador_listo', () => alEntrar({ ok: true }));
-  mando.on('operador_denegado', (crudo) => alEntrar({ ok: false, motivo: motivoDe(crudo) }));
+  mando.on('operador_denegado', (crudo) => alEntrar({ ok: false, motivo: motivoDe(crudo), error: leeError(crudo) }));
   mando.on('operador_error', (crudo) => {
-    const m = motivoDe(crudo);
+    const e = leeError(crudo);
     /* «sin partido para configurar» es benigno: pasa al patchear (p. ej. la
        serie) cuando el mapa ya terminó y el match se borró. La serie se persiste
-       igual en el server, así que no se molesta al operador con esto. */
-    if (m === 'sin partido para configurar') return;
-    alFallar(m);
+       igual en el server, así que no se molesta al operador con esto
+       (`describeError` lo descarta). */
+    if (e.reason === 'sin partido para configurar') return;
+    if (alError) alError(e);
+    else alFallar(e.reason || 'rechazado');
   });
-  mando.on('disconnect', () => alEntrar({ ok: false, motivo: 'conexión perdida' }));
+  mando.on('disconnect', () => alEntrar({ ok: false, motivo: 'connection lost' }));
 
   /* El canal de operador todavía no existe en el servidor. Mientras no exista,
      socket.io reintenta en silencio y el panel se queda en sólo lectura, que
      es exactamente lo que debe pasar: se mira, no se toca. */
-  mando.on('connect_error', () => alEntrar({ ok: false, motivo: 'el servidor no tiene canal de mando' }));
+  mando.on('connect_error', () => {
+    alEntrar({ ok: false, motivo: 'the server has no control channel' });
+    alCaida?.('mando', endpoint);
+  });
+  mando.on('operador_listo', () => alCaida?.('mando-ok', endpoint));
 
   return {
     /**
@@ -171,8 +183,8 @@ export function conecta({ endpoint, grupo, token, alEstado, alEntrar, alFallar, 
 
 function motivoDe(crudo) {
   try {
-    return JSON.parse(crudo).reason ?? 'rechazado';
+    return JSON.parse(crudo).reason ?? 'rejected';
   } catch {
-    return 'rechazado';
+    return 'rejected';
   }
 }

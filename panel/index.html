@@ -349,6 +349,12 @@
                 <span class="prep-top__to" id="prep-top-torneo"></span>
               </div>
 
+              <!-- «¿Qué hago ahora?»: el siguiente paso, según lo que el panel sabe (ver guia.js). -->
+              <div class="guia" id="guia" data-nivel="espera" role="status" hidden>
+                <div class="guia__txt"><b id="guia-tit"></b><span id="guia-txt"></span></div>
+                <button class="boton boton--secundario boton--mini" type="button" id="guia-accion" hidden></button>
+              </div>
+
               <div class="prep">
             <!-- Config de la sala, como la barra lateral de la lobby de VALORANT. -->
             <aside class="prep__lado">
@@ -494,10 +500,15 @@
                         <input id="rot-duracion" type="number" min="0" max="600" step="5" value="0" />
                       </label>
                     </div>
+                    <label class="campo" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 10px">
+                      <input id="rot-evento" type="checkbox" checked />
+                      <span class="etiqueta">Also show the tournament logo</span>
+                    </label>
                     <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px">
                       <button class="boton" type="button" id="rot-pon">Show</button>
                       <button class="boton boton--secundario" type="button" id="rot-quita">Hide</button>
                     </div>
+                    <p class="apunte" id="rot-nota" style="margin-top: 8px" role="status">It is shown on air during the buy phase.</p>
                   </div>
                 </details>
               </div>
@@ -696,6 +707,135 @@
             </div>
           </div>
 
+          <!-- Conexión: un solo botón que lo reabre todo (servidor, overlay local, lector de sala y las dos
+               conexiones del panel) sin cerrar el programa. Es lo mismo que Ctrl+Alt+R. -->
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Connection</h2>
+              <span class="etiqueta">If something looks stuck</span>
+            </div>
+            <div class="panel__cuerpo">
+              <p class="apunte" style="margin-top: 2px">
+                Reopens the server connection, the local overlay that OBS reads and the lobby reader, then checks your
+                setup again. Use it when the HUD stops updating or the buttons turn off. It does not end the match.
+                Same as <strong>Ctrl+Alt+R</strong>.
+              </p>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px">
+                <button class="boton" type="button" id="bt-reconecta" data-reconecta title="Reopen every connection without closing the program">Reconnect everything</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Opciones del HUD en antena. Se aplican al momento. -->
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">On-air display</h2>
+              <span class="etiqueta">Applies immediately</span>
+            </div>
+            <div class="panel__cuerpo">
+              <div class="rejilla">
+                <label class="campo">
+                  <span class="etiqueta">Minimal HUD</span>
+                  <select id="set-minimal" data-clave="minimal">
+                    <option value="false">Off · full HUD</option>
+                    <option value="true">On · hide the top bar</option>
+                  </select>
+                </label>
+                <label class="campo">
+                  <span class="etiqueta">Remove team tag from names</span>
+                  <select id="set-tricodes" data-clave="playercamsInfo.removeTricodes">
+                    <option value="false">Off</option>
+                    <option value="true">On</option>
+                  </select>
+                </label>
+              </div>
+              <p class="apunte" style="margin-top: 8px">
+                Minimal HUD hides the scoreboard bar at the top (use it when your OBS scene already has its own); the
+                player cards stay. “Remove team tag” turns “ABC Name” into “Name” on the cards.
+              </p>
+            </div>
+          </div>
+
+          <!-- Cabezas de serie: el texto pequeño bajo el tricode de cada equipo. -->
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Seeding</h2>
+              <span class="etiqueta">Small text under each team code</span>
+            </div>
+            <div class="panel__cuerpo">
+              <div class="rejilla">
+                <label class="campo">
+                  <span class="etiqueta">Left team</span>
+                  <input id="set-seed-izq" data-clave="seedingInfo.left" type="text" maxlength="20" placeholder="e.g. #1 Group A" />
+                </label>
+                <label class="campo">
+                  <span class="etiqueta">Right team</span>
+                  <input id="set-seed-der" data-clave="seedingInfo.right" type="text" maxlength="20" placeholder="e.g. #4 Group B" />
+                </label>
+              </div>
+              <p class="apunte" style="margin-top: 8px">
+                Up to 20 characters. “Left” and “right” are the teams as set in the match (team A and team B); the text
+                follows each team when they change sides. When you start a match from Matches, its own seeds are used.
+              </p>
+            </div>
+          </div>
+
+          <!-- Alias de los jugadores: otro nombre en tarjetas, compra, selección y cámaras. -->
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Player aliases</h2>
+              <span class="etiqueta">Another name on air</span>
+            </div>
+            <div class="panel__cuerpo">
+              <label class="campo" id="al-campo">
+                <span class="etiqueta">One player per line: Riot ID = alias</span>
+                <textarea id="al-texto" rows="6" spellcheck="false" placeholder="Name#TAG = Alias"></textarea>
+              </label>
+              <ul class="campo__errores" id="al-errores" hidden></ul>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px">
+                <button class="boton" type="button" id="al-aplicar">Apply aliases</button>
+                <button class="boton boton--secundario" type="button" id="al-rellenar" title="Adds the players of the current match with an empty alias, ready to fill in">Add current players</button>
+              </div>
+              <p class="apunte" id="al-estado" style="margin-top: 8px">
+                The Riot ID must include the tag (Name#TAG). The alias replaces the name on the player cards, the buy
+                board, agent select and the camera caption (max 32 characters, 100 players). Leave the alias empty to
+                remove it. Nothing is sent until every line is correct.
+              </p>
+            </div>
+          </div>
+
+          <!-- Caja de fin de ronda: qué decora la ceremonia de «gana la ronda». -->
+          <div class="panel">
+            <div class="panel__cabeza">
+              <h2 class="display">Round-win box</h2>
+              <span class="etiqueta">Sponsors or tournament on the round-win card</span>
+            </div>
+            <div class="panel__cuerpo">
+              <label class="campo">
+                <span class="etiqueta">Show</span>
+                <select id="rw-tipo">
+                  <option value="disabled">Team only (default)</option>
+                  <option value="tournamentInfo">Tournament logo and backdrop</option>
+                  <option value="sponsors">Sponsors</option>
+                </select>
+              </label>
+              <div id="rw-patro" hidden>
+                <div class="rw__filas" id="rw-filas"></div>
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px">
+                  <button class="boton boton--secundario boton--mini" type="button" id="rw-add">Add sponsor</button>
+                </div>
+              </div>
+              <ul class="campo__errores" id="rw-errores" hidden></ul>
+              <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px">
+                <button class="boton" type="button" id="rw-aplicar">Apply</button>
+              </div>
+              <p class="apunte" id="rw-estado" style="margin-top: 8px">
+                With “Sponsors”, each round-win card uses the first row that matches the winning team and the kind of
+                round; if none matches, the first row. “Left” and “right” are the teams as set in the match, not the
+                side of the screen. Tournament logo and backdrop come from the Tournament panel.
+              </p>
+            </div>
+          </div>
           <!-- Overlay del operador: el HUD encima del juego en la pantalla del
                operador (con las teclas 1–0), excluido de la captura de OBS. -->
           <div class="panel">
@@ -1083,6 +1223,7 @@
           <input id="to-logo" type="url" placeholder="https://" /></label>
         <label class="campo"><span class="etiqueta">Backdrop (URL)</span>
           <input id="to-backdrop" type="url" placeholder="https://" /></label>
+        <p class="apunte" id="to-error" role="alert" hidden style="color: var(--rec-claro); margin: 0"></p>
         <div class="dlg__pie">
           <button class="boton boton--terciario" type="button" data-cerrar>Cancel</button>
           <button class="boton" type="submit">Save</button>
@@ -1113,6 +1254,13 @@
           <label class="campo"><span class="etiqueta">Team B (right)</span>
             <select id="match-eqB"></select></label>
         </div>
+        <div class="rejilla">
+          <label class="campo"><span class="etiqueta">Seed · team A (optional)</span>
+            <input id="match-seedA" type="text" maxlength="20" placeholder="e.g. #1 Group A" /></label>
+          <label class="campo"><span class="etiqueta">Seed · team B (optional)</span>
+            <input id="match-seedB" type="text" maxlength="20" placeholder="e.g. #4 Group B" /></label>
+        </div>
+        <p class="apunte" id="match-error" role="alert" hidden style="color: var(--rec-claro); margin: 0"></p>
         <div class="dlg__pie">
           <button class="boton boton--terciario" type="button" data-cerrar>Cancel</button>
           <button class="boton" type="submit">Save</button>
@@ -1163,11 +1311,11 @@
     <script type="module" src="js/shell.js"></script>
     <!-- Pausa detectada por pantalla (el juego en gris con el timer quieto): aviso con los equipos para asignarla. -->
     <div id="pausa-aviso" class="pausa-aviso" role="alert" hidden>
-      <div class="pausa-aviso__texto"><strong>PAUSA DETECTADA</strong><span id="pausa-aviso-sub">¿Quién la pidió?</span></div>
+      <div class="pausa-aviso__texto"><strong>PAUSE DETECTED</strong><span id="pausa-aviso-sub">Who asked for it?</span></div>
       <div class="pausa-aviso__botones">
         <button type="button" id="pausa-izq" class="pausa-aviso__b"></button>
         <button type="button" id="pausa-der" class="pausa-aviso__b"></button>
-        <button type="button" id="pausa-tec" class="pausa-aviso__b pausa-aviso__b--sec">Técnica</button>
+        <button type="button" id="pausa-tec" class="pausa-aviso__b pausa-aviso__b--sec">Technical</button>
       </div>
     </div>
   </body>

@@ -99,7 +99,7 @@ export function cuenta() {
  */
 export async function entra(correo, contrasena) {
   if (correo.trim() === '' || contrasena === '') {
-    return 'Faltan el correo o la contraseña.';
+    return 'Enter your email and password.';
   }
 
   /*
@@ -115,7 +115,7 @@ export async function entra(correo, contrasena) {
    * desarrolla.
    */
   if (!seguro(AUTENTICADOR)) {
-    return 'El servidor de acceso no usa HTTPS, así que no se manda la contraseña.';
+    return 'The sign-in server does not use HTTPS, so the password was not sent.';
   }
 
   let r;
@@ -126,25 +126,25 @@ export async function entra(correo, contrasena) {
       body: JSON.stringify({ correo: correo.trim(), contrasena }),
     });
   } catch {
-    return 'No se llega al servidor de acceso. ¿Hay internet?';
+    return 'Cannot reach the sign-in server. Is the internet connection working?';
   }
 
-  if (r.status === 401) return 'Correo o contraseña incorrectos.';
-  if (r.status === 403) return 'Esta cuenta no tiene acceso al observador.';
-  if (!r.ok) return 'No se pudo entrar. Inténtalo de nuevo en un momento.';
+  if (r.status === 401) return 'Wrong email or password.';
+  if (r.status === 403) return 'This account does not have observer access.';
+  if (!r.ok) return 'Could not sign in. Try again in a moment.';
 
   let datos;
   try {
     datos = await r.json();
   } catch {
-    return 'El servidor devolvió una respuesta que no se entiende.';
+    return 'The sign-in server sent a reply that could not be read.';
   }
 
   if (typeof datos?.token !== 'string' || datos.token === '') {
-    return 'El servidor no devolvió sesión.';
+    return 'The sign-in server did not return a session.';
   }
   if (!datos.overlayToken || !datos.groupCode) {
-    return 'El servidor no entregó permiso de emisión. Avisa a soporte.';
+    return 'The sign-in server did not grant broadcast permission. Contact support.';
   }
 
   guarda(datos.token, datos.overlayToken, datos.groupCode);

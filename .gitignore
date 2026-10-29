@@ -11,4 +11,4 @@ site.bak-*
 .claude/
 
 # Fondos de vídeo de DEFYED (uso personal con crédito; no se redistribuyen en un repo público). Se conservan en local.
-seleccion/assets/fondos/
+seleccion/assets/fondos/*/

@@ -20,6 +20,7 @@
    siempre debió estar. Este fichero no habla con el juego.                   */
 
 import { arranca, apaga } from './panel.js';
+import { confirma } from './dialogo.js';
 import { montaAcceso, muestraAcceso } from './acceso.js';
 import { montaDashboard, muestraDashboard, puuidsDelMatchEnVivo, equiposDelMatchEnVivo, equiposConJugadoresDelVivo } from './db.js';
 import { montaAtajos, muestraAtajos, cargaAtajos, guardaAtajos, atajos } from './atajos.js';
@@ -117,7 +118,7 @@ function montaBarra() {
      caller: así el botón siempre llama a los jugadores del match correcto. */
   window.__easyLlamaJugadores = () => {
     const puuids = puuidsDelMatchEnVivo();
-    if (puuids.length === 0) return Promise.resolve({ ok: false, error: 'no hay jugadores con puuid en este match' });
+    if (puuids.length === 0) return Promise.resolve({ ok: false, error: 'there are no players with a known account id in this match' });
     return api()?.llamaJugadores?.(puuids) ?? Promise.resolve({ ok: false, error: 'sin puente' });
   };
 
@@ -134,6 +135,11 @@ function montaBarra() {
   /* Colocar a cada jugador en su lado de la sala de Riot: el panel calcula quién va dónde y se lo pasa al programa. */
   window.__easyEquiposConJugadores = () => equiposConJugadoresDelVivo();
   window.__easyColoca = (lista) => api()?.colocaJugadores?.(lista);
+
+  /* «Reconnect everything»: lo mismo que Ctrl+Alt+R. El programa reabre la conexión al servidor, el overlay local y
+     el lector de sala, y devuelve qué ha hecho (`{ ok, hecho }` o `{ ok: false, error }`). */
+  window.__easyReconecta = () =>
+    api()?.reconectaTodo?.() ?? Promise.resolve({ ok: false, error: 'this only works inside the observer program' });
 
   /* La base local (equipos/matches/torneos): el panel es web puro y no toca el
      puente `electronAPI`; el shell le presta `window.__easyDB` con el CRUD. Cada
@@ -177,7 +183,14 @@ function montaBarra() {
   /* Cerrar sesión ya tiene sentido aquí: el shell es quien tiene la sesión.
      Antes este botón navegaba a `/salir` y, dentro del exe, dejaba el panel en
      blanco sin vuelta atrás. */
-  $('a-salir')?.addEventListener('click', () => sal());
+  $('a-salir')?.addEventListener('click', async () => {
+    if (!(await confirma({
+      titulo: 'Log out?',
+      texto: 'The observer and the overlay that OBS reads stop until you sign in again. Do not do it in the middle of a broadcast.',
+      ok: 'Log out',
+    }))) return;
+    sal();
+  });
 
   /* Toggle del overlay del operador (Settings). Recuerda el estado y, al abrir
      el panel, sincroniza la ventana con lo guardado. */

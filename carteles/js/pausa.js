@@ -44,6 +44,23 @@ function pintaCartel(match, timeout) {
   if (quien !== null) quien.textContent = tecnica ? 'Producción' : (equipo?.name ?? '');
   relieve(fondo, tecnica ? '' : (equipo?.logoUrl ?? ''));
 
+  /* El fondo del torneo, si el operador puso uno, va de telón del cartel (tiempo muerto y pausa técnica).
+     Adaptado de ValoSpectra/Spectra-Frontend (Elastic License 2.0) — components/common/timeout/timeout.component.html */
+  if (nodo !== null) {
+    let telon = nodo.querySelector('.pausa__telon');
+    const url = match.broadcast?.tournamentBackdrop ?? '';
+    if (url !== '' && telon === null) {
+      telon = document.createElement('div');
+      telon.className = 'pausa__telon';
+      telon.style.cssText = 'position:absolute;inset:0;z-index:0;pointer-events:none;background:center / cover no-repeat;opacity:.5;';
+      nodo.prepend(telon);
+    }
+    if (telon !== null) {
+      const css = url === '' ? '' : `url("${url.replace(/["\\]/g, '')}")`;
+      if (telon.style.backgroundImage !== css) telon.style.backgroundImage = css;
+    }
+  }
+
   if (cupo !== null) cupo.style.visibility = tecnica ? 'hidden' : '';
   if (!tecnica && pips !== null && equipo !== null && equipo !== undefined) {
     const total = match.rules?.timeoutsPerTeam ?? 0;

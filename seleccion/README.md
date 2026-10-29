@@ -51,3 +51,9 @@ con un solo observado, y la fase de compra de dos segundos.
 
 Una selección entera: 6/2/2 → 7/2/1 → 8/2/0 → 9/1/0 → 10/0/0, y la pantalla
 se esconde sola al empezar la compra. Sin errores de consola.
+
+## Alias de jugador
+
+Si el operador puso un alias (`tools.nameOverrides`), la celda enseña el alias
+en vez del nombre de Riot. Todo texto que viene de fuera (nombre, equipo, alias)
+se escapa antes de ir al HTML.

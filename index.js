@@ -70,6 +70,8 @@ function monta(nombre, pantalla) {
   if (token !== null && token !== '') extra.set('token', token);
   if (!pantalla.barra) extra.set('barra', '0');
   if (dev) extra.set('dev', '1');
+  /* `?demo=1` (solo para maquetar): cada pantalla enseña sus datos de ejemplo. En directo no se pone nunca. */
+  if (params.get('demo') === '1') extra.set('demo', '1');
   /* Vista del operador: propaga el flag para que las pantallas muestren las
      teclas de observador. Solo lo trae `operador/`, nunca la URL de OBS. */
   if (params.get('operador') === '1') extra.set('operador', '1');

@@ -11,6 +11,8 @@
    local→servidor del plan (equipos {name,tricode,url}, seriesInfo, tournamentInfo). */
 
 import { iniciaConfig, reiniciaEstadoJuego } from './panel.js';
+import { confirma } from './dialogo.js';
+import { validaUrlImagen } from './validacion.js';
 import { cuenta, tokenSesion, API_CUENTAS, seguro, ponEmision, sal } from './sesion.js';
 import { calientaAssets, mapaSplash } from './valassets.js';
 import { animaConteo } from './contador.js';
@@ -529,12 +531,19 @@ function pintaHero() {
     .join(' · ');
   const go = $('hero-go');
   go.textContent = live ? 'Resume broadcast' : 'Start match';
-  go.onclick = () => arrancaMatch(next.id);
+  go.onclick = () => pideArrancar(next.id);
   const end = $('hero-end');
   if (end) {
     end.hidden = !live;
-    end.onclick = () => {
-      if (confirm('End this broadcast?')) terminaBroadcast(next.id);
+    end.onclick = async () => {
+      const acaba = await confirma({
+        titulo: 'End this broadcast?',
+        texto: finalizada(next)
+          ? 'The match is finished: it stays in your list as done, and the overlay stops showing it.'
+          : 'The match is not finished. Ending it now REMOVES it from your list and the overlay stops showing it.',
+        ok: 'End broadcast',
+      });
+      if (acaba) terminaBroadcast(next.id);
     };
   }
 }
@@ -860,6 +869,7 @@ function abreTournament(t) {
   $('to-name').value = t?.name ?? '';
   $('to-logo').value = t?.logoUrl ?? '';
   $('to-backdrop').value = t?.backdropUrl ?? '';
+  if ($('to-error') !== null) $('to-error').hidden = true;
   abre('dlg-tournament');
 }
 async function guardaTournament(ev) {
@@ -870,6 +880,18 @@ async function guardaTournament(ev) {
     backdropUrl: $('to-backdrop').value.trim(),
   };
   if (!dato.name) return;
+  /* Los logos tienen que ser direcciones de imagen de la web: un fichero del PC no carga en el directo. */
+  const errores = [];
+  const logo = validaUrlImagen(dato.logoUrl);
+  const fondo = validaUrlImagen(dato.backdropUrl);
+  if (!logo.ok) errores.push(`Logo: ${logo.motivo}`);
+  if (!fondo.ok) errores.push(`Backdrop: ${fondo.motivo}`);
+  const aviso = $('to-error');
+  if (aviso !== null) {
+    aviso.textContent = errores.join(' ');
+    aviso.hidden = errores.length === 0;
+  }
+  if (errores.length > 0) return;
   const id = $('to-id').value;
   if (id) await DB().tournaments.update(id, dato);
   else await DB().tournaments.create(dato);
@@ -885,6 +907,9 @@ function abreMatch(m) {
   $('match-name').value = m?.name ?? '';
   $('match-formato').value = m?.formato ?? 'BO3';
   $('match-torneo').value = m?.tournamentId ?? '';
+  $('match-seedA').value = m?.seedA ?? '';
+  $('match-seedB').value = m?.seedB ?? '';
+  $('match-error').hidden = true;
   if (teams.length > 0) {
     $('match-eqA').value = m?.teamAId ?? teams[0].id;
     $('match-eqB').value = m?.teamBId ?? (teams[1]?.id ?? teams[0].id);
@@ -904,11 +929,30 @@ function datosMatchDelForm() {
     teamASnap: snap(equipoPorId(teamAId)),
     teamBSnap: snap(equipoPorId(teamBId)),
     tournamentId: $('match-torneo').value || null,
+    /* El cabeza de serie viaja con el match: al arrancarlo se manda siempre (vacío si no tiene), así no queda en
+       antena el del match anterior. */
+    seedA: $('match-seedA').value.trim().slice(0, 20),
+    seedB: $('match-seedB').value.trim().slice(0, 20),
   };
 }
 async function guardaMatch(ev) {
   ev.preventDefault();
   const dato = datosMatchDelForm();
+  /* Dos veces el mismo equipo no es un enfrentamiento: se dice aquí, en el formulario, y no se guarda. */
+  const error = $('match-error');
+  if (dato.teamAId && dato.teamAId === dato.teamBId) {
+    error.textContent = 'Team A and team B are the same team. Pick two different teams.';
+    error.hidden = false;
+    return;
+  }
+  /* Un match NUEVO arranca al instante: sin los dos equipos saldría en antena con los nombres vacíos. Para empezar sin equipos
+     está «Quick match». (Al EDITAR sí se permite dejar un hueco, para completarlo después.) */
+  if (!$('match-id').value && (!dato.teamAId || !dato.teamBId)) {
+    error.textContent = 'Pick both teams first. To start without teams, use “Quick match”.';
+    error.hidden = false;
+    return;
+  }
+  error.hidden = true;
   const id = $('match-id').value;
   if (id) {
     /* Editar un match existente: guarda y se queda en la lista (no arranca). */
@@ -922,12 +966,30 @@ async function guardaMatch(ev) {
   const r = await DB().matches.create({ ...dato, score: { wonLeft: 0, wonRight: 0 }, mapInfo: [], estado: 'draft' });
   cierra('dlg-match');
   await recarga();
-  if (r?.item?.id) await arrancaMatch(r.item.id);
+  if (r?.item?.id) await pideArrancar(r.item.id);
 }
 
 /* ── Start: empuja la config del match a emisión ── */
 const puuidsDe = (equipo) =>
   (equipo.players ?? []).map((j) => j.puuid).filter((p) => typeof p === 'string' && p.length > 0);
+
+/**
+ * Arranca un match, avisando antes si va a sustituir a otro que está en antena sin terminar: ese se BORRA de la lista
+ * (no hay estado intermedio donde guardarlo), y no debe pasar por un clic de más.
+ */
+async function pideArrancar(id) {
+  const otro = matches.find((x) => x.id !== id && x.estado === 'live' && !finalizada(x));
+  if (otro !== undefined) {
+    const nombre = otro.name || `${otro.teamASnap?.tricode || 'A'} vs ${otro.teamBSnap?.tricode || 'B'}`;
+    const sigue = await confirma({
+      titulo: 'Replace the match on air?',
+      texto: `“${nombre}” is on air and not finished. Starting this one removes it from your list.`,
+      ok: 'Start the new match',
+    });
+    if (!sigue) return;
+  }
+  return arrancaMatch(id);
+}
 
 async function arrancaMatch(id) {
   const m = matches.find((x) => x.id === id);
@@ -950,6 +1012,8 @@ async function arrancaMatch(id) {
     },
     /* `puuids`: con ellos el servidor coloca solo a cada equipo en su lado
        según quién juega de verdad («Switch teams» lo invierte a mano). */
+    /* Siempre se manda (aunque vacío): el cabeza de serie es de ESTE match, no del anterior. */
+    seedingInfo: { left: m.seedA ?? '', right: m.seedB ?? '' },
     equipos: [
       { name: a.name || '', tricode: a.tricode || '', url: a.logoUrl || '', puuids: puuidsDe(a) },
       { name: b.name || '', tricode: b.tricode || '', url: b.logoUrl || '', puuids: puuidsDe(b) },
@@ -1008,7 +1072,7 @@ async function quickMatch() {
     estado: 'draft',
   });
   await recarga();
-  if (r?.item) await arrancaMatch(r.item.id);
+  if (r?.item) await pideArrancar(r.item.id);
 }
 
 /* ── Navegación de la sidebar ── */
@@ -1191,7 +1255,7 @@ export function montaDashboard(cb) {
       const m = matches.find((x) => x.id === d.mReopen);
       if (m) { m.estado = 'live'; m.score = { wonLeft: 0, wonRight: 0 }; m.mapInfo = []; }
       await recarga();
-      await arrancaMatch(d.mReopen);
+      await pideArrancar(d.mReopen);
       return;
     }
     if (d.nuevo === 'team') return abreTeam(null);
@@ -1200,13 +1264,13 @@ export function montaDashboard(cb) {
     if (d.eqEdit) return abreTeam(teams.find((x) => x.id === d.eqEdit));
     if (d.toEdit) return abreTournament(tournaments.find((x) => x.id === d.toEdit));
     if (d.mEdit) return abreMatch(matches.find((x) => x.id === d.mEdit));
-    if (d.mStart) return arrancaMatch(d.mStart);
+    if (d.mStart) return pideArrancar(d.mStart);
     if (d.eqDel) {
       /* Borrar un equipo no debe romper sus matches: el snapshot ya congela
          nombre/tricode/logo, pero el id queda colgando, así que se nullea. */
       const usan = matches.filter((m) => m.teamAId === d.eqDel || m.teamBId === d.eqDel);
       const msg = usan.length ? `Delete this team? ${usan.length} match${usan.length === 1 ? '' : 'es'} using it keep their saved copy.` : 'Delete this team?';
-      if (confirm(msg)) {
+      if (await confirma({ titulo: 'Delete this team?', texto: msg, ok: 'Delete' })) {
         for (const m of usan) {
           const patch = {};
           if (m.teamAId === d.eqDel) patch.teamAId = null;
@@ -1222,13 +1286,13 @@ export function montaDashboard(cb) {
          se desasignan (tournamentId=null) antes de borrar. */
       const dentro = matches.filter((m) => m.tournamentId === d.toDel);
       const msg = dentro.length ? `Delete this tournament? Its ${dentro.length} match${dentro.length === 1 ? '' : 'es'} will be kept but unassigned.` : 'Delete this tournament?';
-      if (confirm(msg)) {
+      if (await confirma({ titulo: 'Delete this tournament?', texto: msg, ok: 'Delete' })) {
         for (const m of dentro) await DB().matches.update(m.id, { tournamentId: null });
         await DB().tournaments.remove(d.toDel);
         await recarga();
       }
     }
-    if (d.mDel && confirm('Delete this match?')) { await DB().matches.remove(d.mDel); await recarga(); }
+    if (d.mDel && (await confirma({ titulo: 'Delete this match?', texto: 'It is removed from your list. This cannot be undone.', ok: 'Delete' }))) { await DB().matches.remove(d.mDel); await recarga(); }
   });
 }
 

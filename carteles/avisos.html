@@ -55,6 +55,7 @@
     </div>
 
     <div class="cartel__filo"></div>
+    <img class="aviso__evento" id="logoEvento" alt="" style="display: none">
 
     <div class="cartel__cuerpo">
       <span class="cartel__dato" id="titulo" style="margin-bottom: 11px;">Tiempo muerto</span>
@@ -64,17 +65,20 @@
   </div>
 
   <!-- ══ Patrocinadores ══ una marca a la vez, relevándose -->
-  <div class="patro">
+  <div class="patro" style="visibility: hidden">
     <span class="patro__etq">patrocina</span>
     <div class="patro__filete"></div>
-    <div class="patro__hueco"><span class="patro__marca" id="marca">LOGITECH G</span></div>
+    <div class="patro__hueco"><span class="patro__marca" id="marca"></span></div>
   </div>
 
-  <div class="marca-agua">EASY OPEN · easyhud.net</div>
+  <div class="marca-agua"></div>
 
 </div>
 
 <script>
+/* SOLO PARA MAQUETAR (?demo=1). En directo este bloque no hace nada: antes cambiaba el patrocinador real por
+   «RED BULL» o «SECRETLAB» cada cinco segundos y dejaba a la vista el bloque de ejemplo. */
+if (new URLSearchParams(location.search).get('demo') === '1') {
 /* Tres clases de aviso. El de equipo lleva color y logo; los de producción
    van en gris neutro. */
 const AVISOS = [
@@ -108,6 +112,10 @@ setInterval(() => {
   m = (m + 1) % MARCAS.length;
   document.getElementById('marca').textContent = MARCAS[m];
 }, 5000);
+document.querySelector('.patro').style.visibility = '';
+document.getElementById('marca').textContent = MARCAS[0];
+document.querySelector('.marca-agua').textContent = 'EASY OPEN · easyhud.net';
+}
 </script>
 <script src="./js/escenario.js?v=2"></script>
 <script type="module" src="./js/avisos.js"></script>

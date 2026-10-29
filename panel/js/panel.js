@@ -31,6 +31,12 @@
 import { conecta } from './enlace.js';
 import { atajos, guardaAtajos } from './atajos.js';
 import { calculaFinMapa } from './finmapa.js';
+import { confirma } from './dialogo.js';
+import { describeCaida, describeError } from './errores.js';
+import { siguientePaso } from './guia.js';
+import {
+  CEREMONIAS, aliasATexto, completaConJugadores, limitaNumero, parseAliasTexto, validaCaja, validaSemilla, validaUrlImagen,
+} from './validacion.js';
 
 /* Cada mando de directo lleva la MISMA tecla global que su atajo. Se enseña en
    la esquina inferior izquierda del cuadro y se puede recambiar ahí mismo. */
@@ -173,7 +179,7 @@ function muestraAvisoPausa(activa) {
   }
   $('pausa-izq').innerHTML = textoEquipoPausa(0);
   $('pausa-der').innerHTML = textoEquipoPausa(1);
-  $('pausa-aviso-sub').textContent = '¿Quién la pidió?';
+  $('pausa-aviso-sub').textContent = 'Who asked for it?';
   caja.hidden = false;
   pitido();
 }
@@ -219,6 +225,139 @@ function avisa(texto, rojo = false) {
   d.textContent = texto;
   caja.append(d);
 }
+
+/* La pila de avisos con acción: cada uno tiene una CLAVE (el mismo aviso no se apila dos veces), puede llevar una lista
+   de detalles y un botón, y se va solo pasados `ms` (0 = se queda hasta que se arregle o se cierre). Es lo que ve el
+   operador cuando el servidor rechaza algo o se cae una conexión: una frase de qué pasó y qué hacer. */
+const pila = new Map();
+
+function quitaAviso(clave) {
+  const e = pila.get(clave);
+  if (e === undefined) return;
+  clearTimeout(e.reloj);
+  e.nodo.remove();
+  pila.delete(clave);
+}
+
+function muestraAviso(clave, d) {
+  if (d === null) return;
+  quitaAviso(clave);
+  const caja = $('avisos');
+  const nodo = document.createElement('div');
+  nodo.className = d.nivel === 'error' ? 'aviso aviso--rojo aviso--pila' : 'aviso aviso--pila';
+  nodo.setAttribute('role', d.nivel === 'error' ? 'alert' : 'status');
+
+  const cuerpo = document.createElement('div');
+  cuerpo.className = 'aviso__cuerpo';
+  const t = document.createElement('p');
+  t.textContent = d.texto;
+  cuerpo.append(t);
+  if (d.detalle?.length > 0) {
+    const ul = document.createElement('ul');
+    for (const linea of d.detalle) {
+      const li = document.createElement('li');
+      li.textContent = linea;
+      ul.append(li);
+    }
+    cuerpo.append(ul);
+  }
+  nodo.append(cuerpo);
+
+  const acciones = document.createElement('div');
+  acciones.className = 'aviso__acciones';
+  if (d.accion === 'reconectar') {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'boton boton--secundario boton--mini';
+    b.textContent = 'Reconnect everything';
+    b.addEventListener('click', () => void reconectaTodo());
+    acciones.append(b);
+  } else if (d.accion === 'sesion') {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'boton boton--secundario boton--mini';
+    b.textContent = 'Sign in again';
+    b.addEventListener('click', () => $('a-salir')?.click());
+    acciones.append(b);
+  }
+  const x = document.createElement('button');
+  x.type = 'button';
+  x.className = 'aviso__cerrar';
+  x.setAttribute('aria-label', 'Dismiss');
+  x.textContent = '✕';
+  x.addEventListener('click', () => quitaAviso(clave));
+  acciones.append(x);
+  nodo.append(acciones);
+
+  caja.append(nodo);
+  const reloj = d.ms > 0 ? setTimeout(() => quitaAviso(clave), d.ms) : null;
+  pila.set(clave, { nodo, reloj });
+  /* Máximo cuatro a la vez: el más viejo se va. */
+  while (pila.size > 4) quitaAviso(pila.keys().next().value);
+}
+
+/** Un error del servidor (ver `errores.js`): se enseña con su frase, su lista de ajustes y su botón. */
+function alErrorServidor(e) {
+  muestraAviso(`srv:${e.codigo || e.reason.slice(0, 40)}`, describeError(e));
+}
+
+/** Una caída o una recuperación de la conexión. */
+function alCaidaConexion(cual, endpoint) {
+  if (cual === 'datos-ok') return quitaAviso('caida:datos');
+  if (cual === 'mando-ok') return quitaAviso('caida:mando');
+  muestraAviso(`caida:${cual}`, describeCaida(cual, endpoint));
+}
+
+/** «Reconnect everything»: reabre en el programa el servidor, el overlay local y el lector de sala, y aquí las dos
+    conexiones del panel. Un solo botón en vez de cerrar y abrir el programa a mitad de directo. */
+let reconectando = false;
+async function reconectaTodo() {
+  if (reconectando) return;
+  const puente = window.__easyReconecta;
+  if (typeof puente !== 'function') {
+    muestraAviso('reconecta', { texto: 'Reconnect everything only works inside the observer program.', detalle: [], nivel: 'aviso', ms: 8000, accion: null });
+    return;
+  }
+  reconectando = true;
+  const botones = [...document.querySelectorAll('[data-reconecta]')];
+  for (const b of botones) {
+    b.disabled = true;
+    b.dataset.antes = b.textContent;
+    b.textContent = 'Reconnecting…';
+  }
+  try {
+    const r = await puente();
+    if (r?.ok) {
+      abreEnlace();
+      muestraAviso('reconecta', {
+        texto: 'Everything was reopened. The setup check runs again in a few seconds.',
+        detalle: Array.isArray(r.hecho) ? r.hecho : [],
+        nivel: 'aviso',
+        ms: 9000,
+        accion: null,
+      });
+    } else {
+      muestraAviso('reconecta', {
+        texto: `Could not reconnect everything: ${r?.error ?? 'no answer from the program'}. Close and reopen Easy HUD if it keeps failing.`,
+        detalle: [],
+        nivel: 'error',
+        ms: 0,
+        accion: null,
+      });
+    }
+  } catch (e) {
+    muestraAviso('reconecta', { texto: `Could not reconnect everything: ${e instanceof Error ? e.message : String(e)}`, detalle: [], nivel: 'error', ms: 0, accion: null });
+  } finally {
+    reconectando = false;
+    for (const b of botones) {
+      b.disabled = false;
+      b.textContent = b.dataset.antes ?? b.textContent;
+    }
+  }
+}
+document.addEventListener('click', (e) => {
+  if (e.target.closest('[data-reconecta]') !== null) void reconectaTodo();
+});
 
 /* ══ La mudanza de los campos compartidos ══════════════════════════════════ */
 
@@ -280,9 +419,18 @@ function modoPanel() {
      en la sesión y en Settings, pero no ocupa sitio en antena. */
   pintaObs();
 
+  abreEnlace();
+  pinta();
+}
+
+/** (Re)abre las dos conexiones del panel con la sesión actual. Lo usa el arranque y «Reconnect everything». */
+function abreEnlace() {
+  if (cuenta === null) return;
   if (enlace !== null) enlace.cierra();
+  mandando = false;
   permiso = 'conectando';
   pintaEstado('Connecting', false);
+  pintaMandos();
 
   enlace = conecta({
     endpoint: cuenta.endpoint,
@@ -291,24 +439,28 @@ function modoPanel() {
     alEstado: (m) => {
       const primero = M === null;
       M = m;
-      if (primero) avisa('');
+      if (primero) quitaAviso('caida:datos');
       avisaMapa();
       pinta();
     },
-    alEntrar: ({ ok, motivo }) => {
+    alEntrar: ({ ok, motivo, error }) => {
       mandando = ok;
       permiso = ok ? 'ok' : 'sin-mando';
       $('a-sesion').textContent = ok
         ? `Group ${cuenta.grupo} · controls open.`
         : `Group ${cuenta.grupo} · no control (${motivo}).`;
+      /* Un permiso rechazado se explica con su frase y su botón; el servidor ya dice qué hacer. */
+      if (ok) quitaAviso('srv:permiso');
+      else if (error?.codigo) muestraAviso('srv:permiso', describeError(error));
       pintaEstadoVivo();
       pintaMandos();
+      pintaGuia();
     },
     alFallar: (msg) => avisa(msg, true),
+    alError: alErrorServidor,
+    alCaida: alCaidaConexion,
     alSala: (s) => aplicaSala(s),
   });
-
-  pinta();
 }
 
 /* ══ Navegación del panel ══════════════════════════════════════════════════ */
@@ -367,14 +519,53 @@ const MANDOS = [
     encendido: 'Running',
     apagado: (m) => `${m?.tools?.timeoutCounter?.right ?? 0} left`,
   },
+  /* Antes este botón no hacía NADA visible: las tarjetas de Easy enseñan siempre K/D/A (cabecera) y créditos (pie), así
+     que no había nada que conmutar. Ahora «KDA» esconde los créditos de los jugadores VIVOS (el dinero del equipo
+     no sale en antena); el de los muertos se queda. */
   {
     orden: 'kdaCreditos',
-    titulo: 'Show KDA',
+    titulo: 'Credits of living players',
     puesta: (m) => m?.showAliveKDA === true,
-    encendido: 'KDA',
-    apagado: 'Credits',
+    encendido: 'Hidden',
+    apagado: 'Shown',
+  },
+  {
+    /* No es una orden del servidor sino un ajuste (`tools.minimal`): se manda como parche, pero se maneja igual
+       que un mando porque es lo que el realizador quiere a mano en directo. */
+    orden: 'minimal',
+    local: true,
+    titulo: 'Minimal HUD',
+    puesta: (m) => m?.tools?.minimal === true,
+    encendido: 'Top bar hidden',
+    apagado: 'Top bar shown',
   },
 ];
+
+/** Lo que hace cada mando, para el tooltip (y para que el operador sepa qué va a mover antes de pulsar). */
+const AYUDA_MANDO = {
+  pausaTecnica: 'Shows the technical-pause card on air. Press again to resume.',
+  tiempoMuertoIzq: 'Starts (or cancels) a tactical timeout for the left team.',
+  tiempoMuertoDer: 'Starts (or cancels) a tactical timeout for the right team.',
+  kdaCreditos: 'Hides the credits of the players who are alive on the player cards (their K/D/A is always shown). Dead players keep theirs.',
+  minimal: 'Hides the top scoreboard bar, for when you already show your own scoreboard in OBS. The player cards stay.',
+};
+
+/**
+ * Por qué un mando no se puede pulsar ahora, o `''` si se puede.
+ * Un botón apagado sin motivo parece un fallo; con el motivo, es una instrucción.
+ */
+function razonDeshabilitado(m, puesta) {
+  if (M === null) return 'No match yet: start a match and open the observer first.';
+  if (!mandando) return 'The controls are off (read only). Press “Reconnect everything” in Settings.';
+  /* Sin tiempos muertos que quedan, no se puede empezar otro; sí cancelar el que corre. */
+  if (m.orden === 'tiempoMuertoIzq' && !puesta && (M?.tools?.timeoutCounter?.left ?? 0) <= 0) {
+    return `${nombreEquipo(0)} has no timeouts left.`;
+  }
+  if (m.orden === 'tiempoMuertoDer' && !puesta && (M?.tools?.timeoutCounter?.right ?? 0) <= 0) {
+    return `${nombreEquipo(1)} has no timeouts left.`;
+  }
+  return '';
+}
 
 function nombreEquipo(i) {
   const t = M?.teams?.[i];
@@ -430,8 +621,12 @@ function pintaMandos() {
     b.querySelector('.mando__pie span').textContent = typeof pie === 'function' ? pie(M) : pie;
 
     /* Sin partido o sin mando no hay nada que mandar. Un botón que no va tiene
-       que parecer un botón que no va, no fallar en silencio al pulsarlo. */
-    b.disabled = M === null || !mandando;
+       que parecer un botón que no va, no fallar en silencio al pulsarlo: y dice
+       POR QUÉ en su tooltip. */
+    const razon = razonDeshabilitado(m, puesta);
+    b.disabled = razon !== '';
+    const ayuda = razon || AYUDA_MANDO[m.orden] || '';
+    if (b.title !== ayuda) b.title = ayuda;
 
     /* La tecla del mando (esquina inferior izquierda). Atenuada si el atajo está
        apagado; «…» mientras espera una tecla nueva. */
@@ -447,9 +642,46 @@ function pintaMandos() {
   }
 }
 
-document.addEventListener('click', (e) => {
+/** Las órdenes que cambian lo que el público ve de golpe: antes de mandarlas se pregunta y se explica el efecto. */
+const CONFIRMAR_ORDEN = {
+  intercambiaEquipos: {
+    titulo: 'Swap left and right teams?',
+    texto: 'The two teams trade places on the HUD: names, logos, score and series score all move. Use it only if they were set up on the wrong sides.',
+    ok: 'Swap teams',
+  },
+  intercambiaBandos: {
+    titulo: 'Swap attackers and defenders?',
+    texto: 'Every team changes side (attack ↔ defense) on the HUD. The game does this by itself at half time, so only use it to fix a wrong side.',
+    ok: 'Swap sides',
+  },
+};
+
+/*
+ * Un doble clic no manda la orden dos veces.
+ *
+ * Las órdenes de directo son INTERRUPTORES sin argumento (pausa técnica, tiempo muerto…): dos clics seguidos las
+ * ponen y las quitan, y el operador se queda sin cambio y sin saber por qué (o con un tiempo muerto gastado y
+ * cancelado). Se ignora una orden repetida dentro de este margen; el resultado llega por el estado, no por el clic.
+ */
+const MARGEN_REPETIDA_MS = 700;
+const ultimaOrden = new Map();
+
+document.addEventListener('click', async (e) => {
   const b = e.target.closest('[data-orden]');
   if (b === null || b.disabled) return;
+  const ahora = Date.now();
+  if (ahora - (ultimaOrden.get(b.dataset.orden) ?? 0) < MARGEN_REPETIDA_MS) return;
+  ultimaOrden.set(b.dataset.orden, ahora);
+  const pregunta = CONFIRMAR_ORDEN[b.dataset.orden];
+  if (pregunta !== undefined && !(await confirma(pregunta))) {
+    ultimaOrden.delete(b.dataset.orden); // cancelar el diálogo no cuenta como orden mandada
+    return;
+  }
+  /* El modo mínimo no es una orden sino un ajuste: se manda como parche. */
+  if (b.dataset.orden === 'minimal') {
+    enlace?.parchea({ minimal: !(M?.tools?.minimal === true) });
+    return;
+  }
   /* «Switch teams» intercambia la identidad izquierda↔derecha: el marcador de
      serie va ATADO al equipo, así que también se intercambia (wonLeft↔wonRight)
      para que el número se mueva con ellos. */
@@ -539,23 +771,63 @@ document.addEventListener('click', (e) => {
 /* ══ El rótulo ═════════════════════════════════════════════════════════════ */
 
 $('rot-pon').addEventListener('click', () => {
-  const segundos = Number($('rot-duracion').value) || 0;
+  const titulo = $('rot-titulo').value.trim();
+  const mensaje = $('rot-mensaje').value.trim();
+  if (titulo === '' && mensaje === '') {
+    notaRotulo('Write a title or a message first: an empty lower third shows nothing.');
+    return;
+  }
+  const dur = limitaNumero($('rot-duracion').value === '' ? 0 : $('rot-duracion').value, 0, 600);
+  if (!dur.ok) {
+    notaRotulo('Seconds must be a number (0 = until you hide it).');
+    return;
+  }
+  if (dur.ajustado) $('rot-duracion').value = String(dur.valor);
+  const segundos = dur.valor;
   const equipo = $('rot-equipo').value;
   enlace?.orden('rotulo', {
     active: true,
-    title: $('rot-titulo').value.trim(),
-    message: $('rot-mensaje').value.trim(),
+    title: titulo,
+    message: mensaje,
     /* 0 quiere decir «hasta que lo quite yo». El servidor espera `null` para
        eso, no un cero, que interpretaría como «cero segundos». */
     duration: segundos > 0 ? segundos : null,
     selectedTeam: equipo === '0' ? 'left' : equipo === '1' ? 'right' : undefined,
-    eventLogoEnabled: equipo === '',
+    eventLogoEnabled: $('rot-evento')?.checked === true,
   });
+  /* El rótulo solo sale en la fase de compra (como en el original): se dice, para que nadie lo busque en combate. */
+  notaRotulo(
+    M?.roundPhase === 'shopping'
+      ? 'Showing on air.'
+      : 'Sent. It appears on air during the buy phase (the next one, if you are not in it now).',
+  );
 });
 
 $('rot-quita').addEventListener('click', () => {
   enlace?.orden('rotulo', { active: false, title: '', message: '', duration: null });
+  notaRotulo('');
 });
+
+function notaRotulo(texto) {
+  const n = $('rot-nota');
+  if (n !== null) n.textContent = texto;
+}
+
+/* «Show» solo vale con algo que enseñar; «Hide» solo con un rótulo puesto. Cada uno dice por qué no se puede. */
+function pintaRotulo() {
+  const pon = $('rot-pon');
+  const quita = $('rot-quita');
+  if (pon === null || quita === null) return;
+  const sinPartido = M === null || !mandando;
+  const vacio = $('rot-titulo').value.trim() === '' && $('rot-mensaje').value.trim() === '';
+  pon.disabled = sinPartido || vacio;
+  pon.title = sinPartido ? 'No match or no control yet.' : vacio ? 'Write a title or a message first.' : '';
+  const puesto = M?.toastInfo?.active === true;
+  quita.disabled = sinPartido || !puesto;
+  quita.title = sinPartido ? 'No match or no control yet.' : !puesto ? 'There is no lower third on air.' : '';
+}
+$('rot-titulo')?.addEventListener('input', pintaRotulo);
+$('rot-mensaje')?.addEventListener('input', pintaRotulo);
 
 /* ══ Campos de configuración ═══════════════════════════════════════════════ */
 
@@ -596,8 +868,19 @@ document.addEventListener('change', (e) => {
   const el = e.target;
 
   if (el.dataset?.clave !== undefined) {
-    enlace?.parchea(construyeParche(el.dataset.clave, valorDeCampo(el)));
-    el.closest('.campo')?.removeAttribute('data-sucio');
+    const v = validaCampo(el);
+    notaCampo(el, v.nota ?? '');
+    if (!v.ok) {
+      /* Se devuelve el campo a lo que hay en antena: lo escrito no era válido y no se manda. */
+      const actual = leeRuta(M?.tools, el.dataset.clave);
+      el.value = actual === undefined || actual === null ? '' : String(actual);
+      el.closest('.campo')?.removeAttribute('data-sucio');
+      return;
+    }
+    if (v.valor !== undefined) el.value = String(v.valor);
+    if (parchea(construyeParche(el.dataset.clave, v.valor !== undefined ? v.valor : valorDeCampo(el)))) {
+      el.closest('.campo')?.removeAttribute('data-sucio');
+    }
     return;
   }
 
@@ -606,9 +889,19 @@ document.addEventListener('change', (e) => {
      Es un override del panel sobre lo que puso el observador al conectar. */
   if (el.dataset?.eq !== undefined) {
     const i = Number(el.dataset.eq);
-    const cambio = { [el.dataset.campo]: el.value };
-    enlace?.parchea({ equipos: i === 0 ? [cambio] : [null, cambio] });
-    el.closest('.campo')?.removeAttribute('data-sucio');
+    if (el.dataset.campo === 'url') {
+      const u = validaUrlImagen(el.value);
+      notaCampo(el, u.ok ? '' : u.motivo);
+      if (!u.ok) {
+        el.value = M?.teams?.[i]?.teamUrl ?? '';
+        el.closest('.campo')?.removeAttribute('data-sucio');
+        return;
+      }
+    }
+    const cambio = { [el.dataset.campo]: el.value.trim() };
+    if (parchea({ equipos: i === 0 ? [cambio] : [null, cambio] })) {
+      el.closest('.campo')?.removeAttribute('data-sucio');
+    }
     return;
   }
 
@@ -623,6 +916,258 @@ document.addEventListener('change', (e) => {
   }
 });
 
+/** Manda un parche de configuración, o dice por qué no se ha mandado. Devuelve si salió. */
+function parchea(parche) {
+  if (enlace === null || !mandando) {
+    muestraAviso('no-enviado', {
+      texto: 'Your change was not sent: the controls are off (read only). Press “Reconnect everything”, then try again.',
+      detalle: [],
+      nivel: 'error',
+      ms: 10000,
+      accion: 'reconectar',
+    });
+    return false;
+  }
+  enlace.parchea(parche);
+  return true;
+}
+
+/** Una nota bajo un campo (el motivo de un rechazo, o un ajuste hecho). Vacía, la quita. */
+function notaCampo(el, texto) {
+  const campo = el.closest('.campo') ?? el.parentElement;
+  if (campo === null) return;
+  let n = campo.querySelector(':scope > .campo__nota');
+  if (texto === '') {
+    n?.remove();
+    return;
+  }
+  if (n === null) {
+    n = document.createElement('small');
+    n.className = 'campo__nota';
+    n.setAttribute('role', 'status');
+    campo.append(n);
+  }
+  n.textContent = texto;
+}
+
+/** Valida un campo de configuración antes de mandarlo. `valor` es el ya ajustado (números, textos recortados). */
+function validaCampo(el) {
+  if (el.type === 'number') {
+    const min = el.min !== '' ? Number(el.min) : -Infinity;
+    const max = el.max !== '' ? Number(el.max) : Infinity;
+    const r = limitaNumero(el.value, min, max);
+    return r.ok ? { ok: true, valor: r.valor, nota: r.ajustado ? r.motivo : '' } : { ok: false, nota: r.motivo };
+  }
+  const clave = el.dataset.clave ?? '';
+  if (el.type === 'url' || /(logoUrl|backdropUrl)$/.test(clave)) {
+    const u = validaUrlImagen(el.value);
+    return u.ok ? { ok: true, valor: u.valor, nota: '' } : { ok: false, nota: u.motivo };
+  }
+  if (/^seedingInfo\./.test(clave)) {
+    const s = validaSemilla(el.value);
+    return { ok: true, valor: s.valor, nota: s.ok ? '' : s.motivo };
+  }
+  return { ok: true, nota: '' };
+}
+
+/* ══ Alias de jugadores ════════════════════════════════════════════════════
+   Una línea por jugador: «Nombre#TAG = alias». Se valida entera ANTES de mandar (ver `parseAliasTexto`): una línea a
+   medias no puede borrar el alias de otro jugador por accidente. El servidor SUSTITUYE la lista, así que lo que se
+   manda es siempre la lista completa. */
+
+const alTexto = () => $('al-texto');
+
+function muestraErrores(idUl, errores) {
+  const ul = $(idUl);
+  if (ul === null) return;
+  ul.textContent = '';
+  for (const e of errores) {
+    const li = document.createElement('li');
+    li.textContent = e;
+    ul.append(li);
+  }
+  ul.hidden = errores.length === 0;
+}
+
+$('al-texto')?.addEventListener('input', () => {
+  $('al-campo')?.setAttribute('data-sucio', 'si');
+  const { errores } = parseAliasTexto(alTexto().value);
+  muestraErrores('al-errores', errores.map((e) => (e.linea > 0 ? `Line ${e.linea}: ${e.motivo}` : e.motivo)));
+});
+
+$('al-aplicar')?.addEventListener('click', () => {
+  const { pares, errores } = parseAliasTexto(alTexto().value);
+  if (errores.length > 0) {
+    muestraErrores('al-errores', errores.map((e) => (e.linea > 0 ? `Line ${e.linea}: ${e.motivo}` : e.motivo)));
+    return;
+  }
+  /* Un alias vacío quita el de ese jugador: no se manda como par, simplemente no está en la lista nueva. */
+  const lista = pares.filter(([, alias]) => alias !== '');
+  if (parchea({ nameOverrides: lista })) {
+    $('al-campo')?.removeAttribute('data-sucio');
+    $('al-estado').textContent = lista.length === 0 ? 'All aliases removed.' : `${lista.length} alias${lista.length === 1 ? '' : 'es'} sent.`;
+  }
+});
+
+$('al-rellenar')?.addEventListener('click', () => {
+  const ids = (M?.teams ?? []).flatMap((t) => (t.players ?? []).map((p) => p.fullName || `${p.name}#${p.tagline}`));
+  if (ids.length === 0) {
+    $('al-estado').textContent = 'There are no players in the match yet. Add them once they join the lobby.';
+    return;
+  }
+  alTexto().value = completaConJugadores(alTexto().value, ids);
+  $('al-campo')?.setAttribute('data-sucio', 'si');
+  $('al-estado').textContent = 'Players added. Write each alias after the “=”, then press Apply.';
+});
+
+/* ══ Caja de fin de ronda ═════════════════════════════════════════════════ */
+
+let filasCaja = [];
+let cajaSucia = false;
+
+const FILA_NUEVA = () => ({ wonTeam: 'all', roundCeremony: ['all'], iconUrl: '', backdropUrl: '' });
+
+function pintaFilasCaja() {
+  const cont = $('rw-filas');
+  if (cont === null) return;
+  cont.textContent = '';
+  filasCaja.forEach((fila, i) => {
+    const div = document.createElement('div');
+    div.className = 'rw__fila';
+    const campo = (rotulo, control) => {
+      const l = document.createElement('label');
+      l.className = 'campo';
+      const s = document.createElement('span');
+      s.className = 'etiqueta';
+      s.textContent = rotulo;
+      l.append(s, control);
+      return l;
+    };
+    const sel = (opciones, valor, alCambiar) => {
+      const s = document.createElement('select');
+      for (const [v, t] of opciones) {
+        const o = document.createElement('option');
+        o.value = v;
+        o.textContent = t;
+        s.append(o);
+      }
+      s.value = valor;
+      s.addEventListener('change', () => {
+        alCambiar(s.value);
+        cajaSucia = true;
+      });
+      return s;
+    };
+    const txt = (valor, ph, alCambiar) => {
+      const t = document.createElement('input');
+      t.type = 'url';
+      t.placeholder = ph;
+      t.value = valor;
+      t.addEventListener('input', () => {
+        alCambiar(t.value);
+        cajaSucia = true;
+      });
+      return t;
+    };
+    const quitar = document.createElement('button');
+    quitar.type = 'button';
+    quitar.className = 'boton boton--terciario boton--mini';
+    quitar.textContent = 'Remove';
+    quitar.addEventListener('click', () => {
+      filasCaja.splice(i, 1);
+      cajaSucia = true;
+      pintaFilasCaja();
+    });
+    div.append(
+      campo('Winning team', sel([['all', 'Any'], ['left', 'Left team'], ['right', 'Right team']], fila.wonTeam, (v) => (fila.wonTeam = v))),
+      campo('Round', sel(CEREMONIAS, fila.roundCeremony[0] ?? 'all', (v) => (fila.roundCeremony = [v]))),
+      campo('Icon (https://)', txt(fila.iconUrl, 'https://', (v) => (fila.iconUrl = v))),
+      campo('Backdrop (https://)', txt(fila.backdropUrl, 'https://', (v) => (fila.backdropUrl = v))),
+      quitar,
+    );
+    cont.append(div);
+  });
+  $('rw-add').disabled = filasCaja.length >= 10;
+  $('rw-add').title = filasCaja.length >= 10 ? 'The limit is 10 sponsors.' : '';
+}
+
+function pintaTipoCaja() {
+  $('rw-patro').hidden = $('rw-tipo').value !== 'sponsors';
+}
+
+$('rw-tipo')?.addEventListener('change', () => {
+  cajaSucia = true;
+  if ($('rw-tipo').value === 'sponsors' && filasCaja.length === 0) filasCaja.push(FILA_NUEVA());
+  pintaTipoCaja();
+  pintaFilasCaja();
+});
+$('rw-add')?.addEventListener('click', () => {
+  filasCaja.push(FILA_NUEVA());
+  cajaSucia = true;
+  pintaFilasCaja();
+});
+$('rw-aplicar')?.addEventListener('click', () => {
+  const v = validaCaja({ type: $('rw-tipo').value, sponsors: filasCaja });
+  muestraErrores('rw-errores', v.errores);
+  if (!v.ok) return;
+  /* Con otro tipo se manda también la lista (vacía o no): el servidor la guarda para cuando se vuelva a «Sponsors». */
+  if (parchea({ roundWinBox: v.limpio })) {
+    cajaSucia = false;
+    $('rw-estado').textContent = 'Applied. It shows on the next round-win card.';
+  }
+});
+
+/** Lo que hay en antena → los controles nuevos de Settings (sin pisar lo que el operador está escribiendo). */
+function pintaExtras() {
+  if (M === null) return;
+  const alT = alTexto();
+  if (alT !== null && $('al-campo')?.dataset.sucio !== 'si' && document.activeElement !== alT) {
+    const t = aliasATexto(M.tools?.nameOverrides);
+    if (alT.value !== t) alT.value = t;
+  }
+  if (!cajaSucia && $('rw-tipo') !== null) {
+    const c = M.tools?.roundWinBox ?? { type: 'disabled', sponsors: [] };
+    const firma = JSON.stringify(c);
+    if ($('rw-tipo').dataset.firma !== firma) {
+      $('rw-tipo').dataset.firma = firma;
+      $('rw-tipo').value = ['disabled', 'tournamentInfo', 'sponsors'].includes(c.type) ? c.type : 'disabled';
+      filasCaja = (c.sponsors ?? []).map((s) => ({
+        wonTeam: s.wonTeam ?? 'all',
+        roundCeremony: Array.isArray(s.roundCeremony) && s.roundCeremony.length > 0 ? s.roundCeremony : ['all'],
+        iconUrl: s.iconUrl ?? '',
+        backdropUrl: s.backdropUrl ?? '',
+      }));
+      pintaTipoCaja();
+      pintaFilasCaja();
+    }
+  }
+}
+
+/* ══ «¿Qué hago ahora?» ═══════════════════════════════════════════════════ */
+
+function pintaGuia() {
+  const caja = $('guia');
+  if (caja === null) return;
+  const paso = siguientePaso({ permiso, M, escena, hayLobby: SALA !== null });
+  /* Con todo en orden la banda se esconde: solo molesta cuando hay algo que decir. */
+  caja.hidden = paso.nivel === 'bien' && M !== null && partidaEnCurso();
+  caja.dataset.nivel = paso.nivel;
+  $('guia-tit').textContent = paso.titulo;
+  $('guia-txt').textContent = paso.texto;
+  const b = $('guia-accion');
+  b.hidden = paso.accion === null;
+  if (paso.accion === 'reconectar') {
+    b.textContent = 'Reconnect everything';
+    b.dataset.reconecta = '';
+  } else if (paso.accion === 'crear-sala') {
+    b.textContent = 'Create lobby';
+    b.removeAttribute('data-reconecta');
+  }
+  b.dataset.paso = paso.accion ?? '';
+}
+$('guia-accion')?.addEventListener('click', () => {
+  if ($('guia-accion').dataset.paso === 'crear-sala') $('cam-generar')?.click();
+});
 function pintaCampos() {
   if (M === null) return;
   for (const el of document.querySelectorAll('[data-clave]')) {
@@ -1063,6 +1608,12 @@ $('cam-generar')?.addEventListener('click', async () => {
     if (estado) estado.textContent = 'Create lobby only works inside the observer exe.';
     return;
   }
+  /* Con una partida en marcha, otra sala la deja a medias en antena: se pregunta antes. */
+  if (partidaEnCurso() && !(await confirma({
+    titulo: 'A match is in progress',
+    texto: 'Creating a new lobby ends the match that is on air now. Only do it when that match is over or abandoned.',
+    ok: 'Create new lobby',
+  }))) return;
   reiniciaEstadoJuego(); // sala nueva = partida nueva: fuera lo que quedó de la anterior
   boton.disabled = true;
   const antes = boton.textContent;
@@ -1851,6 +2402,9 @@ function pinta() {
   pintaTira();
   pintaMandos();
   pintaCampos();
+  pintaExtras();
+  pintaRotulo();
+  pintaGuia();
   pintaMatch();
   pintaEquipos();
   pintaReloj();

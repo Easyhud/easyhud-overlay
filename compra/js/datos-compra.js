@@ -9,8 +9,9 @@
    La pantalla se rehace entera en cada cambio, y aquí sí se puede: el tablero
    de compra cambia cuando alguien compra, no diez veces por segundo. */
 
-import { esMinimo, etiquetaRonda, serieDeMapas } from '../../comun/partida.js';
+import { esMinimo, etiquetaRonda, planHistorial, serieDeMapas } from '../../comun/partida.js';
 import { abreFuente } from '../../comun/fuente.js';
+import { ARMAS } from './catalogo.js';
 
 /** Pistolas, para saber qué hueco ocupa el arma que llega. */
 const PISTOLAS = new Set(['classic', 'shorty', 'frenzy', 'ghost', 'sheriff', 'bandit']);
@@ -41,6 +42,9 @@ function armas(nombre) {
   if (nombre === null || nombre === '') return { primaria: null, secundaria: null };
 
   const clave = nombre.toLowerCase() === 'knife' ? 'melee' : nombre.toLowerCase(); // el servidor lo llama «Knife»
+  /* Un nombre que el catálogo no conoce («Unknown», un arma nueva) se queda sin hueco: antes pasaba por la rama de
+     las primarias y el pintor intentaba cargar una imagen con la dirección vacía. */
+  if (!Object.hasOwn(ARMAS, clave)) return { primaria: null, secundaria: null };
   return PISTOLAS.has(clave) || clave === 'melee'
     ? { primaria: null, secundaria: clave }
     : { primaria: clave, secundaria: null };
@@ -99,6 +103,13 @@ function porBajas(a, b) {
   return a.posicion - b.posicion;
 }
 
+/** `kayo` → «KAY/O»; el resto, la clave con la primera en mayúscula. Vacío si no se conoce el agente. */
+function nombreAgente(clave) {
+  if (clave === '') return '';
+  if (clave === 'kayo') return 'KAY/O';
+  return clave.charAt(0).toUpperCase() + clave.slice(1);
+}
+
 function jugador(player, agentes, posicion) {
   const stats = player.stats ?? { kills: 0, deaths: 0, assists: 0 };
   const danoReal = player.provenance?.damage === 'player';
@@ -107,8 +118,11 @@ function jugador(player, agentes, posicion) {
   const tiene = cargas(player);
 
   return {
-    nick: player.identity?.name ?? '',
+    /* Lo que se lee: el alias del operador (`tools.nameOverrides`) o, si no hay, el nombre de Riot. */
+    nick: player.identity?.alias || player.identity?.name || '',
     agente: (agentes[player.agentInternal] ?? player.agentName ?? '').toLowerCase(),
+    /* El nombre que se lee, a partir de la clave del catálogo (`kayo` es «KAY/O»). */
+    agenteNombre: nombreAgente((agentes[player.agentInternal] ?? player.agentName ?? '').toLowerCase()),
     escudo: player.armor ?? 'none',
     secundaria,
     primaria,
@@ -212,6 +226,7 @@ function construye(match, agentes) {
       return {
         tricode: team.shortName,
         nombre: team.name,
+        semilla: team.seeding ?? '',
         tanto: team.roundsWon,
         logo: team.logoUrl,
         tiempos: team.timeoutsRemaining,
@@ -229,6 +244,8 @@ function construye(match, agentes) {
       match.teams[i].players.map((p, k) => jugador(p, agentes, k)).sort(porBajas),
     ),
     jugadas,
+    /* Dónde se corta el historial y dónde van las marcas de cambio de lado y de prórroga (ver `planHistorial`). */
+    plan: planHistorial(match.rules, jugadas),
     ganadores,
     bandos,
     motivos,

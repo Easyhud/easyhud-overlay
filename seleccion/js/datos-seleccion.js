@@ -102,7 +102,8 @@ function construye(match) {
         const clave = (AGENTE_POR_INTERNO[p.agentInternal] ?? p.agentName ?? '').toLowerCase();
         const turno = team.players.findIndex((otro) => otro.locked !== true);
         return {
-          nick: p.identity?.name ?? '',
+          /* El alias del operador (	ools.nameOverrides) o, si no hay, el nombre de Riot. */
+          nick: p.identity?.alias || p.identity?.name || '',
           agente: clave,
           // `agentName` llega vacío para quien ya bloqueó: se escribe el nombre del agente a partir de su clave.
           nombre: p.agentName || (clave === 'kayo' ? 'KAY/O' : clave.charAt(0).toUpperCase() + clave.slice(1)),

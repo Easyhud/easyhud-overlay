@@ -3,6 +3,12 @@
    color, la etiqueta y si hay logo al fondo. Junto a él viven dos piezas
    permanentes: patrocinadores y marca de agua.                              */
 
+/* El logo del evento (eventLogoEnabled): plano, en la esquina, cuando el aviso es de un equipo. */
+.aviso__evento {
+  position: absolute; top: 22px; right: 28px; z-index: 2;
+  max-width: 150px; max-height: 60px; object-fit: contain;
+}
+
 .aviso__texto {
   font-size: 12px; font-weight: 600;
   letter-spacing: .2em; text-transform: uppercase;
@@ -14,7 +20,9 @@
    Una marca a la vez, relevándose cada cinco segundos: dos a la vez compiten
    y no se lee ninguna. */
 .patro {
-  position: absolute; right: 16px; bottom: 96px;
+  /* Arriba a la derecha, por debajo de la caja del torneo y por encima de la columna de tarjetas: abajo se
+     montaba sobre las tarjetas de combate y sobre las filas del tablero de compra (que llega hasta el borde). */
+  position: absolute; right: 16px; top: 440px;
   display: flex; align-items: center; gap: 14px;
   height: 56px; padding: 0 22px; box-sizing: border-box;
   background: linear-gradient(160deg, rgb(38 41 49 / 94%), rgb(15 17 21 / 94%));
@@ -58,8 +66,9 @@
   100%  { opacity: 0; transform: translateY(-8px); }
 }
 
+/* Debajo de la barra de arriba, centrada: abajo tapaba la última fila del tablero de compra. */
 .marca-agua {
-  position: absolute; left: 50%; bottom: 16px; translate: -50% 0;
+  position: absolute; left: 50%; top: 98px; translate: -50% 0;
   font-size: 12px; font-weight: 600;
   letter-spacing: .14em; text-transform: uppercase;
   color: #b9bbc2;

@@ -10,7 +10,7 @@
    - **La marca de agua** no se mueve nunca.
 */
 
-import { barra, cartel, conecta, relieve, tinta } from './enlace.js';
+import { ajustaTexto, barra, cartel, conecta, relieve, tinta } from './enlace.js';
 
 /*
  * El cartel esconde SOLO el cartel, no el escenario.
@@ -26,6 +26,7 @@ const titulo = document.getElementById('titulo');
 const etiqueta = document.getElementById('etiqueta');
 const texto = document.getElementById('texto');
 const marca = document.getElementById('marca');
+const insignia = document.getElementById('logoEvento');
 /** @type {HTMLElement | null} */
 const patro = document.querySelector('.patro');
 const agua = document.querySelector('.marca-agua');
@@ -43,9 +44,22 @@ function pinta(match, toast) {
    * regla que la pausa: lo que lo pide decide de qué color va.
    */
   tinta(nodo, equipo === null || equipo === undefined ? null : toast.teamIndex, equipo?.side);
-  relieve(fondo, equipo?.logoUrl ?? '');
+  /* Sin equipo, el logo del evento (si el operador lo pidió) ocupa el relieve del fondo; con equipo, el relieve es
+     el del equipo y el del evento va aparte, plano, en la esquina. Adaptado de ValoSpectra/Spectra-Frontend
+     (Elastic License 2.0) — components/shopping/toast/toast-component.html (`eventLogoEnabled`). */
+  const logoEvento = toast.eventLogo === true ? (match.broadcast?.tournamentLogo ?? '') : '';
+  relieve(fondo, equipo?.logoUrl || logoEvento);
+  if (insignia !== null) {
+    const url = equipo?.logoUrl && logoEvento !== '' ? logoEvento : '';
+    if (insignia.getAttribute('src') !== url) {
+      if (url === '') insignia.removeAttribute('src');
+      else insignia.setAttribute('src', url);
+    }
+    insignia.style.display = url === '' ? 'none' : '';
+  }
 
-  if (titulo !== null) titulo.textContent = toast.title;
+  /* Con el logo del evento a la derecha queda menos sitio para el título. */
+  if (titulo !== null) ajustaTexto(titulo, toast.title, insignia !== null && insignia.style.display !== 'none' ? 470 : 600);
   if (etiqueta !== null) {
     etiqueta.textContent = equipo?.name ?? match.broadcast?.tournamentName ?? '';
   }
@@ -55,6 +69,7 @@ function pinta(match, toast) {
 /* ── Los patrocinadores ──────────────────────────────────────────────────── */
 
 let marcas = [];
+let patrocinioListo = false;
 let cual = 0;
 let releva;
 
@@ -105,7 +120,10 @@ function patrocinio(config) {
   const nuevas = config?.enabled === true ? (config.urls ?? []) : [];
   const cada = config?.rotateMs ?? 8000;
 
-  if (JSON.stringify(nuevas) === JSON.stringify(marcas)) return;
+  /* La primera vez se sigue adelante aunque la lista esté vacía: el bloque arranca escondido y así queda
+     (antes, sin patrocinadores, se quedaba a la vista con el texto de ejemplo del HTML). */
+  if (patrocinioListo && JSON.stringify(nuevas) === JSON.stringify(marcas)) return;
+  patrocinioListo = true;
   marcas = nuevas;
   cual = 0;
   clearInterval(releva);
@@ -167,8 +185,11 @@ conecta({
     patrocinio(emision.sponsors);
     if (agua !== null) agua.textContent = emision.watermark ?? '';
 
+    /* El rótulo solo sale en la fase de COMPRA, como en el original (ahí es cuando se mira): en combate taparía el
+       juego, y si el operador lo deja puesto, aparece solo en la compra siguiente. Adaptado de
+       ValoSpectra/Spectra-Frontend (Elastic License 2.0) — components/shopping/toast/toast-component.ts (shouldHide). */
     const toast = emision.toast ?? { visible: false };
-    if (!toast.visible) {
+    if (!toast.visible || match.phase !== 'shopping') {
       caja.sale();
       return;
     }

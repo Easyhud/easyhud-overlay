@@ -14,7 +14,10 @@ window.pintaVictoria = (D) => {
   const pinta = () => {
     const eq = D.equipos[D.ganador];
     const bando = D.ganador ? 'def' : 'atk';
-    const nombre = eq.nombre.toUpperCase();
+    /* Lo que viene de fuera (nombre, palabra de la dirección, logo) se escapa antes de ir a `innerHTML`. */
+    const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    const nombre = esc(eq.nombre.toUpperCase());
+    const logo = String(eq.logo ?? '').replace(/['"()\\\s<>]/g, (c) => encodeURIComponent(c));
 
     /* El color del ganador entra por variables: el CSS no sabe quién ganó. */
     vic.style.setProperty('--c', 'var(--' + bando + ')');
@@ -29,8 +32,8 @@ window.pintaVictoria = (D) => {
     vic.innerHTML =
         '<div class="vic__muro"><div class="vic__deriva">' + muro + '</div></div>'
       + '<div class="vic__reticula"></div>'
-      + '<div class="vic__escudo" style="--logo: url(\'' + eq.logo + '\');"></div>'
-      + '<div class="vic__banda"><span class="vic__palabra">' + D.palabra + '</span></div>';
+      + '<div class="vic__escudo" style="--logo: url(\'' + logo + '\');"></div>'
+      + '<div class="vic__banda"><span class="vic__palabra">' + esc(D.palabra) + '</span></div>';
   };
   pinta();
 };

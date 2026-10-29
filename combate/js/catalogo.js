@@ -1,6 +1,6 @@
 /* GENERADO por tools/fetch-catalogo.mjs — no editar a mano.
    Del catálogo público de VALORANT, 2026-09-11.
-   29 agentes, 20 armas, 4 papeles. */
+   30 agentes, 20 armas, 4 papeles. */
 
 export const AGENTES = {
   astra: '41fb69c1-4189-7b37-f117-bcaf1e96f1bf',
@@ -13,6 +13,7 @@ export const AGENTES = {
   fade: 'dade69b4-4f5a-8528-247b-219e5a1facd6',
   gekko: 'e370fa57-4757-3604-3648-499e1f642d3f',
   harbor: '95b78ed7-4637-86d9-7e41-71ba8c293152',
+  hush: 'ddd5a15c-4fbe-42fa-3789-11a55ca5ee04',
   iso: '0e38b510-41a8-5780-5e8f-568b2a4f2d6c',
   jett: 'add6443a-41bd-e414-f6ad-e58d267f4e95',
   kayo: '601dbbe7-43ce-be57-2a40-4abd24953621',
@@ -77,6 +78,7 @@ export const PAPEL_DE_AGENTE = {
   fade: 'initiator',
   gekko: 'initiator',
   harbor: 'controller',
+  hush: 'duelist',
   iso: 'duelist',
   jett: 'duelist',
   kayo: 'initiator',
@@ -102,6 +104,7 @@ export const PAPEL_DE_AGENTE = {
    `Wushu` es Jett, y sin este puente el retrato no se pide nunca. */
 export const AGENTE_POR_INTERNO = {
   'Aggrobot': 'gekko',
+  'AggroBot': 'gekko', // así lo escribe el frontend de ValoSpectra; no se sabe con qué mayúsculas llega según la versión del juego
   'BountyHunter': 'fade',
   'Breach': 'breach',
   'Cable': 'deadlock',
@@ -117,6 +120,7 @@ export const AGENTE_POR_INTERNO = {
   'Mage': 'harbor',
   'Nox': 'vyse',
   'Pandemic': 'viper',
+  'Paprika': 'hush', // Hush (agente nuevo, 2026-10)
   'Phoenix': 'phoenix',
   'Pine': 'veto',
   'Rift': 'astra',

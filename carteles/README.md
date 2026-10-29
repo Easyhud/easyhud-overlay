@@ -30,15 +30,34 @@ de entrada, en `enlace.js`.
 Y al entrar se pinta **antes** de animar, o el cartel entraría con el
 contenido de la vez anterior.
 
-## Las tres ceremonias sí salen
+## Las ceremonias que salen
 
-El cartel de diseño dice "Gana la ronda" y nada más. Como el servidor deduce
-además `ace`, `teamAce` y `thrifty`, el título cambia con ellas: son el
-motivo por el que un cartel de ronda merece mirarse.
+El cartel de diseño dice "Gana la ronda" y nada más. El overlay deduce además
+`ace`, `clutch`, `teamAce`, `thrifty` (ronda ahorrada) e `impecable`, y el
+título cambia con ellas (ver `comun/traduccion.js`, `ceremoniaDe`).
 
-`clutch` e `impecable` no aparecen porque no se deducen — ver `ceremony.ts`
-en el servidor.
+## La caja de fin de ronda (`tools.roundWinBox`)
 
+Decora la ceremonia: nada (por defecto), el logo y el fondo del torneo, o un
+patrocinador. Con patrocinadores se usa el primero que case con el equipo que
+ganó y con el tipo de ronda; si ninguno casa, el primero. «Izquierda» y
+«derecha» son los equipos tal como están en el match, no el lado de la
+pantalla. La elección vive en `comun/extras.js` (`eligeCaja`); el cartel pone
+el icono arriba a la derecha y el fondo detrás del lavado de color.
+
+Adaptado de ValoSpectra/Spectra-Frontend (Elastic License 2.0) —
+`endround-banner.component.ts`.
+
+## Avisos: rótulo, patrocinadores y marca de agua
+
+- El **rótulo** solo sale en la fase de **compra** (como en el original). Si el
+  operador lo deja puesto, aparece en la compra siguiente. Con
+  `eventLogoEnabled` lleva también el logo del torneo. El título se encoge
+  según su longitud (`ajustaTexto` en `enlace.js`) para no cortarse.
+- Los **patrocinadores** (a la derecha, bajo la caja del torneo) y la **marca de
+  agua** (centrada bajo la barra) están siempre que estén activados. Antes
+  estaban abajo y se montaban sobre las tarjetas y el tablero de compra.
+- El HTML trae textos de ejemplo («LOGITECH G»…): solo se ven con `?demo=1`.
 ## Los colores, como manda el LEEME
 
 - **Ronda ganada**: verde fijo. No sigue al bando, a propósito.

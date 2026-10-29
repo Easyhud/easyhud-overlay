@@ -118,6 +118,33 @@ export function tinta(nodo, lado, bando) {
   nodo.style.setProperty('--cl', color.cl);
 }
 
+/**
+ * Ajusta el tamaño de un texto grande para que quepa en el cartel.
+ *
+ * Los carteles ponen el dato principal a 64 px, en una sola línea y en
+ * mayúsculas: cabe un nombre de equipo, no un título de aviso de 40 letras, que
+ * se cortaba por la mitad en pantalla. Aquí se encoge según su longitud (con un
+ * mínimo de 26 px) y, si aun así es larguísimo, se deja partir en dos líneas.
+ * Es una estimación por caracteres a propósito: medir el texto dentro de un
+ * lienzo escalado con `zoom` da cifras distintas según el navegador.
+ *
+ * @param {HTMLElement | null} nodo
+ * @param {string} texto
+ * @param {number} ancho Los píxeles de ancho de que dispone, ya sin el relieve.
+ */
+export function ajustaTexto(nodo, texto, ancho = 600) {
+  if (nodo === null) return;
+  nodo.textContent = texto;
+  const PX_POR_LETRA = 0.54; // Oswald 700 en mayúsculas, con su espaciado
+  const cabe = Math.floor(ancho / (PX_POR_LETRA * Math.max(1, texto.length)));
+  const tam = Math.max(26, Math.min(64, cabe));
+  nodo.style.fontSize = tam >= 64 ? '' : `${tam}px`;
+  const largo = tam === 26 && texto.length * PX_POR_LETRA * 26 > ancho;
+  nodo.style.whiteSpace = largo ? 'normal' : '';
+  nodo.style.maxWidth = largo ? `${ancho}px` : '';
+  nodo.style.lineHeight = largo ? '1.08' : '';
+}
+
 /** Pone el mismo logo en todas las capas del relieve, o las apaga. */
 export function relieve(contenedor, url) {
   if (contenedor === null) return;

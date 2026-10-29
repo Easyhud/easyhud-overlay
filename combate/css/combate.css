@@ -482,6 +482,22 @@
   font-variant-numeric: tabular-nums;
   font-size: 17px;
 }
+/* Bajas de ESTA ronda, esquina inferior izquierda sobre la barra; solo con 1 o más.
+   Adaptado de ValoSpectra/Spectra-Frontend (Elastic License 2.0) — components/combat/playercams/playercams.component.html */
+.camara__bajas {
+  position: absolute;
+  z-index: 2;
+  left: 0;
+  bottom: 34px;
+  padding: 3px 12px 3px 14px;
+  border-left: 5px solid var(--lado);
+  background: linear-gradient(90deg, rgb(8 8 10 / 88%), rgb(8 8 10 / 40%));
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.camara__bajas[hidden] { display: none; }
 /* El primer número (bajas) lleva el subrayado amarillo de la emisión. */
 .camara__kda b {
   font-weight: 700;
@@ -540,3 +556,10 @@
 /* Sin escudo que enseñar: el rótulo necesita el sitio (la tarjeta del muerto
    es estrecha). */
 .tarjeta--desconectada .vida__escudo { display: none; }
+
+/* Icono especial del agente (`iconNameSuffix`: Clove «Not Dead Yet», Vyse «Evolution», Astra «Targeting»): el
+   retrato se marca con un aro del color de la tarjeta. No se cambia la imagen —el arte de Riot no se guarda aquí—. */
+.cab__retrato[data-sufijo]:not([data-sufijo=""]) {
+  outline: 2px solid var(--cl);
+  outline-offset: -2px;
+}

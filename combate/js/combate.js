@@ -62,6 +62,9 @@ const MS_BAJA = 520;
 const MS_HABILIDAD = 420;
 
 const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+/** Una dirección dentro de `url('…')` de un atributo `style`: nada que cierre la comilla o el paréntesis. */
+const urlCss = (u) => String(u ?? '').replace(/['"()\\\s<>]/g, (c) => encodeURIComponent(c));
 const el = (tag, clase) => {
   const nodo = document.createElement(tag);
   if (clase !== undefined) nodo.className = clase;
@@ -75,9 +78,31 @@ const texto = (nodo, valor) => {
   const s = String(valor);
   if (nodo.textContent !== s) nodo.textContent = s;
 };
+/*
+ * Una imagen que no carga (404 del CDN, sin red, dirección mala) NO se queda como icono roto a la vista: se
+ * esconde con `visibility` (el hueco se conserva, así nada se mueve) y se anota QUÉ dirección falló. Se
+ * compara con la dirección, no con un booleano: si luego llega otra distinta, se vuelve a intentar.
+ * En fase de captura porque `error` de una imagen no burbujea.
+ */
+addEventListener(
+  'error',
+  (e) => {
+    const img = e.target;
+    if (img instanceof HTMLImageElement) {
+      img.dataset.roto = img.getAttribute('src') ?? '';
+      img.style.visibility = 'hidden';
+    }
+  },
+  true,
+);
+const rota = (img) => img.dataset.roto !== undefined && img.dataset.roto === (img.getAttribute('src') ?? '');
 const fuente = (img, url) => {
-  if (url !== '' && img.getAttribute('src') !== url) img.setAttribute('src', url);
+  if (url !== '' && img.getAttribute('src') !== url) {
+    img.setAttribute('src', url);
+    img.style.visibility = '';
+  }
   ver(img, url !== '');
+  if (url !== '' && rota(img)) img.style.visibility = 'hidden';
 };
 
 /* ── Marcador ──────────────────────────────────────────────────────────────
@@ -121,6 +146,8 @@ function pintaMarcador(e) {
       }
     }
     texto($('tri-' + suf), equipo.tricode ?? '');
+    /* Cabeza de serie bajo el tricode (`tools.seedingInfo`). Va con el equipo: si cambian de lado, se van con él. */
+    texto($('sem-' + suf), equipo.semilla ?? '');
     texto($('tanto-' + suf), equipo.tantos ?? 0);
   });
 
@@ -265,6 +292,7 @@ function creaTarjeta(lado) {
   const credNum = el('span');
   const credito = el('div', 'credito');
   credito.append(credImg, credNum);
+  /* Se esconde con `visibility`: el hueco se conserva y el arma no se mueve. */
   const arma = el('img', 'arma');
   arma.alt = '';
   pie.append(el('span', 'elastico'), credito, arma);
@@ -312,7 +340,7 @@ function creaTarjeta(lado) {
     tarjeta, ulti, halo, trazo, dentro, iconoUlt, tramos: [],
     retrato, ojo, rango, nick, spike, kda,
     escudo, escudoNum, vidaNum, barra, relleno, sinDato, fuera,
-    habs, credNum, arma, foco, tecla,
+    habs, credito, credNum, arma, foco, tecla,
     lados: 0, bando: '',
   };
 }
@@ -366,7 +394,11 @@ function actualizaCabecera(n, p) {
 
   ver(n.ojo, p.observado);
   fuente(n.rango, iconoRango(p.rango));
-  texto(n.nick, p.nick);
+  /* El alias del operador, si lo hay (`tools.nameOverrides`); si no, el nombre de Riot. */
+  texto(n.nick, p.visible ?? p.nick);
+  /* Icono especial del agente (Clove «Not Dead Yet», Vyse, Astra): se marca el retrato. */
+  const sufijo = p.sufijo ?? '';
+  if (n.retrato.dataset.sufijo !== sufijo) n.retrato.dataset.sufijo = sufijo;
   ver(n.spike, p.spike);
   texto(n.kda, p.kda);
 
@@ -415,8 +447,9 @@ function actualizaVida(n, p) {
 /** Pie. Los muertos pierden habilidades y arma, conservan el crédito. */
 function actualizaPie(n, p) {
   n.habs.forEach((h, k) => {
+    /* `datos.js` ya deja a `null` las de un muerto, salvo la de Clove, que sigue usando la suya. */
     const dato = p.habilidades[k];
-    const hay = p.vivo && dato !== null && dato !== undefined;
+    const hay = dato !== null && dato !== undefined;
     ver(h.caja, hay);
     if (!hay) return;
 
@@ -424,7 +457,7 @@ function actualizaPie(n, p) {
        `display` encogía el pie y movía el crédito y el arma. */
     const url = iconoHabilidad(p.agente, k);
     if (url !== '' && h.icono.getAttribute('src') !== url) h.icono.setAttribute('src', url);
-    h.icono.style.visibility = url === '' ? 'hidden' : '';
+    h.icono.style.visibility = url === '' || rota(h.icono) ? 'hidden' : '';
     /* El icono dice lo mismo que los rombos, para que se lea sin mirarlos:
        entero si tiene todas, a medias si gastó alguna, casi transparente si
        no le queda ninguna. */
@@ -440,6 +473,8 @@ function actualizaPie(n, p) {
   });
 
   texto(n.credNum, p.credito === null ? '—' : miles(p.credito));
+  const oculto = p.ocultaCredito === true ? 'hidden' : '';
+  if (n.credito.style.visibility !== oculto) n.credito.style.visibility = oculto;
   fuente(n.arma, p.vivo ? iconoArma(p.arma) : '');
 }
 
@@ -586,25 +621,41 @@ suscribe((e) => {
 });
 
 /* Historial de la serie (izquierda): los mapas JUGADOS con el marcador y los
-   logos de ambos equipos (el perdedor en gris), más el mapa actual como
-   «Current: X». bo1 (mapasParaGanar<=1) o sin mapas no se muestra. Los futuros
-   no se pintan. */
+   logos de ambos equipos (el perdedor en gris), el mapa actual como
+   «Current: X» y el SIGUIENTE: «Next: X» si lo eligió un equipo, «Decider: X»
+   si es el decisivo. bo1 (mapasParaGanar<=1) o sin mapas no se muestra.
+   Adaptado de ValoSpectra/Spectra-Frontend (Elastic License 2.0) —
+   components/top/auxiliary/series-maps/series-maps.component.html */
+
 function pintaHistorial(e) {
   const cont = $('historial');
   if (!cont) return;
   const mapas = Array.isArray(e.mapasSerie) ? e.mapasSerie : [];
   const visibles = mapas.filter((m) => m.state === 'past' || m.state === 'live');
+  /* Solo el siguiente: más futuros no caben y no dicen nada que el siguiente no diga. */
+  const proximo = mapas.find((m) => m.state === 'future' && m.name);
+  if (proximo !== undefined) visibles.push(proximo);
   if (e.minimo === true || (e.mapasParaGanar ?? 0) <= 1 || visibles.length === 0) {
     cont.hidden = true;
     cont.innerHTML = '';
     return;
   }
   cont.hidden = false;
+  cont.classList.toggle('historial--apretado', visibles.length > 3);
   cont.innerHTML = visibles
     .map((m) => {
-      const nombre = String(m.name || '—');
+      const nombre = esc(m.name || '—');
       if (m.state === 'live') {
         return `<div class="historial__tramo historial__tramo--actual"><span class="historial__mapa">Current: ${nombre}</span></div>`;
+      }
+      if (m.state === 'future') {
+        const decisivo = m.decider === true || !m.logo;
+        const logo = decisivo ? '' : `<div class="historial__logo" style="background-image:url('${urlCss(m.logo)}')"></div>`;
+        return (
+          `<div class="historial__tramo historial__tramo--futuro">` +
+          `<span class="historial__mapa">${decisivo ? 'Decider' : 'Next'}: ${nombre}</span>${logo}` +
+          `</div>`
+        );
       }
       const sc = Array.isArray(m.score) ? m.score : [0, 0];
       const izqPerdio = sc[0] < sc[1] ? ' historial__logo--perdio' : '';
@@ -614,18 +665,20 @@ function pintaHistorial(e) {
       return (
         `<div class="historial__tramo">` +
         `<span class="historial__mapa">${nombre}</span>` +
-        `<div class="historial__logo${izqPerdio}" style="background-image:url('${li}')"></div>` +
-        `<span class="historial__marcador">${sc[0]}–${sc[1]}</span>` +
-        `<div class="historial__logo${derPerdio}" style="background-image:url('${ri}')"></div>` +
+        `<div class="historial__logo${izqPerdio}" style="background-image:url('${urlCss(li)}')"></div>` +
+        `<span class="historial__marcador">${Number(sc[0]) || 0}–${Number(sc[1]) || 0}</span>` +
+        `<div class="historial__logo${derPerdio}" style="background-image:url('${urlCss(ri)}')"></div>` +
         `</div>`
       );
     })
     .join('');
 }
-
 /* Caja del torneo (250×80, arriba-derecha): la imagen del torneo si la hay; si
    no, la marca EASY HUD por defecto para que la caja nunca quede vacía. */
 function pintaTorneo(e) {
+  /* El texto de la franja gris de al lado de la caja es el NOMBRE DEL TORNEO configurado (antes llevaba un texto
+     fijo de otro evento); sin nombre, se queda vacía en vez de mentir. */
+  texto($('torneo-nombre'), typeof e.torneoNombre === 'string' ? e.torneoNombre : '');
   const caja = $('torneo-caja');
   if (!caja) return;
   const logo = typeof e.torneoLogo === 'string' ? e.torneoLogo : '';
@@ -633,7 +686,13 @@ function pintaTorneo(e) {
     if (caja.dataset.modo !== 'img' || caja.dataset.url !== logo) {
       caja.dataset.modo = 'img';
       caja.dataset.url = logo;
-      caja.innerHTML = `<img class="torneo-caja__img" src="${logo}" alt="">`;
+      /* Por DOM y no por `innerHTML`: la dirección viene de fuera. */
+      const img = document.createElement('img');
+      img.className = 'torneo-caja__img';
+      img.alt = '';
+      img.src = logo;
+      caja.textContent = '';
+      caja.append(img);
     }
   } else if (caja.dataset.modo !== 'marca') {
     caja.dataset.modo = 'marca';
@@ -720,7 +779,8 @@ function pintaCamara(e) {
 
   const cam = e.camaras ?? { activas: false, sala: '', publicando: [], base: '', params: '', password: '' };
   const obs = [...(e.jugadores[0] ?? []), ...(e.jugadores[1] ?? [])].find((p) => p.observado);
-  const fullName = obs ? `${obs.nick}#${obs.tag}` : '';
+  /* El nombre REAL (el de la cámara y el de quien publica), no el alias. */
+  const fullName = obs ? (obs.completo || `${obs.nick}#${obs.tag}`) : '';
   const publicando = obs && cam.publicando.includes(fullName);
 
   /* Conectados: todos los que emiten, mientras las cámaras estén activas. */
@@ -767,10 +827,20 @@ function pintaCamara(e) {
   const equipo = (e.jugadores[0] ?? []).includes(obs) ? 0 : 1;
   caja.dataset.bando = coloresDeBando(e.equipos[equipo]?.bando, equipo).ataca ? 'attack' : 'defense';
   const nombre = $('camara-nombre');
-  if (nombre !== null && nombre.textContent !== obs.nick) nombre.textContent = obs.nick;
+  const quien = obs.visible ?? obs.nick;
+  if (nombre !== null && nombre.textContent !== quien) nombre.textContent = quien;
   const [k = '0', d = '0', a = '0'] = String(obs.kda ?? '0/0/0').split('/');
   const kda = $('camara-kda');
   const n = (v) => Number(v) || 0; // son cifras: nada que escapar
   const html = `<b>${n(k)}</b> / ${n(d)} / ${n(a)}`;
   if (kda !== null && kda.innerHTML !== html) kda.innerHTML = html;
+
+  /* Bajas de esta ronda: solo si hay alguna. Es un número, nada que escapar.
+     Adaptado de ValoSpectra/Spectra-Frontend (Elastic License 2.0) — components/combat/playercams/playercams.component.html */
+  const bajas = $('camara-bajas');
+  const rondaBajas = n(obs.bajasRonda);
+  if (bajas !== null) {
+    bajas.hidden = rondaBajas < 1;
+    texto(bajas, `× ${rondaBajas}`);
+  }
 }

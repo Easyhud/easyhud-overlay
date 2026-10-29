@@ -93,6 +93,14 @@ a:hover { color: var(--atk-light); }
   font-size: 21px; font-weight: 600; letter-spacing: .08em; line-height: 1;
   text-shadow: 0 1px 3px rgb(0 0 0 / 45%);
 }
+/* El tricode y, debajo, el cabeza de serie (`tools.seedingInfo`). Vacío, no ocupa sitio. */
+.equipo__id { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; min-width: 0; }
+.equipo--der .equipo__id { align-items: flex-end; }
+.equipo__semilla {
+  font-size: 10px; font-weight: 600; letter-spacing: .14em; line-height: 1;
+  text-transform: uppercase; color: #9aa0ab; white-space: nowrap;
+}
+.equipo__semilla:empty { display: none; }
 .equipo__sep { flex: 1; }
 .equipo__tanto {
   position: relative; z-index: 2;

@@ -137,6 +137,44 @@ export function serieDeMapas(match) {
 }
 
 /**
+ * Qué columnas lleva el historial de rondas de la compra, y dónde se corta.
+ *
+ * Antes iba escrito a fuego (1–12 y 13–24). Con un formato más corto o más
+ * largo —el propio servidor dice cuándo cambian de lado y cuándo empieza la
+ * prórroga— el corte quedaba mal. Ahora sale de las reglas:
+ *
+ *  - `reglas.switchRound`: la primera ronda de la segunda mitad (13).
+ *  - `reglas.overtimeStartRound`: la primera ronda de la prórroga (25).
+ *
+ * Si no vienen, se asume el formato normal. La primera mitad va a la izquierda;
+ * la segunda, a la derecha, con una marca de «cambio de lado» al principio y
+ * una marca «OT n» antes de cada prórroga (cada una son DOS rondas). La segunda
+ * mitad crece con la prórroga: las columnas aparecen según se juegan.
+ *
+ * Adaptado de ValoSpectra/Spectra-Frontend (Elastic License 2.0) — components/shopping/roundreasons/roundreasons.component.html
+ * (marcas de `switchRound` y de `firstOtRound`).
+ *
+ * @param {{ switchRound?: number, overtimeStartRound?: number } | undefined} reglas
+ * @param {number} jugadas La última ronda con resultado.
+ * @returns {{ izq: Array<{ ronda: number }>, der: Array<{ ronda: number } | { cambio: true } | { ot: number }> }}
+ */
+export function planHistorial(reglas, jugadas) {
+  const corte = (reglas?.switchRound ?? 0) > 1 ? reglas.switchRound : 13;
+  const primeraOt = (reglas?.overtimeStartRound ?? 0) > corte ? reglas.overtimeStartRound : 2 * (corte - 1) + 1;
+  const ultima = Math.max(primeraOt - 1, Math.max(0, jugadas ?? 0));
+
+  const izq = [];
+  for (let n = 1; n < corte; n += 1) izq.push({ ronda: n });
+
+  const der = [{ cambio: true }];
+  for (let n = corte; n <= ultima; n += 1) {
+    if (n >= primeraOt && (n - primeraOt) % 2 === 0) der.push({ ot: (n - primeraOt) / 2 + 1 });
+    der.push({ ronda: n });
+  }
+  return { izq, der };
+}
+
+/**
  * ¿Va el overlay en modo mínimo?
  *
  * Lo conmuta el operador desde su panel y sirve para **liberar la franja de

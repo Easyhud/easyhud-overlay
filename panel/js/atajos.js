@@ -19,12 +19,12 @@ const LLAVE = 'hotkeys';
 
 /** Los seis mandos, en el orden en que se enseñan. */
 const MANDOS = [
-  { id: 'spikePlanted', nombre: 'Spike plantada', nota: 'Fuerza el contador de la spike.' },
-  { id: 'techPause', nombre: 'Pausa técnica', nota: 'Saca la pantalla de pausa.' },
-  { id: 'leftTimeout', nombre: 'Tiempo muerto · izquierda', nota: 'Gasta uno del cupo.' },
-  { id: 'rightTimeout', nombre: 'Tiempo muerto · derecha', nota: 'Gasta uno del cupo.' },
-  { id: 'switchKdaCredits', nombre: 'KDA / Creditos', nota: 'Cambia lo que muestra el marcador.' },
-  { id: 'showToast', nombre: 'Rotulo', nota: 'Enseña el rotulo que haya escrito.' },
+  { id: 'spikePlanted', nombre: 'Spike planted', nota: 'Forces the spike countdown.' },
+  { id: 'techPause', nombre: 'Tech pause', nota: 'Shows the pause card.' },
+  { id: 'leftTimeout', nombre: 'Timeout · left team', nota: 'Uses one of their timeouts.' },
+  { id: 'rightTimeout', nombre: 'Timeout · right team', nota: 'Uses one of their timeouts.' },
+  { id: 'switchKdaCredits', nombre: 'Credits of living players', nota: 'Hides or shows the credits of living players.' },
+  { id: 'showToast', nombre: 'Title card', nota: 'Shows the title card you have written.' },
 ];
 
 /** Por defecto: F1–F6 y todas apagadas. */

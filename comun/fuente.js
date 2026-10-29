@@ -32,6 +32,7 @@ import {
   actualizaClutch,
   actualizaEconomia,
 } from './traduccion.js';
+import { eligeCaja, plantadoSegunServidor } from './extras.js';
 
 /* ── Dirección y sala ────────────────────────────────────────────────────── */
 
@@ -123,7 +124,12 @@ function alMatchData(raw) {
      plantado para contar con su propio reloj. */
   const sp = raw.spikeState ?? { planted: false, defused: false, detonated: false };
   const plantada = sp.planted === true && sp.defused !== true && sp.detonated !== true;
-  if (plantada && !memoria.spikeActiva) memoria.spikePlantadaEn = Date.now();
+  /* Si se acaba de ver plantada, el instante sale del servidor (`spikeDetonationTime` menos lo que dura): así, si se
+     recarga la fuente de OBS con la spike ya plantada, la cuenta sigue donde iba en vez de volver a 45. Si el reloj
+     del servidor no cuadra con el del PC, `plantadoSegunServidor` devuelve null y se usa el instante en que se vio. */
+  if (plantada && !memoria.spikeActiva) {
+    memoria.spikePlantadaEn = plantadoSegunServidor(raw.spikeDetonationTime, Date.now()) ?? Date.now();
+  }
   if (!plantada) memoria.spikePlantadaEn = null;
   memoria.spikeActiva = plantada;
   match.spike = { status: plantada ? 'planted' : 'idle', plantedAt: memoria.spikePlantadaEn, site: '' };
@@ -136,6 +142,13 @@ function alMatchData(raw) {
     const dur = raw.tools?.timeoutDuration ?? 60;
     if (!memoria.tiempoActivo) {
       memoria.tiempoInicio = Date.now() - Math.max(0, dur - (to.timeRemaining ?? dur)) * 1000;
+    } else if (!to.techPause && typeof to.timeRemaining === 'number') {
+      /* El reloj lo lleva el navegador, pero si el servidor dice otra cosa (una ampliación del tiempo, un reloj
+         parado) se hace caso al servidor: solo si discrepa de verdad, para que el reloj no dé saltos por el retardo. */
+      const quedaAqui = dur - (Date.now() - memoria.tiempoInicio) / 1000;
+      if (Math.abs(quedaAqui - to.timeRemaining) > 3) {
+        memoria.tiempoInicio = Date.now() - Math.max(0, dur - to.timeRemaining) * 1000;
+      }
     }
     match.timeout = {
       durationSec: dur,
@@ -175,11 +188,18 @@ function alMatchData(raw) {
     if (!esperando) {
       if (ganador === -1) ganador = equipoGanador(raw);
       memoria.ultimaRondaFin = raw.roundNumber;
+      const ceremonia = ceremoniaDe(raw, ganador, memoria.clutch, memoria.economia);
       eventos.push({
         type: 'roundEnd',
         winnerIndex: otro(ganador),
         winnerSide: raw.teams?.[ganador]?.isAttacking ? 'attack' : 'defense',
-        ceremony: ceremoniaDe(raw, ganador, memoria.clutch, memoria.economia),
+        ceremony: ceremonia,
+        /* Lo que decora la ceremonia (patrocinador o torneo), elegido por el EQUIPO que ganó —`ganador` es el
+           índice del panel, no el lado de la pantalla—. */
+        caja: eligeCaja(match.broadcast.roundWinBox, ceremonia, ganador, {
+          logoUrl: match.broadcast.tournamentLogo,
+          backdropUrl: match.broadcast.tournamentBackdrop,
+        }),
       });
     }
   }

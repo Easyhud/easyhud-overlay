@@ -80,6 +80,11 @@ a:hover { color: var(--atk-light); }
   white-space: nowrap;
 }
 .historial__tramo--actual .historial__mapa { color: #ffffff; }
+/* El siguiente mapa o el decisivo: más tenue que el que se juega. */
+.historial__tramo--futuro .historial__mapa { color: #9aa0ab; }
+/* Con más de tres tramos (BO5) se aprieta para que quepan sin cortarse. */
+.historial--apretado .historial__tramo { padding: 0 18px; gap: 8px; }
+.historial--apretado .historial__mapa { font-size: 14px; }
 .historial__marcador {
   font-size: 15px; font-weight: 600;
   color: #c9cad0;
@@ -206,6 +211,14 @@ a:hover { color: var(--atk-light); }
 .panel-equipo__tricodigo {
   font-size: 21px; font-weight: 600; letter-spacing: .08em; line-height: 1;
 }
+/* El tricode y, debajo, el cabeza de serie (`tools.seedingInfo`). Vacío, no ocupa sitio. */
+.panel-equipo__id { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 3px; min-width: 0; }
+.panel-equipo--der .panel-equipo__id { align-items: flex-end; }
+.panel-equipo__semilla {
+  font-size: 10px; font-weight: 600; letter-spacing: .14em; line-height: 1;
+  text-transform: uppercase; color: #9aa0ab; white-space: nowrap;
+}
+.panel-equipo__semilla:empty { display: none; }
 .panel-equipo__tanto {
   font-size: 29px; font-weight: 700; line-height: 1;
   font-variant-numeric: tabular-nums;

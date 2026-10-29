@@ -106,3 +106,12 @@ El marcado y el CSS siguen en `ARTE/COMBATE` para cuando se ponga.
 Cuatro no van al repositorio por ser arte de terceros; hay copia en
 `ARTE/assets-originales/`. De ellos, en esta pantalla solo se usa
 `backdrop-game.png`, que es la captura para encuadrar y **en emisión se quita**.
+
+## Cabezas de serie, alias y tira de mapas (rama `copia-funcional`)
+
+- Cabeza de serie bajo el tricode de cada equipo (`tools.seedingInfo`); va con el equipo.
+- Las tarjetas y el pie de la cámara enseñan el alias (`tools.nameOverrides`); la cámara se sigue armando con el nombre real.
+- La tira de mapas de arriba a la izquierda añade el siguiente: «Next: X» o «Decider: X».
+- El texto de al lado de la caja del torneo es el **nombre del torneo** configurado (antes llevaba un texto fijo).
+- Clove muerta sigue mostrando su habilidad E; el retrato de los iconos especiales lleva un aro.
+- Modo mínimo (`tools.minimal`): se apaga toda la franja de arriba.

@@ -164,8 +164,11 @@ const TECLAS = ['grenade', 'ability1', 'ability2'];
  * `max` sale de las cargas cuando la fuente las da. Si no las da, una sola:
  * pintar dos rombos sin saberlo sería inventar.
  */
-function habilidad(abilities, tecla, vivo, hayDatos) {
-  if (!vivo) return null;
+function habilidad(abilities, tecla, vivo, hayDatos, sigueConLaSuya = false) {
+  /* Clove muerta sigue usando su habilidad E (la fase «Not Dead Yet»): es la única que se enseña de un muerto, y solo
+     con datos de su cliente (sin ellos no se sabe si la tiene). Adaptado de ValoSpectra/Spectra-Frontend
+     (Elastic License 2.0) — components/common/abilities/abilities.component.html. */
+  if (!vivo && !(sigueConLaSuya && tecla === 'ability2' && hayDatos)) return null;
   if (!hayDatos) return { tiene: 1, max: 1 };
   const cargas = abilities.charges?.[tecla] ?? null;
   if (cargas === null) return { tiene: abilities[tecla] ? 1 : 0, max: 1 };
@@ -197,8 +200,14 @@ function jugador(player) {
   const danoReal = player.provenance?.damage === 'player';
 
   return {
+    /* `nick` y `tag` son los REALES: con ellos se arma el nombre de la cámara. Lo que se lee en pantalla es
+       `visible`, que es el alias que puso el operador o, si no hay, el nick. */
     nick: player.identity?.name ?? '',
     tag: player.identity?.tag ?? '',
+    completo: player.identity?.full || `${player.identity?.name ?? ''}#${player.identity?.tag ?? ''}`,
+    visible: player.identity?.alias || player.identity?.name || '',
+    /* Icono especial del agente (ver `iconSuffix` en `traduccion.js`). */
+    sufijo: player.iconSuffix ?? '',
     agente: agente.toLowerCase(),
     vivo: player.alive,
     vida: vidaReal ? player.health : null,
@@ -211,16 +220,16 @@ function jugador(player) {
      * si la tiene, si no la secundaria, y si no el cuchillo. Eso encaja con
      * lo que da el juego, porque **manda una sola arma**, no el inventario.
      *
-     * Con un matiz que conviene saber: la que manda es la que se lleva **en
-     * la mano**. Si alguien corre con el cuchillo fuera teniendo un Vandal,
-     * la tarjeta enseña el cuchillo. Es lo que hace el HUD del propio juego,
-     * y es la verdad de lo que está pasando; deducir "la mejor que tiene"
-     * exigiría recordar lo que se le vio antes y seguiría enseñándola después
-     * de que la suelte.
+     * Con un matiz que conviene saber: la que manda es la de MAYOR VALOR que
+     * lleva (`highestWeapon`, la del marcador del juego), no la que tiene en
+     * la mano. Si alguien corre con el cuchillo fuera teniendo un Vandal, la
+     * tarjeta sigue enseñando el Vandal. Si el servidor manda un nombre que el
+     * catálogo no conoce (p. ej. «Unknown»), sale `null` y el hueco se queda
+     * vacío en vez de pedir una imagen que no existe.
      */
     arma: ARMA_POR_NOMBRE[player.weapon] ?? null,
     habilidades: TECLAS.map((t) =>
-      habilidad(player.abilities ?? {}, t, player.alive, player.provenance?.abilities === 'player'),
+      habilidad(player.abilities ?? {}, t, player.alive, player.provenance?.abilities === 'player', agente === 'clove'),
     ),
     ult: player.ultimate?.points ?? 0,
     /* 0 = aún no se sabe cuánto cuesta: el pintor no la da por lista. */
@@ -231,6 +240,8 @@ function jugador(player) {
     credito: player.moneyStale === true ? null : (player.money ?? 0),
     gasto: player.spentThisRound ?? 0,
     kda: `${stats.kills}/${stats.deaths}/${stats.assists}`,
+    /* Bajas de ESTA ronda (la insignia de la cámara). */
+    bajasRonda: player.killsRound ?? 0,
     /*
      * EL DAÑO. Está en el estado y **no se pinta todavía**: el hueco en pantalla
      * lo decide Antonio, y el diseño es suyo.
@@ -350,6 +361,7 @@ function aplicaEstado(match) {
     tricode: team.shortName,
     nombre: team.name,
     logo: team.logoUrl,
+    semilla: team.seeding ?? '',
     tantos: team.roundsWon,
     mapas: team.mapsWon,
     bando: team.side,
@@ -359,7 +371,15 @@ function aplicaEstado(match) {
 
   /* DEMO: si el partido trae roster, se usa; si no (feed sin jugadores), se
      conserva el roster de ejemplo para poder VER las tarjetas y las teclas. */
-  const roster = match.teams.map((team) => team.players.map(jugador));
+  /* `ocultaCredito`: el mando «créditos de los vivos» del operador. Solo afecta a quien sigue vivo. */
+  const sinCreditos = match.broadcast?.hideAliveCredits === true;
+  const roster = match.teams.map((team) =>
+    team.players.map((p) => {
+      const j = jugador(p);
+      j.ocultaCredito = sinCreditos && j.vivo;
+      return j;
+    }),
+  );
   const hayRoster = roster.some((equipo) => equipo.length > 0);
   estado.jugadores = hayRoster || !DEMO ? roster : estado.jugadores;
 

@@ -7,7 +7,7 @@
 
    Sale, se queda unos segundos y se va sola. */
 
-import { cartel, conecta, relieve, tinta } from './enlace.js';
+import { ajustaTexto, cartel, conecta, relieve, tinta } from './enlace.js';
 
 /**
  * TOPE de cuánto se queda puesto.
@@ -31,6 +31,8 @@ const dato = document.querySelector('.cartel__dato');
 const pie = document.querySelector('.cer__pie');
 const logo = document.querySelector('.cer__logo');
 const fondo = document.querySelector('.cer__fondo > div');
+const patro = document.getElementById('patro');
+const telon = document.getElementById('telon');
 
 caja.escondeYa();
 
@@ -80,7 +82,8 @@ function anuncia(evento) {
   tinta(nodo, 0);
 
   etq.textContent = TITULOS[evento.ceremony] ?? TITULOS.roundWin;
-  dato.textContent = equipo.name;
+  /* El logo, el filete y el margen se llevan unos 230 px de los 700 del cartel. */
+  ajustaTexto(dato, equipo.name, 440);
 
   const tri = logo?.querySelector('span');
   if (tri !== null && tri !== undefined) tri.textContent = equipo.shortName;
@@ -89,6 +92,17 @@ function anuncia(evento) {
     icono.style.backgroundImage = equipo.logoUrl === '' ? '' : `url(${equipo.logoUrl})`;
   }
   relieve(fondo, equipo.logoUrl);
+
+  /* La caja de fin de ronda: icono y telón del patrocinador o del torneo, si el operador los configuró. */
+  const decoracion = evento.caja ?? { iconUrl: '', backdropUrl: '' };
+  if (patro !== null) {
+    if (patro.getAttribute('src') !== decoracion.iconUrl) {
+      if (decoracion.iconUrl === '') patro.removeAttribute('src');
+      else patro.setAttribute('src', decoracion.iconUrl);
+    }
+    patro.style.display = decoracion.iconUrl === '' ? 'none' : '';
+  }
+  if (telon !== null) telon.style.backgroundImage = decoracion.backdropUrl === '' ? '' : `url("${decoracion.backdropUrl.replace(/["\\]/g, '')}")`;
 
   if (pie !== null) {
     const [texto, , lado] = pie.children;

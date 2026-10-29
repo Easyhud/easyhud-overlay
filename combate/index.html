@@ -35,7 +35,7 @@
 
     <!-- torneo (derecha): relleno + marca de agua + caja 250×80 -->
     <div class="torneo-relleno"></div>
-    <div class="torneo-marca-agua"><span>Easy Open · easyhud.net</span></div>
+    <div class="torneo-marca-agua"><span id="torneo-nombre"></span></div>
     <div class="torneo-caja" id="torneo-caja">
       <div class="torneo-caja__marca"></div>
       <span class="torneo-caja__texto">EASY HUD</span>
@@ -48,7 +48,7 @@
           <span class="panel-equipo__logo-inicial" id="ini-izq"></span>
           <div class="panel-equipo__logo" id="logo-izq"></div>
         </div>
-        <span class="panel-equipo__tricodigo" id="tri-izq"></span>
+        <span class="panel-equipo__id"><span class="panel-equipo__tricodigo" id="tri-izq"></span><span class="panel-equipo__semilla" id="sem-izq"></span></span>
         <span style="flex:1"></span>
         <span class="panel-equipo__tanto" id="tanto-izq">0</span>
         <div class="panel-equipo__filo"></div>
@@ -60,7 +60,7 @@
         <div class="panel-equipo__filo"></div>
         <span class="panel-equipo__tanto" id="tanto-der">0</span>
         <span style="flex:1"></span>
-        <span class="panel-equipo__tricodigo" id="tri-der"></span>
+        <span class="panel-equipo__id"><span class="panel-equipo__tricodigo" id="tri-der"></span><span class="panel-equipo__semilla" id="sem-der"></span></span>
         <div class="panel-equipo__logo-caja">
           <span class="panel-equipo__logo-inicial" id="ini-der"></span>
           <div class="panel-equipo__logo" id="logo-der"></div>
@@ -88,6 +88,7 @@
        publicando y estemos en combate. -->
   <div class="camara" id="camara" hidden>
     <!-- Los visores (un iframe por jugador que emite) los crea combate.js aquí dentro. -->
+    <div class="camara__bajas" id="camara-bajas" hidden></div>
     <div class="camara__pie">
       <span class="camara__nombre" id="camara-nombre"></span>
       <span class="camara__kda" id="camara-kda"></span>

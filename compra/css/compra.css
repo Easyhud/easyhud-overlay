@@ -104,6 +104,11 @@
 .ident__retrato { width: 62px; height: 100%; flex: 0 0 auto; background: top center / cover no-repeat; }
 .ident__nick { font-family: 'Oswald', sans-serif; font-size: 21px; font-weight: 500; line-height: 1.24; letter-spacing: .03em; color: #fff; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
 .mitad--der .ident__nick { text-align: right; }
+/* Nick y nombre del agente, uno sobre otro. */
+.ident__texto { display: flex; flex-direction: column; justify-content: center; flex: 1 1 auto; min-width: 0; }
+.ident__texto .ident__nick { flex: 0 1 auto; }
+.ident__agente { font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; line-height: 1.1; color: #8b8d94; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; }
+.mitad--der .ident__agente { text-align: right; }
 .ident__kda { font-family: 'Oswald', sans-serif; font-size: 19px; font-weight: 600; line-height: 1; letter-spacing: .03em; color: #c9cad0; width: 70px; flex: 0 0 auto; font-variant-numeric: tabular-nums; text-align: left; }
 .mitad--der .ident__kda { text-align: right; }
 .elastico { flex: 1; }
@@ -172,6 +177,17 @@
 .hcel--def { background: var(--atk); } /* defensor: verde */
 .hcel i { width: 17px; height: 17px; filter: brightness(0) invert(1); background: center / contain no-repeat; }
 .hcel--pend { display: grid; place-items: center; }
+
+/* Marcas del historial: «cambio de lado» (primera columna de la segunda mitad) y «OT n» (cada prórroga). */
+.hcol--marca { flex: 0 0 26px; }
+.hmarca {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  flex: 1 1 auto; box-sizing: border-box;
+  font-family: 'Oswald', sans-serif; font-size: 14px; font-weight: 600; line-height: 1.05;
+  background: rgb(255 255 255 / 14%); color: #e6e7ea;
+}
+.hmarca b { font-size: 10px; font-weight: 600; letter-spacing: .06em; }
+.hmarca--cambio { font-size: 16px; }
 
 
 /* ══ ANIMACIONES DE ESTADO ═════════════════════════════════════════════════
